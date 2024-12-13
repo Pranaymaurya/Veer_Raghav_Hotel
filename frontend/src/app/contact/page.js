@@ -19,7 +19,7 @@ function ContactSection() {
 
   return (
     <div className="relative bg-white">
-      <AnimatedCursor
+      {/* <AnimatedCursor
         innerSize={8}
         outerSize={25}
         color="255, 165, 0"
@@ -39,7 +39,7 @@ function ContactSection() {
           'button',
           '.link',
         ]}
-      />
+      /> */}
 
       {/* Background Image */}
       <div className="relative h-64 md:h-96">

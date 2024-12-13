@@ -33,7 +33,7 @@ export default function Home() {
       ) : (
      <div className="bg-[#FFFFFF]">
       <SparkleEffect/>
-      <AnimatedCursor
+      {/* <AnimatedCursor
         innerSize={8}
         outerSize={25}
         // RGB values for white color
@@ -54,7 +54,7 @@ export default function Home() {
           'button',
           '.link',
         ]}
-      />
+      /> */}
       <HeroSection />
       <LayoutGrid />
       <TextAnimation />
