@@ -160,7 +160,7 @@ function Page() {
   return (
     
     <div className="bg-white w-screen">
-      <AnimatedCursor
+      {/* <AnimatedCursor
         innerSize={8}
         outerSize={25}
         // RGB values for white color
@@ -181,7 +181,7 @@ function Page() {
           'button',
           '.link',
         ]}
-      />
+      /> */}
     <div className="h-[350vh] bg-white py-20 w-full flex flex-col items-center justify-center max-w-screen-xl mx-auto px-4">
       <h1 className="font-serif font-bold text-4xl bg-gradient-to-r from-[#FF9933] to-[#FFD700] text-transparent bg-clip-text flex items-center justify-center">
         Gallery
