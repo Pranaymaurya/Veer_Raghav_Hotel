@@ -4,7 +4,9 @@ import {
   CancelBooking,
   CreateBooking,
   GetAllBookings,
+  getavgrating,
   GetBookingById,
+  Putrating,
 } from '../Controllers/BookingController.js';
 import {
   AddImagesById,
@@ -15,7 +17,7 @@ import {
   UpdateRoom,
 } from '../Controllers/roomController.js';
 import { uploadMultiple } from '../Middleware/Multer.js';
-import authMiddleware from '../Middleware/AuthMiddleware.js';
+import {authMiddleware,authorizeRoles} from '../Middleware/AuthMiddleware.js';
 const router = express.Router();
 
 // Authentication routes
@@ -23,17 +25,18 @@ router.post('/register', register);
 router.post('/login', login);
 
 // Booking routes
-router.post('/booking',authMiddleware, CreateBooking); // Create a booking
-router.put('/booking/:id/cancel',authMiddleware, CancelBooking); // Cancel a booking by ID
-router.get('/booking',authMiddleware, GetAllBookings); // Get all bookings
-router.get('/booking/:id',authMiddleware, GetBookingById); // Get a booking by ID
-
+router.post('/booking',authMiddleware,authorizeRoles('user','admin'), CreateBooking); // Create a booking
+router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking); // Cancel a booking by ID
+router.get('/booking',authMiddleware,authorizeRoles('user','admin'), GetAllBookings); // Get all bookings
+router.get('/booking/:id',authMiddleware,authorizeRoles('user','admin'), GetBookingById); // Get a booking by ID
+router.post('/room/rating/',authMiddleware,authorizeRoles('user','admin'), Putrating);
+router.get('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), getavgrating);
 // Room routes
-router.post('/room',authMiddleware,uploadMultiple, AddRoom); // Create a new room
-router.post('/room/images/:id',authMiddleware, uploadMultiple, AddImagesById);
-router.delete('/room/:id',authMiddleware, DeleteRoom); // Delete a room by ID
-router.get('/room',authMiddleware, GetRooms); // Get all rooms
-router.get('/room/:id',authMiddleware, GetRoomById); // Get a single room by ID
-router.put('/room/:id',authMiddleware, UpdateRoom); // Update a room by ID
+router.post('/room',authMiddleware,authorizeRoles('admin'),uploadMultiple, AddRoom); // Create a new room
+router.post('/room/images/:id',authMiddleware, uploadMultiple,authorizeRoles('admin'), AddImagesById);
+router.delete('/room/:id',authMiddleware,authorizeRoles('admin'), DeleteRoom); // Delete a room by ID
+router.get('/room',authMiddleware,authorizeRoles('admin'), GetRooms); // Get all rooms
+router.get('/room/:id',authMiddleware,authorizeRoles('admin'), GetRoomById); // Get a single room by ID
+router.put('/room/:id',authMiddleware,authorizeRoles('admin'), UpdateRoom); // Update a room by ID
 
 export default router;

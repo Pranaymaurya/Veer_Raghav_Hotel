@@ -23,7 +23,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['Male', 'Female', 'other'],
         default: '',
-      },
+      }, role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',},
     phoneno: {
         type: Number,
         required: true,
@@ -35,6 +38,7 @@ const userSchema = new mongoose.Schema({
           message: props => `${props.value} is not a valid phone number!`
         },
       },
+      
   });
   
 const User=mongoose.model('User',userSchema)

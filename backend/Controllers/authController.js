@@ -1,12 +1,13 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../Models/userModel.js';
+
 // Register Function
 export const register = async (req, res) => {
-  const { name, email, password, phoneno, gender, age } = req.body;
+  const { name, email, password, phoneno, gender, age, role } = req.body;
 
   try {
-    // Validate required fields
+    // Input validation
     if (!name || !email || !password || !phoneno) {
       return res.status(400).json({
         success: false,
@@ -14,7 +15,7 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists (either by email or phone number)
+    // Check for existing user
     const existingUser = await User.findOne({ $or: [{ email }, { phoneno }] });
     if (existingUser) {
       return res.status(400).json({
@@ -34,7 +35,8 @@ export const register = async (req, res) => {
       password: hashedPassword,
       phoneno,
       gender,
-      age
+      age,
+      role
     });
 
     return res.status(201).json({
@@ -69,19 +71,14 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() }); // Case-insensitive email check
 
-    console.log("User from DB:", user);  // Log user to check if it's found
-    
     if (!user || !user.password) {
       return res.status(400).json({
         success: false,
         message: "User not found or password is missing."
       });
     }
-
-    console.log('Password from request:', password);
-    console.log('Stored password:', user.password);
 
     const isMatch = await bcryptjs.compare(password, user.password);
     if (!isMatch) {
@@ -92,11 +89,10 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user._id, email: user.email, role: user.role }, // Include 'role' here
       process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '1h' }
     );
-
     return res.status(200).json({
       success: true,
       message: "Login successful.",
@@ -106,7 +102,8 @@ export const login = async (req, res) => {
         email: user.email,
         phoneno: user.phoneno,
         gender: user.gender,
-        age: user.age
+        age: user.age,
+        role: user.role
       }
     });
   } catch (error) {
