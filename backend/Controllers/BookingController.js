@@ -76,3 +76,78 @@ export const CancelBooking = async (req, res) => {
     res.status(500).json({ message: "Failed to cancel booking", error: error.message });
   }
 };
+
+
+
+export const Putrating = async (req, res) => {
+  try {
+    const { id } = req.params;  // Room being rated
+    const { rating } = req.body;    // Rating value
+    const currentUserId = req.user._id; // Assuming the current user is authenticated and stored in req.user
+
+    // Find the room being rated
+    console.log(id)
+    console.log(currentUserId)
+
+    const roomToRate = await Room.findById(id);
+    if (!roomToRate) {
+      return res.status(404).json({ success: false, message: 'Room not found.' });
+    }
+
+    // Check if the rating is within the valid range (0-5)
+    if (rating < 0 || rating > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 0 and 5.' });
+    }
+
+    // Check if the current user has already rated this room
+    const existingRating = roomToRate.ratings.find(r => String(r.userId) === String(currentUserId));
+    if (existingRating) {
+      return res.status(400).json({ success: false, message: 'You have already rated this room.' });
+    }
+
+    // Add the new rating
+    roomToRate.ratings.push({
+      userId: currentUserId,
+      rating,
+    });
+
+    // Save the updated room document
+    await roomToRate.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Rating added successfully.',
+      room: roomToRate,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error occurred while adding rating' });
+  }
+};
+
+// Get the average rating of a room
+export const getavgrating = async (req, res) => {
+  try {
+    const { id } = req.params;  
+    console.log('roomId from params:', id);  // Debugging line
+
+    const room = await Room.findById(id);
+    
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found.' });
+    }
+    
+    const ratings = room.ratings;
+    if (ratings.length === 0) {
+      return res.status(200).json({ success: true, message: 'No ratings available.', avg: 0 });
+    }
+    
+    const sum = ratings.reduce((acc, cur) => acc + cur.rating, 0);
+    const avg = Math.round(sum / ratings.length);
+
+    res.status(200).json({ success: true, message: 'Average rating retrieved successfully.', avg });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error occurred while retrieving average rating.' });
+  }
+};
