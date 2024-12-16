@@ -29,7 +29,7 @@ router.post('/booking',authMiddleware,authorizeRoles('user','admin'), CreateBook
 router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking); // Cancel a booking by ID
 router.get('/booking',authMiddleware,authorizeRoles('user','admin'), GetAllBookings); // Get all bookings
 router.get('/booking/:id',authMiddleware,authorizeRoles('user','admin'), GetBookingById); // Get a booking by ID
-router.post('/room/rating/',authMiddleware,authorizeRoles('user','admin'), Putrating);
+router.post('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), Putrating);
 router.get('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), getavgrating);
 // Room routes
 router.post('/room',authMiddleware,authorizeRoles('admin'),uploadMultiple, AddRoom); // Create a new room
