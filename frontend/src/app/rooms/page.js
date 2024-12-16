@@ -20,13 +20,75 @@ export default function RoomsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('price');
   const [filters, setFilters] = useState({
-    priceRange: [0, 500],
+    priceRange: [0, 15000],
     type: '',
     capacity: '',
     amenities: [],
     startDate: null,
     endDate: null,
   });
+
+  // Calculate nights between dates
+  const calculateNights = (startDate, endDate) => {
+    if (!startDate || !endDate) return 1;
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 1;
+  };
+
+  // Calculate dynamic price based on base price and number of nights
+  const calculateDynamicPrice = (basePrice, startDate, endDate) => {
+    const nights = calculateNights(startDate, endDate);
+
+    // Optional: Apply dynamic pricing logic
+    // For example, discount for longer stays or peak/off-peak pricing
+    if (nights >= 5) {
+      // 10% discount for stays 5 nights or longer
+      return Math.round(basePrice * nights * 0.9);
+    } else if (nights > 1) {
+      // Slight discount for multi-night stays
+      return Math.round(basePrice * nights * 0.95);
+    }
+
+    return basePrice * nights;
+  };
+
+  // Load state from localStorage on initial render
+  useEffect(() => {
+    const savedSearchQuery = localStorage.getItem('roomSearchQuery');
+    const savedSortBy = localStorage.getItem('roomSortBy');
+    const savedFilters = localStorage.getItem('roomFilters');
+
+    if (savedSearchQuery) setSearchQuery(savedSearchQuery);
+    if (savedSortBy) setSortBy(savedSortBy);
+
+    if (savedFilters) {
+      const parsedFilters = JSON.parse(savedFilters);
+      // Convert date strings back to Date objects
+      if (parsedFilters.startDate) parsedFilters.startDate = new Date(parsedFilters.startDate);
+      if (parsedFilters.endDate) parsedFilters.endDate = new Date(parsedFilters.endDate);
+      setFilters(parsedFilters);
+    }
+  }, [setFilters, setSearchQuery, setSortBy]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('roomSearchQuery', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    localStorage.setItem('roomSortBy', sortBy);
+  }, [sortBy]);
+
+  useEffect(() => {
+    // Deep clone filters to avoid storing Date objects directly
+    const filtersToStore = {
+      ...filters,
+      startDate: filters.startDate?.toISOString(),
+      endDate: filters.endDate?.toISOString()
+    };
+    localStorage.setItem('roomFilters', JSON.stringify(filtersToStore));
+  }, [filters]);
 
   const availableAmenities = [...new Set(rooms.flatMap(room => room.amenities))];
 
@@ -40,7 +102,9 @@ export default function RoomsPage() {
       const typeMatches = filters.type === '' || room.type === filters.type;
       const capacityMatches = filters.capacity === '' || room.capacity >= parseInt(filters.capacity);
       const amenitiesMatch = filters.amenities.every(amenity => room.amenities.includes(amenity));
-      const searchMatches = room.name.toLowerCase().includes(searchQuery.toLowerCase()) || room.description.toLowerCase().includes(searchQuery.toLowerCase()) || room.amenities.some(amenity => amenity.toLowerCase().includes(searchQuery.toLowerCase()));
+      const searchMatches = room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.amenities.some(amenity => amenity.toLowerCase().includes(searchQuery.toLowerCase()));
 
       return priceWithinRange && typeMatches && capacityMatches && amenitiesMatch && searchMatches;
     });
@@ -48,8 +112,11 @@ export default function RoomsPage() {
 
   const sortedRooms = useMemo(() => {
     return [...filteredRooms].sort((a, b) => {
+      const aPriceForSort = calculateDynamicPrice(a.price, filters.startDate, filters.endDate);
+      const bPriceForSort = calculateDynamicPrice(b.price, filters.startDate, filters.endDate);
+
       if (sortBy === 'price') {
-        return a.price - b.price;
+        return aPriceForSort - bPriceForSort;
       } else if (sortBy === 'rating') {
         return b.rating - a.rating;
       } else if (sortBy === 'capacity') {
@@ -57,23 +124,42 @@ export default function RoomsPage() {
       }
       return 0;
     });
-  }, [filteredRooms, sortBy]);
+  }, [filteredRooms, sortBy, filters.startDate, filters.endDate]);
 
   const filteredAndSortedRooms = sortedRooms;
 
   const handleRoomClick = (roomId) => {
-    router.push(`/rooms/${roomId}?startDate=${filters.startDate?.toISOString()}&endDate=${filters.endDate?.toISOString()}&guests=${filters.capacity}`);
+    const queryParams = new URLSearchParams();
+
+    // Only add parameters that have been set
+    if (filters.startDate) {
+      queryParams.append('startDate', filters.startDate.toISOString());
+    }
+    if (filters.endDate) {
+      queryParams.append('endDate', filters.endDate.toISOString());
+    }
+    if (filters.capacity) {
+      queryParams.append('guests', filters.capacity);
+    }
+
+    // Construct the URL with query parameters
+    const queryString = queryParams.toString();
+    const url = queryString
+      ? `/rooms/${roomId}?${queryString}`
+      : `/rooms/${roomId}`;
+
+    router.push(url);
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-orange-50 roooms"
+      className="min-h-screen bg-white roooms"
     >
-      <header className="bg-gradient-to-r from-orange-600 to-orange-700 text-white py-16 px-4" style={{ zIndex: 1 }}>
-        <motion.div 
+      <header className="bg-gradient-to-r from-orange-600 to-orange-700 text-white py-16 px-4" style={{ zIndex: 9999 }}>
+        <motion.div
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -140,11 +226,11 @@ export default function RoomsPage() {
 
       <div className="container mx-auto px-4 py-12" style={{ zIndex: -1 }}>
         {/* Mobile Filter Toggle */}
-        <motion.div 
+        <motion.div
           className="md:hidden mb-6"
           whileTap={{ scale: 0.95 }}
         >
-          <button 
+          <button
             onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
             className="w-full bg-orange-500 text-white py-3 rounded-lg flex items-center justify-center"
           >
@@ -157,7 +243,7 @@ export default function RoomsPage() {
           {/* Filters Sidebar */}
           <AnimatePresence>
             {(isMobileFilterOpen || !isMobileFilterOpen) && (
-              <motion.div 
+              <motion.div
                 initial={{ x: "-100%", opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "-100%", opacity: 0 }}
@@ -171,7 +257,7 @@ export default function RoomsPage() {
               >
                 <div className="flex justify-between items-center mb-6 md:hidden">
                   <h2 className="text-2xl font-semibold text-gray-800">Filters</h2>
-                  <button 
+                  <button
                     onClick={() => setIsMobileFilterOpen(false)}
                     className="text-orange-600"
                   >
@@ -183,9 +269,9 @@ export default function RoomsPage() {
                 <div className="mb-6">
                   <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                   <div className="relative">
-                    <input 
+                    <input
                       id="search"
-                      type="text" 
+                      type="text"
                       placeholder="Search rooms, amenities, price..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -203,11 +289,11 @@ export default function RoomsPage() {
                 <div className="mb-6">
                   <label htmlFor="price-range" className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
                   <div className="flex items-center space-x-4">
-                    <input 
+                    <input
                       id="price-range"
-                      type="range" 
-                      min="0" 
-                      max="500" 
+                      type="range"
+                      min="0"
+                      max="500"
                       value={filters.priceRange[1]}
                       onChange={(e) => handleFilterChange('priceRange', [0, parseInt(e.target.value)])}
                       className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
@@ -220,7 +306,7 @@ export default function RoomsPage() {
                 <div className="mb-6">
                   <label htmlFor="room-type" className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
                   <div className="relative">
-                    <select 
+                    <select
                       id="room-type"
                       value={filters.type}
                       onChange={(e) => handleFilterChange('type', e.target.value)}
@@ -242,7 +328,7 @@ export default function RoomsPage() {
                 <div className="mb-6">
                   <label htmlFor="guests" className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
                   <div className="relative">
-                    <select 
+                    <select
                       id="guests"
                       value={filters.capacity}
                       onChange={(e) => handleFilterChange('capacity', e.target.value)}
@@ -266,8 +352,8 @@ export default function RoomsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
                   {availableAmenities.map(amenity => (
                     <div key={amenity} className="flex items-center mb-2">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         id={amenity}
                         checked={filters.amenities.includes(amenity)}
                         onChange={() => {
@@ -291,7 +377,7 @@ export default function RoomsPage() {
           {/* Rooms Grid */}
           <div className="md:col-span-3">
             {/* Sorting and Results Count */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -302,7 +388,7 @@ export default function RoomsPage() {
                   {filteredAndSortedRooms.length} rooms found
                 </span>
                 <div className="relative">
-                  <select 
+                  <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none transition-all duration-200"
@@ -321,7 +407,7 @@ export default function RoomsPage() {
             </motion.div>
 
             {filteredAndSortedRooms.length === 0 ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
@@ -330,14 +416,14 @@ export default function RoomsPage() {
                 <p className="text-2xl text-gray-500">No rooms match your search</p>
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ staggerChildren: 0.1 }}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               >
                 {filteredAndSortedRooms.map((room) => (
-                  <motion.div 
+                  <motion.div
                     key={room.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -367,17 +453,26 @@ export default function RoomsPage() {
                       </div>
                       <div className="flex space-x-2 mb-4 overflow-x-auto">
                         {room.amenities.slice(0, 3).map(amenity => (
-                          <span 
-                            key={amenity} 
+                          <span
+                            key={amenity}
                             className="bg-orange-50 text-orange-600 text-xs px-2 py-1 rounded-full whitespace-nowrap flex items-center"
                           >
-  
+
                             <span className="ml-1">{amenity}</span>
                           </span>
                         ))}
                       </div>
                       <div className="text-black px-3 py-1 rounded-full my-2 text-lg font-semibold">
-                        ₹{room.price} /night
+                        {filters.startDate && filters.endDate ? (
+                          <>
+                            ₹{calculateDynamicPrice(room.price, filters.startDate, filters.endDate)}
+                            <span className="text-sm text-gray-600 ml-1">
+                              ({calculateNights(filters.startDate, filters.endDate)} nights)
+                            </span>
+                          </>
+                        ) : (
+                          `₹${room.price} /night`
+                        )}
                       </div>
                       <Link
                         href={`/rooms/${room.id}`}

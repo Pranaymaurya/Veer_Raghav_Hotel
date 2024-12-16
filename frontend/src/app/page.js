@@ -55,11 +55,14 @@ export default function Home() {
           '.link',
         ]}
       /> */}
-      <HeroSection />
+
+      <Navbar />
+      {/* <HeroSection /> */}
       <LayoutGrid />
       <TextAnimation />
       <Rooms />
       <Hmap />
+      <Footer />
       </div>
         
           
