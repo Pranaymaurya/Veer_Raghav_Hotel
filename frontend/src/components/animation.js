@@ -45,6 +45,7 @@ const AnimationPage = () => {
           onAnimationComplete={handleAnimationComplete}
           className="relative w-full h-screen overflow-hidden"
         >
+          <div className='absolute inset-0 bg-black/50 opacity-50'/>
           {/* Full-screen temple image */}
           <img
             src={templeImg.src}

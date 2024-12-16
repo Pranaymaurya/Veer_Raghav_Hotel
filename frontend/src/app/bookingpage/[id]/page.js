@@ -9,10 +9,12 @@ import { FaStar, FaUsers, FaBed, FaCalendarAlt, FaCreditCard, FaLock } from 'rea
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { rooms } from '../../../app/data/room';
+import { useAuth } from '@/context/AuthContext';
 
 const BookingPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading } = useAuth();
 
   const [room, setRoom] = useState(null);
   const [guests, setGuests] = useState(1);
@@ -26,6 +28,14 @@ const BookingPage = () => {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      // Redirect to login page with a return url
+      router.push('/login?return_url=/booking');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const roomId = searchParams.get('roomId');
@@ -69,44 +79,51 @@ const BookingPage = () => {
     // Redirect to a confirmation page or show a success message
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!room) {
     return <div className="container mx-auto mt-8 text-center">Loading...</div>;
   }
 
+  if (!user) {
+    return null;
+  }
+
+
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="bg-orange-50 min-h-screen py-12 px-4 roooms"
+      className=" min-h-screen py-12 px-4 roooms"
     >
+      
       <div className="container mx-auto">
         <h1 className="text-4xl font-bold text-orange-800 mb-8 text-center">Complete Your Booking</h1>
-        
+
         <div className="grid md:grid-cols-2 gap-8">
           {/* Booking Form */}
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Guest Information</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Your Information</h2>
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <label htmlFor="Name" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                   <input
                     type="text"
-                    id="firstName"
-                    value={firstName}
+                    id="Name"
+                    value={firstName || user?.name?.split(' ')[0] || ''}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md"
                     required
                   />
@@ -117,19 +134,8 @@ const BookingPage = () => {
                 <input
                   type="email"
                   id="email"
-                  value={email}
+                  value={email || user?.email || ''}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  required
-                />
-              </div>
-              <div className="mb-6">
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md"
                   required
                 />
