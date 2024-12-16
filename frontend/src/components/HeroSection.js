@@ -90,7 +90,7 @@ function HeroSection() {
   }, [itemActive]);
 
   return (
-    <div className="slider">
+    <div className="slider " style={{ zIndex: 0 }}>
       {/* List Items */}
       <div className="list">
         {images.map((image, index) => (

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaStar, FaUsers, FaBed, FaCalendarAlt, FaPlus, FaMinus, FaChevronLeft, FaInfoCircle } from 'react-icons/fa';
+import { FaStar, FaUsers, FaBed, FaCalendarAlt, FaPlus, FaMinus, FaChevronLeft, FaInfoCircle, FaExclamationCircle } from 'react-icons/fa';
 import { rooms } from '../../data/room';
 import ImageSlider from '../components/ImageSlider';
 import DatePicker from 'react-datepicker';
@@ -21,6 +21,8 @@ export default function RoomDetail({ params }) {
   
   const [startDate, setStartDate] = useState(searchParams.get('startDate') ? new Date(searchParams.get('startDate')) : new Date());
   const [endDate, setEndDate] = useState(searchParams.get('endDate') ? new Date(searchParams.get('endDate')) : new Date());
+
+  const [dateError, setDateError] = useState('');
 
   useEffect(() => {
     if (searchParams.get('guests')) {
@@ -40,7 +42,26 @@ export default function RoomDetail({ params }) {
   };
 
   useEffect(() => {
-    if (startDate && endDate && endDate > startDate) {
+    // Reset date error when dates change
+    setDateError('');
+
+    if (startDate && endDate) {
+      // Check if start and end dates are the same
+      const isSameDay = startDate.toDateString() === endDate.toDateString();
+      
+      if (isSameDay) {
+        setDateError('Check-out date must be different from check-in date');
+        setDuration({ days: 0, nights: 0 });
+        return;
+      }
+
+      // Ensure end date is after start date
+      if (endDate <= startDate) {
+        setDateError('Check-out date must be after check-in date');
+        setDuration({ days: 0, nights: 0 });
+        return;
+      }
+
       const diffTime = Math.abs(endDate - startDate);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       setDuration({ days: diffDays, nights: diffDays - 1 });
@@ -69,6 +90,9 @@ export default function RoomDetail({ params }) {
   };
 
   const handleBookNow = () => {
+    if (dateError) {
+      return; // Prevent booking if there's a date error
+    }
     const queryString = new URLSearchParams({
       roomId: room.id,
       guests,
@@ -188,6 +212,14 @@ export default function RoomDetail({ params }) {
                 </div>
               </div>
 
+              {/* Date Error Message */}
+              {dateError && (
+                <div className="mb-4 flex items-center text-red-600 text-sm">
+                  <FaExclamationCircle className="mr-2" />
+                  {dateError}
+                </div>
+              )}
+
               {/* Duration */}
               <div className="mb-4">
                 <p className="text-sm font-medium text-gray-700">
@@ -234,7 +266,12 @@ export default function RoomDetail({ params }) {
               {/* Book Now Button */}
               <button 
                 onClick={handleBookNow}
-                className="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition-colors"
+                disabled={!!dateError}
+                className={`w-full py-3 rounded-lg transition-colors ${
+                  dateError 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-orange-500 text-white hover:bg-orange-600'
+                }`}
               >
                 Book Now
               </button>
