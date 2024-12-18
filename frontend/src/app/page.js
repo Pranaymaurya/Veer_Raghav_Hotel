@@ -11,19 +11,19 @@ import HeroSection from "@/components/HeroSection";
 import { LayoutGrid } from "@/components/LayoutGrid";
 import TextAnimation from "@/components/TextAnimation";
 import Rooms from "@/components/Rooms";
-import AnimationPage from "@/components/animation"; 
+import AnimationPage from "@/components/animation";
 import Hmap from "@/components/Hmap";
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    
+
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 2000); 
+    }, 2000);
 
-    return () => clearTimeout(timer); 
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -31,9 +31,9 @@ export default function Home() {
       {loading ? (
         <AnimationPage />
       ) : (
-     <div className="bg-[#FFFFFF]">
-      <SparkleEffect/>
-      {/* <AnimatedCursor
+        <div className="bg-[#FFFFFF]">
+          <SparkleEffect />
+          {/* <AnimatedCursor
         innerSize={8}
         outerSize={25}
         // RGB values for white color
@@ -56,16 +56,16 @@ export default function Home() {
         ]}
       /> */}
 
-      <Navbar />
-      {/* <HeroSection /> */}
-      <LayoutGrid />
-      <TextAnimation />
-      <Rooms />
-      <Hmap />
-      <Footer />
-      </div>
-        
-          
+          <Navbar />
+          {/* <HeroSection /> */}
+          <LayoutGrid />
+          <TextAnimation />
+          <Rooms />
+          <Hmap />
+          <Footer />
+        </div>
+
+
       )}
     </>
   );
