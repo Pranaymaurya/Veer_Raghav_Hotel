@@ -104,3 +104,11 @@ export const updateUser = async (req, res) => {
     }
   };
   
+  export const GetAllUsers = async (req, res) => {
+    try {
+      const bookings = await User.find();
+      res.status(200).json(bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
+    }
+  };
