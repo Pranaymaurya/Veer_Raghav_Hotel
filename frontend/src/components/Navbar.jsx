@@ -30,7 +30,8 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Users,
-  BarChart
+  BarChart,
+  Image
 } from 'lucide-react';
 import { LiaPrayingHandsSolid } from "react-icons/lia";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,7 +44,7 @@ const Navbar = () => {
 
   const menuItems = [
     { name: "Home", path: "/", icon: Home },
-    { name: "Gallery", path: "/gallery", icon: GalleryIcon },
+    { name: "Gallery", path: "/gallery", icon: Image },
     { name: "Rooms", path: "/rooms", icon: LayoutDashboard },
     { name: "Contact", path: "/contact", icon: PhoneCall },
   ];
@@ -55,18 +56,46 @@ const Navbar = () => {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="flex items-center">
+          <Button variant="outline" className="flex items-center text-black">
             <User className="mr-2 h-4 w-4" />
-            {user.name || user.email}
+            <span className="hidden md:inline italic font-light">hello,</span> {user.name || user.email}
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{user.role == ! 'admin' && `My Account`}</DropdownMenuLabel>
-          {user.role == ! 'admin' && <DropdownMenuSeparator />}
-          {user.role == ! 'admin' &&
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="capitalize">{user.role ==! 'admin' ? `Admin Controls` : `${user.name}'s Account`}</DropdownMenuLabel>
+          {user.role == 'admin' ?
             <>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/dashboard" className="flex items-center">
+                  <BarChart className="mr-2 h-4 w-4" /> Dashboard
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/dashboard/guests" className="flex items-center">
+                  <Users className="mr-2 h-4 w-4" /> Manage Users
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/dashboard/settings" className="flex items-center">
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Admin Settings
+                </Link>
+              </DropdownMenuItem>
+            </>
+            : <>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/bookings" className="flex items-center">
+                  <BookOpen className="mr-2 h-4 w-4" /> My Bookings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/settings" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" /> Settings
+                </Link>
+              </DropdownMenuItem>
+            </>}
+
+          {/* <DropdownMenuItem asChild>
                 <Link to="/bookings" className="flex items-center">
                   <BookOpen className="mr-2 h-4 w-4" /> My Bookings
                 </Link>
@@ -75,30 +104,8 @@ const Navbar = () => {
                 <Link to="/settings" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </Link>
-              </DropdownMenuItem>
-            </>
-          }
+              </DropdownMenuItem> */}
           {/* Admin-specific menu items */}
-          {isAdmin && (
-            <>
-              <DropdownMenuLabel>Admin Controls</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link to="/dashboard" className="flex items-center">
-                  <BarChart className="mr-2 h-4 w-4" /> Dashboard
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/dashboard/guests" className="flex items-center">
-                  <Users className="mr-2 h-4 w-4" /> Manage Users
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/dashboard/settings" className="flex items-center">
-                  <ShieldCheck className="mr-2 h-4 w-4" /> Admin Settings
-                </Link>
-              </DropdownMenuItem>
-            </>
-          )}
 
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
@@ -198,7 +205,7 @@ const Navbar = () => {
               ))}
 
               {/* Admin-specific mobile menu items */}
-              {user?.role === 'admin' && (
+              {user?.role === 'admin' ? (
                 <>
                   <DropdownMenuSeparator className="my-2" />
                   <div className="text-sm font-semibold text-gray-500 px-4 mb-2">Admin Controls</div>
@@ -206,6 +213,30 @@ const Navbar = () => {
                     { name: "Dashboard", path: "/dashboard", icon: BarChart },
                     { name: "Manage Users", path: "/dashboard/users", icon: Users },
                     { name: "Admin Settings", path: "/dashboard/settings", icon: ShieldCheck }
+                  ].map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center space-x-2 text-lg border-b border-gray-200 py-2 hover:bg-[#FF9933]/10 hover:text-[#FF9933] transition-colors duration-200"
+                    >
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start hover:bg-[#FF9933]/10 hover:text-[#FF9933] gap-4"
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span className='text-base'>{item.name}</span>
+                      </Button>
+                    </Link>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <DropdownMenuSeparator className="my-2" />
+                  <div className="text-sm font-semibold text-gray-500 px-4 mb-2">My Controls</div>
+                  {[
+                    { name: "My Bookings", path: "/bookings", icon: BookOpen },
+                    { name: "Settings", path: "/settings", icon: Settings },
                   ].map((item) => (
                     <Link
                       key={item.name}

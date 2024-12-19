@@ -43,7 +43,7 @@ export default function RoomsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
-    priceRange: [0, 15000],
+    priceRange: [0, 1500],
     type: '',
     capacity: '',
     amenities: [],
@@ -51,16 +51,38 @@ export default function RoomsPage() {
     endDate: null,
   });
 
+  // Handle guest input change with validation
+  const handleGuestChange = (e) => {
+    const value = e.target.value;
+    if (value === '' || /^\d+$/.test(value)) {
+      if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 10)) {
+        setFilters(prev => ({ ...prev, capacity: value }));
+      }
+    }
+  };
+
+  // Handle price range change
+  const handlePriceRangeChange = (value) => {
+    setFilters(prev => ({ 
+      ...prev, 
+      priceRange: [value[0], value[1]]
+    }));
+  };
+
   // Memoized filtered and sorted rooms
   const filteredRooms = useMemo(() => {
     return rooms.filter(room => {
-      const priceMatch = room.price <= filters.priceRange[1];
+      // Price range filter - check if room price is within the selected range
+      const priceMatch = room.price >= filters.priceRange[0] && room.price <= filters.priceRange[1];
+      
+      // Other filters
       const typeMatch = !filters.type || room.type === filters.type;
       const capacityMatch = !filters.capacity || room.capacity >= parseInt(filters.capacity);
-      const amenitiesMatch = filters.amenities.every(amenity => 
-        room.amenities.includes(amenity)
-      );
-      const searchMatch = 
+      const amenitiesMatch = filters.amenities.length === 0 || 
+        filters.amenities.every(amenity => room.amenities.includes(amenity));
+      
+      // Search query
+      const searchMatch = !searchQuery || 
         room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         room.amenities.some(amenity => 
@@ -71,21 +93,19 @@ export default function RoomsPage() {
     });
   }, [rooms, searchQuery, filters]);
 
-  // Dynamic price calculation
+  // Rest of the helper functions
   const calculateDynamicPrice = (basePrice, nights) => {
     if (nights >= 5) return Math.round(basePrice * nights * 0.9);
     if (nights > 1) return Math.round(basePrice * nights * 0.95);
     return basePrice * nights;
   };
 
-  // Calculate nights
   const calculateNights = (startDate, endDate) => {
     if (!startDate || !endDate) return 1;
     const diffTime = Math.abs(endDate - startDate);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
 
-  // Format date range text
   const getDateRangeText = () => {
     if (filters.startDate && filters.endDate) {
       return `${format(filters.startDate, 'PP')} - ${format(filters.endDate, 'PP')}`;
@@ -93,11 +113,9 @@ export default function RoomsPage() {
     return "Select Dates";
   };
 
-  // Handle Room Click Navigation
   const handleRoomClick = (roomId) => {
     const queryParams = new URLSearchParams();
 
-    // Only add parameters that have been set
     if (filters.startDate) {
       queryParams.append('startDate', filters.startDate.toISOString());
     }
@@ -108,7 +126,6 @@ export default function RoomsPage() {
       queryParams.append('guests', filters.capacity);
     }
 
-    // Construct the URL with query parameters
     const queryString = queryParams.toString();
     const url = queryString
       ? `/rooms/${roomId}?${queryString}`
@@ -175,22 +192,17 @@ export default function RoomsPage() {
               </SelectContent>
             </Select>
 
-            {/* Guests */}
-            <Select 
-              value={filters.capacity}
-              onValueChange={(value) => 
-                setFilters(prev => ({ ...prev, capacity: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Guests" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Guest</SelectItem>
-                <SelectItem value="2">2 Guests</SelectItem>
-                <SelectItem value="4">4 Guests</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Guests Input */}
+            {/* <div className="relative">
+              <Input
+                type="text"
+                placeholder="Number of guests"
+                value={filters.capacity}
+                onChange={handleGuestChange}
+                className="pr-10"
+              />
+              <Users className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            </div> */}
 
             {/* Search */}
             <div className="relative">
@@ -206,14 +218,20 @@ export default function RoomsPage() {
 
           {/* Price Range Slider */}
           <div className="mt-6 space-y-2">
-            <Label>Price Range: ₹{filters.priceRange[1]}</Label>
+            <div className="flex justify-between">
+              <Label>Price Range:</Label>
+              <div className="text-sm text-muted-foreground">
+                ₹{filters.priceRange[0]} - ₹{filters.priceRange[1]}
+              </div>
+            </div>
             <Slider
+              defaultValue={[0, 1500]}
               value={filters.priceRange}
-              onValueChange={(value) => 
-                setFilters(prev => ({ ...prev, priceRange: value }))
-              }
-              max={15000}
-              step={500}
+              onValueChange={handlePriceRangeChange}
+              min={0}
+              max={1500}
+              step={50}
+              className="mt-2"
             />
           </div>
         </CardContent>
@@ -225,9 +243,8 @@ export default function RoomsPage() {
           <Card 
             key={room.id} 
             className="hover:shadow-lg transition-shadow cursor-pointer"
-            // onClick={() => handleRoomClick(room.id)}
           >
-            <ImageSlider images={room.image} />
+            <ImageSlider images={room.images} />
             <CardContent className="p-4 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold">{room.name}</h3>
@@ -266,9 +283,7 @@ export default function RoomsPage() {
                       : 1
                   )}
                 </div>
-                <Link to={`/rooms/${room.id}`}>
-                <Button className="bg-orange-600">Book Now</Button>
-                </Link>
+                <Button onClick={() => handleRoomClick(room.id)} className="bg-orange-600">Book Now</Button>
               </div>
             </CardContent>
           </Card>

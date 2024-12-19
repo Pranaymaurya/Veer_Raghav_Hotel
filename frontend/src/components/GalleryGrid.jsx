@@ -16,7 +16,7 @@ export const GalleryGrid = ({ cards }) => {
   };
 
   return (
-    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+    <div style={{ zIndex: -1}} className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 relative">
       {cards.map((card) => (
         <motion.div
           key={card.id}

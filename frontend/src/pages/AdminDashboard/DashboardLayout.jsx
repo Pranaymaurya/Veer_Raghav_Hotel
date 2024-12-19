@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { Menu, X } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
+import { SettingsProvider } from './SettingsContext';
 
 const DashboardLayout = () => {
     const { user } = useAuth();
@@ -37,51 +38,53 @@ const DashboardLayout = () => {
     }, []);
 
     return (
-        <div className="flex h-screen overflow-hidden">
-            {/* Sidebar for Mobile and Desktop */}
-            <aside
-                className={`
+        <SettingsProvider>
+            <div className="flex h-screen overflow-hidden">
+                {/* Sidebar for Mobile and Desktop */}
+                <aside
+                    className={`
                     fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-lg 
                     transform transition-transform duration-300 ease-in-out 
                     lg:relative lg:translate-x-0 
                     ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
                 `}
-            >
-                {/* Mobile Close Button */}
-                <button
-                    className="lg:hidden absolute top-4 right-4 z-60"
-                    onClick={toggleSidebar}
                 >
-                    <X className="h-6 w-6 text-gray-600" />
-                </button>
+                    {/* Mobile Close Button */}
+                    <button
+                        className="lg:hidden absolute top-4 right-4 z-60"
+                        onClick={toggleSidebar}
+                    >
+                        <X className="h-6 w-6 text-gray-600" />
+                    </button>
 
-                <div className="h-full flex flex-col ">
-                    <Sidebar />
-                </div>
-            </aside>
-
-            {/* Main Content Area */}
-            <div className="flex w-full flex-col overflow-hidden">
-                <div className='px-4 sm:px-6 lg:px-8'>
-                    <Header title="Admin Dashboard" onClick={setIsSidebarOpen} />
-                </div>
-
-                {/* Page Content */}
-                <main className="flex-grow overflow-y-auto border-t">
-                    <div className="p-4 sm:p-6 lg:p-8">
-                        <Outlet />
+                    <div className="h-full flex flex-col ">
+                        <Sidebar />
                     </div>
-                </main>
-            </div>
+                </aside>
 
-            {/* Overlay for Mobile Sidebar */}
-            {isSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-                    onClick={toggleSidebar}
-                ></div>
-            )}
-        </div>
+                {/* Main Content Area */}
+                <div className="flex w-full flex-col overflow-hidden">
+                    <div className='px-4 sm:px-6 lg:px-8'>
+                        <Header title="Admin Dashboard" onClick={setIsSidebarOpen} />
+                    </div>
+
+                    {/* Page Content */}
+                    <main className="flex-grow overflow-y-auto border-t">
+                        <div className="p-4 sm:p-6 lg:p-8">
+                            <Outlet />
+                        </div>
+                    </main>
+                </div>
+
+                {/* Overlay for Mobile Sidebar */}
+                {isSidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                        onClick={toggleSidebar}
+                    ></div>
+                )}
+            </div>
+        </SettingsProvider>
     )
 }
 

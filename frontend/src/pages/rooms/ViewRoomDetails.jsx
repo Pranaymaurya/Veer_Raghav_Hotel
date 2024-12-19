@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { format, differenceInDays } from 'date-fns';
-import { 
-  Bed, 
-  Users, 
-  Star, 
-  ChevronLeft, 
-  Plus, 
-  Minus, 
-  Info, 
-  AlertCircle 
+import {
+  Bed,
+  Users,
+  Star,
+  ChevronLeft,
+  Plus,
+  Minus,
+  Info,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,21 +17,22 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { rooms } from '@/data/room';
+import ImageSlider from './components/ImageSlider';
 
 export default function ViewRoomDetails() {
   // Extract roomId from URL parameters
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
 
   // Use search params to get initial date and guests
   const [searchParams] = useSearchParams();
-  
+
   // Find the room based on the ID from URL
   const room = rooms.find(r => r.id === id);
-  
+
   console.log(id);
-  
+
 
   // Initialize state with search params or defaults
   const [guests, setGuests] = useState(() => {
@@ -82,7 +83,7 @@ export default function ViewRoomDetails() {
   useEffect(() => {
     if (room && date.from && date.to) {
       const days = differenceInDays(date.to, date.from);
-      
+
       if (days <= 0) {
         setDateError('Check-out date must be after check-in date');
       } else {
@@ -107,14 +108,33 @@ export default function ViewRoomDetails() {
     return "Okay";
   };
 
+  const handleBookNow = () => {
+    if (!date.from || !date.to || !room) return;
+    const nights = differenceInDays(date.to, date.from);
+    const price = calculatePrice();
+    const booking = {
+      roomId: room.id,
+      roomName: room.name,
+      roomType: room.type,
+      roomCapacity: room.capacity,
+      roomPrice: room.price,
+      startDate: date.from,
+      endDate: date.to,
+      guests: guests,
+      nights,
+      price,
+    };
+    navigate(`/booking/${room.id}`, { state: { booking } });
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">{room.name}</h1>
-          <Button 
-            variant="link" 
+          <Button
+            variant="link"
             onClick={() => navigate('/rooms')}
             className="pl-0 text-gray-600 hover:text-primary"
           >
@@ -134,21 +154,7 @@ export default function ViewRoomDetails() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Image Carousel */}
         <div className="relative">
-          <img 
-            src={room.images[0]} 
-            alt={room.name} 
-            className="w-full rounded-lg shadow-md object-cover h-96"
-          />
-          <div className="flex mt-4 space-x-2">
-            {room.images.slice(1).map((img, index) => (
-              <img 
-                key={index} 
-                src={img} 
-                alt={`Room view ${index + 2}`} 
-                className="w-20 h-20 object-cover rounded-md opacity-60 hover:opacity-100 transition-opacity"
-              />
-            ))}
-          </div>
+          <ImageSlider images={room.images} />
         </div>
 
         {/* Booking Card */}
@@ -227,17 +233,17 @@ export default function ViewRoomDetails() {
                   Guests
                 </label>
                 <div className="flex items-center">
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => setGuests(Math.max(1, guests - 1))}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
                   <span className="mx-4">{guests}</span>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => setGuests(guests + 1)}
                   >
                     <Plus className="h-4 w-4" />
@@ -275,13 +281,14 @@ export default function ViewRoomDetails() {
                 <span className="text-xl font-bold text-primary mr-2">
                   ₹{calculatePrice()}
                 </span>
-                <Info 
-                  className="text-gray-500 h-4 w-4" 
+                <Info
+                  className="text-gray-500 h-4 w-4"
                   title="Total price for selected stay duration"
                 />
               </div>
-              <Button 
+              <Button
                 disabled={!!dateError}
+                onClick={handleBookNow}
                 className="w-full max-w-xs"
               >
                 Book Now

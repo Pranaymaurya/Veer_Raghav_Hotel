@@ -9,6 +9,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // contexts
 import { AuthProvider } from './context/AuthContext';
+import { BookingProvider } from './context/BookingContext';
+import { RoomProvider } from './context/RoomContext';
 
 // pages
 import Home from './pages/home/home';
@@ -19,6 +21,11 @@ import ContactPage from './pages/contact/ContactPage';
 
 // Login and Register Layout
 import AuthLayout from './pages/auth/AuthLayout';
+import BookingPage from './pages/bookingpage/BookingPage';
+import BookingSuccessPage from './pages/bookingpage/BookingSuccessPage';
+import PaymentPage from './pages/bookingpage/PaymentPage';
+
+// dashboard
 import DashboardLayout from './pages/AdminDashboard/DashboardLayout';
 import DashboardContent from './pages/AdminDashboard/pages/DashboardContent';
 import BookingsContent from './pages/AdminDashboard/pages/BookingsContent';
@@ -26,8 +33,6 @@ import GuestsContent from './pages/AdminDashboard/pages/GuestsContent';
 import PaymentsContent from './pages/AdminDashboard/pages/PaymentsContent';
 import ReportsContent from './pages/AdminDashboard/pages/ReportsContent';
 import SettingsContent from './pages/AdminDashboard/pages/SettingsContent';
-
-// dashboard
 
 
 const router = createBrowserRouter([
@@ -58,7 +63,17 @@ const router = createBrowserRouter([
         element: (
           <ViewRoomDetails />
         )
-      }, 
+      },
+      {
+        path: "/booking/:id",
+        element: (
+          <BookingPage />
+        )
+      },
+      {
+        path: 'booking/success',
+        element: <BookingSuccessPage />
+      },
       {
         path: "/contact",
         element: (
@@ -67,7 +82,10 @@ const router = createBrowserRouter([
       }
     ]
   },
-
+  {
+    path: 'payment',
+    element: <PaymentPage />
+  },
   {
     path: "/auth",
     element: (
@@ -145,7 +163,11 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <BookingProvider>
+        <RoomProvider>
+          <RouterProvider router={router} />
+        </RoomProvider>
+      </BookingProvider>
     </AuthProvider>
   </StrictMode>,
 )

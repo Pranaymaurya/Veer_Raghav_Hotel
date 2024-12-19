@@ -1,7 +1,5 @@
-'use client'; 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import templeImg from './temple.jpg';
 
 const templeImageVariants = {
   hidden: { opacity: 0, y: 100 },  // Start below the screen
@@ -48,9 +46,9 @@ const AnimationPage = () => {
           <div className='absolute inset-0 bg-black/50 opacity-50'/>
           {/* Full-screen temple image */}
           <img
-            src="/temple.jpg"
+            src="https://i.ibb.co/0JY4zRs/temple.jpg"
             alt="Temple"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="w-full h-full object-cover"
           />
 
           <motion.div

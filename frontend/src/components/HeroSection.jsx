@@ -150,12 +150,12 @@ function HeroSection() {
       </div>
 
       {/* WhatsApp Button */}
-      <div className="whatsapp_btn z-[11] fixed top-[85%] left-[92%] h-full w-full ">
+      <div className="fixed bottom-4 right-4 " style={{ zIndex: 9999 }}>
         <button>
           <img
             src="/image/whatsapp.png"
             alt="WhatsApp Icon"
-            className="pulse-animation"
+            className="pulse-animation w-16 h-16"
           />
         </button>
       </div>

@@ -21,7 +21,7 @@ export const InfiniteMovingCards = ({
   const duration = speed === 'fast' ? 20 : speed === 'normal' ? 40 : 60;
 
   return (
-    <div className="relative overflow-hidden" ref={containerRef}>
+    <div className="relative max-w-7xl z-20 overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]" ref={containerRef}>
       <motion.div
         className="flex"
         animate={{
