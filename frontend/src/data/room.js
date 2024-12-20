@@ -14,7 +14,8 @@ export const rooms = [
     rating: 4.8,
     type: 'Suite',
     capacity: 2,
-    amenities: ['City View', 'King Bed', 'Mini Bar', 'Jacuzzi']
+    amenities: ['City View', 'King Bed', 'Mini Bar', 'Jacuzzi'],
+    isAvailable: true
   },
   {
     id: "2",
@@ -31,7 +32,8 @@ export const rooms = [
     rating: 4.5,
     type: 'Room',
     capacity: 2,
-    amenities: ['Work Desk', 'Queen Bed', 'Free WiFi', 'City View']
+    amenities: ['Work Desk', 'Queen Bed', 'Free WiFi', 'City View'],
+    isAvailable: true
   },
   {
     id: "3",
@@ -48,7 +50,8 @@ export const rooms = [
     rating: 4.9,
     type: 'Suite',
     capacity: 4,
-    amenities: ['Two Bedrooms', 'Living Area', 'Kitchen', 'Family Friendly', 'Balcony']
+    amenities: ['Two Bedrooms', 'Living Area', 'Kitchen', 'Family Friendly', 'Balcony'],
+    isAvailable: false
   },
   {
     id: "4",
@@ -65,7 +68,8 @@ export const rooms = [
     rating: 4.3,
     type: 'Room',
     capacity: 1,
-    amenities: ['Single Bed', 'Compact', 'Budget Friendly', 'Free WiFi']
+    amenities: ['Single Bed', 'Compact', 'Budget Friendly', 'Free WiFi'],
+    isAvailable: true
   },
   {
     id: "5",
@@ -82,6 +86,7 @@ export const rooms = [
     rating: 4.9,
     type: 'Suite',
     capacity: 3,
-    amenities: ['Panoramic View', 'Private Terrace', 'Personal Chef', 'Spa Bath', 'Butler Service']
+    amenities: ['Panoramic View', 'Private Terrace', 'Personal Chef', 'Spa Bath', 'Butler Service'],
+    isAvailable: false
   }
 ];

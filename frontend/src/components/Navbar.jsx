@@ -63,7 +63,7 @@ const Navbar = () => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel className="capitalize">{user.role ==! 'admin' ? `Admin Controls` : `${user.name}'s Account`}</DropdownMenuLabel>
+          <DropdownMenuLabel className="capitalize">{user.role == ! 'admin' ? `Admin Controls` : `${user.name}'s Account`}</DropdownMenuLabel>
           {user.role == 'admin' ?
             <>
               <DropdownMenuItem asChild className="cursor-pointer">
@@ -205,60 +205,66 @@ const Navbar = () => {
               ))}
 
               {/* Admin-specific mobile menu items */}
-              {user?.role === 'admin' ? (
+              {user &&
                 <>
-                  <DropdownMenuSeparator className="my-2" />
-                  <div className="text-sm font-semibold text-gray-500 px-4 mb-2">Admin Controls</div>
-                  {[
-                    { name: "Dashboard", path: "/dashboard", icon: BarChart },
-                    { name: "Manage Users", path: "/dashboard/users", icon: Users },
-                    { name: "Admin Settings", path: "/dashboard/settings", icon: ShieldCheck }
-                  ].map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.path}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center space-x-2 text-lg border-b border-gray-200 py-2 hover:bg-[#FF9933]/10 hover:text-[#FF9933] transition-colors duration-200"
-                    >
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start hover:bg-[#FF9933]/10 hover:text-[#FF9933] gap-4"
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span className='text-base'>{item.name}</span>
-                      </Button>
-                    </Link>
-                  ))}
+                  {user?.role === 'admin' ? (
+                    <>
+                      <DropdownMenuSeparator className="my-2" />
+                      <div className="text-sm font-semibold text-gray-500 px-4 mb-2">Admin Controls</div>
+                      {[
+                        { name: "Dashboard", path: "/dashboard", icon: BarChart },
+                        { name: "Manage Users", path: "/dashboard/users", icon: Users },
+                        { name: "Admin Settings", path: "/dashboard/settings", icon: ShieldCheck }
+                      ].map((item) => (
+                        <Link
+                          key={item.name}
+                          to={item.path}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center space-x-2 text-lg border-b border-gray-200 py-2 hover:bg-[#FF9933]/10 hover:text-[#FF9933] transition-colors duration-200"
+                        >
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start hover:bg-[#FF9933]/10 hover:text-[#FF9933] gap-4"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span className='text-base'>{item.name}</span>
+                          </Button>
+                        </Link>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuSeparator className="my-2" />
+                      <div className="text-sm font-semibold text-gray-500 px-4 mb-2">My Controls</div>
+                      {[
+                        { name: "My Bookings", path: "/bookings", icon: BookOpen },
+                        { name: "Settings", path: "/settings", icon: Settings },
+                      ].map((item) => (
+                        <Link
+                          key={item.name}
+                          to={item.path}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center space-x-2 text-lg border-b border-gray-200 py-2 hover:bg-[#FF9933]/10 hover:text-[#FF9933] transition-colors duration-200"
+                        >
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start hover:bg-[#FF9933]/10 hover:text-[#FF9933] gap-4"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span className='text-base'>{item.name}</span>
+                          </Button>
+                        </Link>
+                      ))}
+                    </>
+                  )}
                 </>
-              ) : (
-                <>
-                  <DropdownMenuSeparator className="my-2" />
-                  <div className="text-sm font-semibold text-gray-500 px-4 mb-2">My Controls</div>
-                  {[
-                    { name: "My Bookings", path: "/bookings", icon: BookOpen },
-                    { name: "Settings", path: "/settings", icon: Settings },
-                  ].map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.path}
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center space-x-2 text-lg border-b border-gray-200 py-2 hover:bg-[#FF9933]/10 hover:text-[#FF9933] transition-colors duration-200"
-                    >
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start hover:bg-[#FF9933]/10 hover:text-[#FF9933] gap-4"
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span className='text-base'>{item.name}</span>
-                      </Button>
-                    </Link>
-                  ))}
-                </>
-              )}
+              }
+
+
             </div>
 
             {!user ? (
-              <div className="mt-6 gap-3">
+              <div className="mt-6 flex flex-col gap-2">
                 <Link to="/auth/login" onClick={() => setMenuOpen(false)}>
                   <Button className="w-full bg-[#FF9933] hover:bg-[#a3611f] text-white">Login</Button>
                 </Link>

@@ -1,16 +1,12 @@
-"use client";
-
 import React from "react";
-import "@/components/HeroSection.css"
 import { GalleryGrid } from "@/components/GalleryGrid";
-// import AnimatedCursor from "react-animated-cursor";
+
 // Define the skeleton components first
 const SkeletonOne = () => (
   <div>
     <p className="font-bold md:text-4xl text-xl text-white">
       House in the woods
     </p>
-    <p className="font-normal text-base text-white"></p>
     <p className="font-normal text-base my-4 max-w-lg text-neutral-200">
       A serene and tranquil retreat, this house in the woods offers a peaceful
       escape from the hustle and bustle of city life.
@@ -23,7 +19,6 @@ const SkeletonTwo = () => (
     <p className="font-bold md:text-4xl text-xl text-white">
       House above the clouds
     </p>
-    <p className="font-normal text-base text-white"></p>
     <p className="font-normal text-base my-4 max-w-lg text-neutral-200">
       Perched high above the world, this house offers breathtaking views and a
       unique living experience. It&apos;s a place where the sky meets home, and
@@ -35,7 +30,6 @@ const SkeletonTwo = () => (
 const SkeletonThree = () => (
   <div>
     <p className="font-bold md:text-4xl text-xl text-white">Greens all over</p>
-    <p className="font-normal text-base text-white"></p>
     <p className="font-normal text-base my-4 max-w-lg text-neutral-200">
       A house surrounded by greenery and nature&apos;s beauty. It&apos;s the
       perfect place to relax, unwind, and enjoy life.
@@ -48,7 +42,6 @@ const SkeletonFour = () => (
     <p className="font-bold md:text-4xl text-xl text-white">
       Rivers are serene
     </p>
-    <p className="font-normal text-base text-white"></p>
     <p className="font-normal text-base my-4 max-w-lg text-neutral-200">
       A house by the river is a place of peace and tranquility. It&apos;s the
       perfect place to relax, unwind, and enjoy life.
@@ -120,12 +113,6 @@ function Gallery() {
       thumbnail: "/image/room7.jpeg",
     },
     {
-      id: 10,
-      content: <SkeletonThree />,
-      className: "col-span-1 animateCard",
-      thumbnail: "/image/hotel8.jpeg",
-    },
-    {
       id: 11,
       content: <SkeletonFour />,
       className: "md:col-span-2 animateCard",
@@ -136,12 +123,6 @@ function Gallery() {
       content: <SkeletonOne />,
       className: "md:col-span-2 animateCard",
       thumbnail: "/image/room11.jpeg",
-    },
-    {
-      id: 12,
-      content: <SkeletonTwo />,
-      className: "col-span-1 animateCard",
-      thumbnail: "/image/room15.jpeg",
     },
     {
       id: 13,
@@ -158,38 +139,16 @@ function Gallery() {
   ];
 
   return (
-    
-    <div className="bg-white w-screen">
-      {/* <AnimatedCursor
-        innerSize={8}
-        outerSize={25}
-        // RGB values for white color
-        color="255, 165, 0"
-        outerAlpha={0.2}
-        innerScale={0.7}
-        outerScale={2}
-        clickables={[
-          'a',
-          'input[type="text"]',
-          'input[type="email"]',
-          'input[type="number"]',
-          'input[type="submit"]',
-          'input[type="image"]',
-          'label[for]',
-          'select',
-          'textarea',
-          'button',
-          '.link',
-        ]}
-      /> */}
-    <div className="flex pt-10 flex-col items-center justify-center max-w-5xl mx-auto px-4">
-      <h1 className="pb-5 font-serif font-bold text-4xl flex items-center justify-center">
-        Our Hotel Gallery
-      </h1>
-      <GalleryGrid cards={cards} />
-    </div>
+    <div className=" min-h-screen w-full py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-4xl font-serif font-bold text-center mb-12">
+          Our Hotel Gallery
+        </h1>z
+        <GalleryGrid cards={cards} />
+      </div>
     </div>
   );
 }
 
 export default Gallery;
+

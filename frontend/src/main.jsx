@@ -33,6 +33,8 @@ import GuestsContent from './pages/AdminDashboard/pages/GuestsContent';
 import PaymentsContent from './pages/AdminDashboard/pages/PaymentsContent';
 import ReportsContent from './pages/AdminDashboard/pages/ReportsContent';
 import SettingsContent from './pages/AdminDashboard/pages/SettingsContent';
+import CustomizeRooms from './pages/AdminDashboard/pages/CustomizeRooms';
+import RoomsForm from './pages/AdminDashboard/pages/RoomsForm';
 
 
 const router = createBrowserRouter([
@@ -129,6 +131,24 @@ const router = createBrowserRouter([
         path: "guests",
         element: (
           <GuestsContent />
+        )
+      },
+      {
+        path: "rooms",
+        element: (
+          <CustomizeRooms />
+        )
+      },
+      {
+        path: "rooms/new",
+        element: (
+          <RoomsForm />
+        )
+      },
+      {
+        path: "rooms/:id",
+        element: (
+          <RoomsForm />
         )
       },
       {

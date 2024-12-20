@@ -19,7 +19,7 @@ const LogoutConfirmationModal = ({ onConfirm, children }) => {
       <AlertDialogTrigger asChild>
         {children}
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="max-w-sm md:max-w-fit rounded-xl">
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
           <AlertDialogDescription>
