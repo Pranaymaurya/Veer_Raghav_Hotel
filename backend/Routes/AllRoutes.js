@@ -16,10 +16,10 @@ import {
   GetRooms,
   UpdateRoom,
 } from '../Controllers/roomController.js';
-import { uploadMultiple } from '../Middleware/Multer.js';
+import { uploadMultiple, uploadsingle } from '../Middleware/Multer.js';
 import {authMiddleware,authorizeRoles} from '../Middleware/AuthMiddleware.js';
 import { deleteUser, GetAllUsers, updateUser } from '../Controllers/userController.js';
-import { AddHotel, updateHotel } from '../Controllers/HotelController.js';
+import { AddHotel, GetHotel, updateHotel, UploadHotelLogo } from '../Controllers/HotelController.js';
 const router = express.Router();
 
 // Authentication routes
@@ -38,7 +38,7 @@ router.get('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), get
 // Room routes
 // Room routes
 router.post('/room', authMiddleware, authorizeRoles('admin'), uploadMultiple, AddRoom); // Create a new room
-router.post('/room/images/:id', authMiddleware, uploadMultiple, authorizeRoles('admin'), AddImagesById);
+router.post('/room/images/:id', authMiddleware,  authorizeRoles('admin') ,uploadMultiple, AddImagesById);
 router.delete('/room/:id', authMiddleware, authorizeRoles('admin'), DeleteRoom); // Delete a room by ID
 router.get('/room', GetRooms); // Get all rooms (publicly accessible)
 router.get('/room/:id', authMiddleware, authorizeRoles('admin'), GetRoomById); // Get a single room by ID
@@ -46,4 +46,6 @@ router.put('/room/:id', authMiddleware, authorizeRoles('admin'), UpdateRoom); //
 
 router.post('/hotel', authMiddleware, authorizeRoles('admin'), AddHotel);
 router.put('/hotel/:id', authMiddleware, authorizeRoles('admin'), updateHotel);
+router.put('/hotel/image/:id', authMiddleware, authorizeRoles('admin'),uploadsingle, UploadHotelLogo);
+router.get('/hotel',GetHotel)
 export default router;

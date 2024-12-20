@@ -21,6 +21,9 @@ const hotelSchema = new mongoose.Schema({
     type: String, // Time format like "HH:mm"
     required: true,
   },
+  logo:{
+    type:String,
+  }
 });
 
 const Hotel = mongoose.model("Hotel", hotelSchema);

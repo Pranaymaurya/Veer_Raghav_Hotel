@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import validator from "validator";
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -9,7 +10,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    validate: [validator.isEmail, 'Invalid email format'], // Added custom error message
+    validate: [validator.isEmail, 'Invalid email format'],
   },
   password: {
     type: String,
@@ -34,14 +35,17 @@ const userSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator: function (v) {
-        // Regular expression to match a valid phone number format
-        return /^[0-9]{10}$/.test(v);
+        return /^[0-9]{10}$/.test(v);  // Simple phone number validation
       },
       message: props => `${props.value} is not a valid phone number!`
     },
   },
-
+  address: {
+    type: String,
+    required: false,  // Optional, as some users might not provide an address
+    trim: true,  // Automatically trims spaces before/after the string
+  }
 });
 
-const User = mongoose.model('User', userSchema)
+const User = mongoose.model('User', userSchema);
 export default User;

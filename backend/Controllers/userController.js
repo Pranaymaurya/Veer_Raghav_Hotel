@@ -3,7 +3,7 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../Models/userModel.js';
 export const updateUser = async (req, res) => {
-    const { name, email, password, phoneno, gender, age, role } = req.body;
+    const { name, email,phoneno, gender, age,address} = req.body;
     const userId = req.params.id;  // The ID of the user to update, passed via URL parameter
   
     try {
@@ -15,7 +15,8 @@ export const updateUser = async (req, res) => {
           message: "User not found."
         });
       }
-      console.log(req.user.userId)
+      // console.log(userId)
+      // console.log(req.user.userId)
       // Ensure the logged-in user is the one requesting the update (if required)
       if (userId !== req.user.userId) {  // Assuming req.userId comes from JWT authentication
         return res.status(403).json({
@@ -30,14 +31,9 @@ export const updateUser = async (req, res) => {
       if (phoneno) user.phoneno = phoneno;
       if (gender) user.gender = gender;
       if (age) user.age = age;
-      if (role) user.role = role;
+      if (address) user.address = address;
   
       // If password is provided, hash it
-      if (password) {
-        const salt = await bcryptjs.genSalt(10);
-        user.password = await bcryptjs.hash(password, salt);
-      }
-  
       // Save the updated user
       await user.save();
   
@@ -50,7 +46,7 @@ export const updateUser = async (req, res) => {
           phoneno: user.phoneno,
           gender: user.gender,
           age: user.age,
-          role: user.role
+          address: user.address
         }
       });
     } catch (error) {
