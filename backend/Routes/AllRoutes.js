@@ -19,6 +19,7 @@ import {
 import { uploadMultiple } from '../Middleware/Multer.js';
 import {authMiddleware,authorizeRoles} from '../Middleware/AuthMiddleware.js';
 import { deleteUser, GetAllUsers, updateUser } from '../Controllers/userController.js';
+import { AddHotel, updateHotel } from '../Controllers/HotelController.js';
 const router = express.Router();
 
 // Authentication routes
@@ -43,5 +44,6 @@ router.get('/room', GetRooms); // Get all rooms (publicly accessible)
 router.get('/room/:id', authMiddleware, authorizeRoles('admin'), GetRoomById); // Get a single room by ID
 router.put('/room/:id', authMiddleware, authorizeRoles('admin'), UpdateRoom); // Update a room by ID
 
-
+router.post('/hotel', authMiddleware, authorizeRoles('admin'), AddHotel);
+router.put('/hotel/:id', authMiddleware, authorizeRoles('admin'), updateHotel);
 export default router;
