@@ -18,7 +18,7 @@ import {
 } from '../Controllers/roomController.js';
 import { uploadMultiple } from '../Middleware/Multer.js';
 import {authMiddleware,authorizeRoles} from '../Middleware/AuthMiddleware.js';
-import { deleteUser, updateUser } from '../Controllers/userController.js';
+import { deleteUser, GetAllUsers, updateUser } from '../Controllers/userController.js';
 const router = express.Router();
 
 // Authentication routes
@@ -26,6 +26,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.put('/user/:id',authMiddleware,authorizeRoles('user','admin'), updateUser);
 router.delete('/user/delete/:id',authMiddleware,authorizeRoles('user','admin'), deleteUser);
+router.get('/user',authMiddleware,authorizeRoles('admin'),GetAllUsers)
 // Booking routes
 router.post('/booking',authMiddleware,authorizeRoles('user','admin'), CreateBooking); // Create a booking
 router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking); // Cancel a booking by ID
