@@ -7,6 +7,7 @@ export const CreateBooking = async (req, res) => {
 
   try {
     const room = await Room.findById(roomId);
+    console.log(roomId);
     if (!room) return res.status(404).json({ message: "Room not found" });
     if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
 
@@ -149,5 +150,35 @@ export const getavgrating = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server error occurred while retrieving average rating.' });
+  }
+};
+export const GetUserBookings = async (req, res) => {
+  const userId = req.user.userId;
+  console.log(userId)
+    // Assuming user ID is available via JWT token in req.user
+  try {
+    // Find all bookings for the current user
+    const bookings = await Booking.find({ user: userId })
+      .populate("user")
+      .populate("room");
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No bookings found for this user."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Bookings retrieved successfully.",
+      bookings
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error occurred while fetching user bookings."
+    });
   }
 };
