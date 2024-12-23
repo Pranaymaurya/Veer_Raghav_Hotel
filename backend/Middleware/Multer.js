@@ -30,4 +30,8 @@ const upload = multer({
   fileFilter,
 });
 
-export const uploadMultiple = upload.array('images', 5); // Limit to 5 images
+// For uploading multiple images (up to 5)
+export const uploadMultiple = upload.array('images', 5);
+
+// For uploading a single logo
+export const uploadsingle = upload.single('logo'); // Use 'logo' for the single file upload
