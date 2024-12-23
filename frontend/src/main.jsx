@@ -35,6 +35,7 @@ import ReportsContent from './pages/AdminDashboard/pages/ReportsContent';
 import SettingsContent from './pages/AdminDashboard/pages/SettingsContent';
 import CustomizeRooms from './pages/AdminDashboard/pages/CustomizeRooms';
 import RoomsForm from './pages/AdminDashboard/pages/RoomsForm';
+import UserProdfileLayout from './pages/UserProfile/UserProdfileLayout';
 
 
 const router = createBrowserRouter([
@@ -81,7 +82,15 @@ const router = createBrowserRouter([
         element: (
           <ContactPage />
         )
-      }
+      },
+
+      // User profile section
+      {
+        path: "/profile",
+        element: (
+            <UserProdfileLayout />
+        ),
+      },    
     ]
   },
   {
@@ -171,7 +180,6 @@ const router = createBrowserRouter([
       },
     ]
   },
-
   {
     path: "*",
     element: (

@@ -9,15 +9,18 @@ import { useAuth } from '@/hooks/useAuth';
 export default function AuthLayout() {
   const location = useLocation(); // Using useLocation to get the current path
   const [isLogin, setIsLogin] = useState(true);
-  // const { user } = useAuth();
+
+  const { user } = useAuth();
   
-  // if (user) {
-  //   window.location.href = '/'; // Redirect if user is already logged in
-  // }
+  if (user) {
+    window.location.href = '/'; // Redirect if user is already logged in
+  }
 
   useEffect(() => {
     setIsLogin(location.pathname === '/auth/login'); // Set isLogin based on path
   }, [location]);
+
+
 
   const pageVariants = {
     initial: { opacity: 0, y: 50 },
