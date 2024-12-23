@@ -84,7 +84,7 @@ const Navbar = () => {
             </>
             : <>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/bookings" className="flex items-center">
+                <Link to="/profile#mybookings" className="flex items-center">
                   <BookOpen className="mr-2 h-4 w-4" /> My Bookings
                 </Link>
               </DropdownMenuItem>
