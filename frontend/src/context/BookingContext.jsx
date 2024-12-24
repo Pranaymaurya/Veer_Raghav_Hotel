@@ -1,41 +1,17 @@
-import React, { createContext, useCallback, useContext } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import api from '@/utils/api';
-import { useAuth } from '@/hooks/useAuth';
 
 const BookingContext = createContext();
 
 export const BookingProvider = ({ children }) => {
-  const { getToken, logout, user } = useAuth();
-
-  if (!getToken) {
-    logout();
-    throw new Error('getToken is not defined');
-  }
-
-
-
-  const getAuthConfig = useCallback(async () => {
-    const token = await getToken();
-    return {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    };
-  }, [getToken]);
-
-
   const createBooking = useCallback(async (bookingData) => {
     try {
-      const config = await getAuthConfig();
-      const response = await api.post('/booking', bookingData, config);
-      
-      // Transform the API response to match the expected structure
+      const response = await api.post('/booking', bookingData);
+
       return {
         success: true,
         booking: {
           ...response.data,
-          // Ensure these fields exist in the response
           id: response.data.id || response.data._id,
           userId: bookingData.userId,
           roomId: bookingData.roomId,
@@ -46,20 +22,18 @@ export const BookingProvider = ({ children }) => {
       };
     } catch (error) {
       console.error('Booking error:', error);
-      
-      // Transform error response to match expected structure
+
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'Failed to create booking',
         booking: null
       };
     }
-  }, [getAuthConfig]);
+  }, []);
 
   const cancelBooking = async (bookingId) => {
     try {
-      const config = await getAuthConfig();
-      const response = await api.put(`/booking/${bookingId}/cancel`, {}, config);
+      const response = await api.put(`/booking/${bookingId}/cancel`, {});
       return response.data;
     } catch (error) {
       console.error('Error cancelling booking:', error);
@@ -69,9 +43,9 @@ export const BookingProvider = ({ children }) => {
 
   const getAllBookings = async () => {
     try {
-      const config = await getAuthConfig();
-      const response = await api.get('/bookings', config);
-      return response.data;
+      const response = await api.get('/bookings');
+      return Array.isArray(response.data) ? response.data :
+        Array.isArray(response.data.bookings) ? response.data.bookings : [];
     } catch (error) {
       console.error('Error fetching all bookings:', error);
       throw error;
@@ -80,8 +54,7 @@ export const BookingProvider = ({ children }) => {
 
   const getBookingById = async (bookingId) => {
     try {
-      const config = await getAuthConfig();
-      const response = await api.get(`/booking/${bookingId}`, config);
+      const response = await api.get(`/booking/${bookingId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching booking:', error);

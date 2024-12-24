@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import Cookies from 'js-cookie';
-import api from "@/utils/api";
+import api, { setAuthContext } from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
 
 export const AuthContext = createContext();
@@ -12,13 +12,12 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         checkUserLoggedIn();
+        setAuthContext({ logout });
     }, []);
 
-    const getToken = async () => {
+    const getToken = useCallback(() => {
         try {
             const token = Cookies.get('token');
-            // console.log('bjbj',token);
-
             if (!token) {
                 throw new Error('No token found');
             }
@@ -28,7 +27,7 @@ export const AuthProvider = ({ children }) => {
             logout();
             throw new Error('Authentication failed');
         }
-    };
+    }, []);
 
     const checkUserLoggedIn = () => {
         const userFromCookie = Cookies.get('user');
@@ -54,8 +53,6 @@ export const AuthProvider = ({ children }) => {
                 setUser(response.data.user);
                 Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
                 Cookies.set('token', response.data.token, { expires: 7 });
-
-                console.log(response.data.user);
                 
                 return {
                     success: true,
@@ -110,24 +107,24 @@ export const AuthProvider = ({ children }) => {
     const updateUserData = useCallback((newData) => {
         setUser(currentUser => {
             const updatedUser = { ...currentUser, ...newData };
-            // Update the user cookie with the new data
             Cookies.set('user', JSON.stringify(updatedUser), { expires: 7 });
             return updatedUser;
         });
     }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         setUser(null);
+        Cookies.remove('user');
+        Cookies.remove('token');
+        localStorage.removeItem('token');
         toast({
             title: "Logout successful",
             description: "You have successfully logged out.",
             variant: "success",
             className: "bg-green-200 border-green-400 text-black text-lg",
             duration: 3000
-        })
-        Cookies.remove('user');
-        Cookies.remove('token');
-    };
+        });
+    }, [toast]);
 
     return (
         <AuthContext.Provider value={{
@@ -137,8 +134,7 @@ export const AuthProvider = ({ children }) => {
             register,
             logout,
             getToken,
-            updateUserData,
-            getToken
+            updateUserData
         }}>
             {children}
         </AuthContext.Provider>

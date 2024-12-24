@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DashboardCharts from '../components/DashboardCharts';
+import RecentActivity from '../components/RecentActivity';
 
 const DashboardContent = () => {
   const statsCards = [
@@ -47,6 +49,8 @@ const DashboardContent = () => {
           </Card>
         ))}
       </div>
+      <DashboardCharts />
+      <RecentActivity />
     </div>
   );
 };

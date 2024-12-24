@@ -9,7 +9,7 @@ export const CreateBooking = async (req, res) => {
     const room = await Room.findById(roomId);
     console.log(roomId);
     if (!room) return res.status(404).json({ message: "Room not found" });
-    if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
+    // if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
