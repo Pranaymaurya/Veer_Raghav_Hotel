@@ -1,37 +1,82 @@
-import React, { useState } from 'react';
-// import { useSettings } from '../contexts/SettingsContext';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import { toast } from "@/components/ui/use-toast";
-import { Clock, Mail, Phone, MapPin, DollarSign, Image, Bell } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Clock, Mail, Phone, MapPin, Image, Plus, Trash2, Settings } from 'lucide-react';
 import { useSettings } from '../SettingsContext';
+import { useToast } from '@/hooks/use-toast';
+import { validateHotelData } from '../components/hotelValidation';
+
 
 const SettingsContent = () => {
-  const { settings, updateSettings, uploadLogo } = useSettings();
-  const [logoFile, setLogoFile] = useState(null);
+  const { hotel, isLoading, createHotel, updateHotel, uploadLogo } = useSettings();
   const [formData, setFormData] = useState({
-    hotelName: settings.hotelName || 'Veer Raghav Hotel',
-    contactEmail: settings.contactEmail || 'veer.raghav@pm.me',
-    contactPhone: settings.contactPhone || '',
-    address: settings.address || '',
-    checkInTime: settings.checkInTime || '',
-    checkOutTime: settings.checkOutTime || '',
-    enableBooking: settings.enableBooking || false,
-    currencySymbol: settings.currencySymbol || '$',
+    hotelName: '',
+    // contactEmails: [''],
+    contactPhones: [''],
+    address: '',
+    checkInTime: '',
+    checkOutTime: '',
+    // enableBooking: false,
   });
+  const [logoFile, setLogoFile] = useState(null);
+  const { toast } = useToast();
+
+
+  console.log("Hotel Data:", hotel?.length);
+  
+
+  useEffect(() => {
+    if (hotel?.length > 0) {
+      setFormData({
+        hotelName: hotel.hotelName || '',
+        // contactEmails: hotel.contactEmails || [''],
+        contactPhones: hotel.contactPhones || [''],
+        address: hotel.address || '',
+        checkInTime: hotel.checkInTime || '',
+        checkOutTime: hotel.checkOutTime || '',
+        // enableBooking: hotel.enableBooking || false,
+      });
+    }
+  }, [hotel]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSwitchChange = (checked) => {
-    setFormData(prev => ({ ...prev, enableBooking: checked }));
+  // const handleEmailChange = (index, value) => {
+  //   const newEmails = [...formData.contactEmails];
+  //   newEmails[index] = value;
+  //   setFormData(prev => ({ ...prev, contactEmails: newEmails }));
+  // };
+
+  const handlePhoneChange = (index, value) => {
+    const newPhones = [...formData.contactPhones];
+    newPhones[index] = value;
+    setFormData(prev => ({ ...prev, contactPhones: newPhones }));
+  };
+
+  // const addEmail = () => {
+  //   setFormData(prev => ({ ...prev, contactEmails: [...prev.contactEmails, ''] }));
+  // };
+
+  const addPhone = () => {
+    setFormData(prev => ({ ...prev, contactPhones: [...prev.contactPhones, ''] }));
+  };
+
+  // const removeEmail = (index) => {
+  //   const newEmails = formData.contactEmails.filter((_, i) => i !== index);
+  //   setFormData(prev => ({ ...prev, contactEmails: newEmails }));
+  // };
+
+  const removePhone = (index) => {
+    const newPhones = formData.contactPhones.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, contactPhones: newPhones }));
   };
 
   const handleLogoChange = (e) => {
@@ -44,40 +89,55 @@ const SettingsContent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateSettings(formData);
+      let response;
+      if (hotel?.length > 0) {
+        response = await updateHotel(formData);
+      } else {
+        response = await createHotel(formData);
+      }
+
       if (logoFile) {
         await uploadLogo(logoFile);
       }
+
       toast({
-        title: "Settings updated",
-        description: "Your changes have been saved successfully.",
+        title: hotel?.length > 0 ? "Hotel Updated" : "Hotel Created",
+        description: hotel?.length > 0 ? "Your changes have been saved successfully." : "New hotel has been created successfully.",
       });
     } catch (error) {
-      console.error('Failed to update settings:', error);
+      console.error('Failed to save hotel:', error);
       toast({
         title: "Error",
-        description: "Failed to update settings. Please try again.",
+        description: `Failed to ${hotel ? 'update' : 'create'} hotel. Please try again.`,
         variant: "destructive",
       });
     }
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">Admin Settings</CardTitle>
-          <CardDescription>Manage your hotel's configuration and appearance</CardDescription>
+          <CardTitle className="text-3xl font-bold">
+            {hotel?.length > 0 ? 'Update Hotel Information' : 'Create New Hotel'}
+          </CardTitle>
+          <CardDescription>
+            {hotel?.length > 0 ? 'Manage your hotel\'s configuration and appearance' : 'Set up your new hotel'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <TabsTrigger value="general" className="w-full">General</TabsTrigger>
-              <TabsTrigger value="booking" className="w-full">Booking</TabsTrigger>
-              <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger>
-              <TabsTrigger value="notifications" className="w-full">Notifications</TabsTrigger>
-            </TabsList>
-            <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
+            <Tabs defaultValue="general" className="w-full">
+              <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <TabsTrigger value="general" className="w-full">General</TabsTrigger>
+                <TabsTrigger value="booking" className="w-full">Booking</TabsTrigger>
+                <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger>
+              </TabsList>
+
               <TabsContent value="general">
                 <Card>
                   <CardHeader>
@@ -87,47 +147,62 @@ const SettingsContent = () => {
                   <CardContent className="space-y-6">
                     <div className="flex flex-col space-y-2">
                       <Label htmlFor="hotelName" className="text-lg font-semibold">Hotel Name</Label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="hotelName"
-                          name="hotelName"
-                          value={formData.hotelName}
-                          onChange={handleInputChange}
-                          placeholder="Enter hotel name"
-                          className="flex-grow"
-                        />
-                      </div>
+                      <Input
+                        id="hotelName"
+                        name="hotelName"
+                        value={formData.hotelName}
+                        onChange={handleInputChange}
+                        placeholder="Enter hotel name"
+                        className="flex-grow"
+                        required
+                      />
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="flex flex-col space-y-2">
-                        <Label htmlFor="contactEmail" className="text-lg font-semibold">Contact Email</Label>
-                        <div className="flex items-center space-x-2">
+                    {/* <div className="flex flex-col space-y-2">
+                      <Label className="text-lg font-semibold">Contact Emails</Label>
+                      {formData.contactEmails.map((email, index) => (
+                        <div key={index} className="flex items-center space-x-2">
                           <Mail className="text-gray-500" />
                           <Input
-                            id="contactEmail"
-                            name="contactEmail"
-                            type="email"
-                            value={formData.contactEmail}
-                            onChange={handleInputChange}
+                            value={email}
+                            onChange={(e) => handleEmailChange(index, e.target.value)}
                             placeholder="Enter contact email"
                             className="flex-grow"
+                            type="email"
+                            required
                           />
+                          {index > 0 && (
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeEmail(index)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex flex-col space-y-2">
-                        <Label htmlFor="contactPhone" className="text-lg font-semibold">Contact Phone</Label>
-                        <div className="flex items-center space-x-2">
+                      ))}
+                      <Button type="button" variant="outline" onClick={addEmail}>
+                        <Plus className="mr-2 h-4 w-4" /> Add Email
+                      </Button>
+                    </div> */}
+                    <div className="flex flex-col space-y-2">
+                      <Label className="text-lg font-semibold">Contact Phones</Label>
+                      {formData.contactPhones.map((phone, index) => (
+                        <div key={index} className="flex items-center space-x-2">
                           <Phone className="text-gray-500" />
                           <Input
-                            id="contactPhone"
-                            name="contactPhone"
-                            value={formData.contactPhone}
-                            onChange={handleInputChange}
+                            value={phone}
+                            onChange={(e) => handlePhoneChange(index, e.target.value)}
                             placeholder="Enter contact phone"
                             className="flex-grow"
+                            required
                           />
+                          {index > 0 && (
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removePhone(index)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                      </div>
+                      ))}
+                      <Button type="button" variant="outline" onClick={addPhone}>
+                        <Plus className="mr-2 h-4 w-4" /> Add Phone
+                      </Button>
                     </div>
                     <div className="flex flex-col space-y-2">
                       <Label htmlFor="address" className="text-lg font-semibold">Address</Label>
@@ -140,12 +215,14 @@ const SettingsContent = () => {
                           onChange={handleInputChange}
                           placeholder="Enter hotel address"
                           className="flex-grow"
+                          required
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
+
               <TabsContent value="booking">
                 <Card>
                   <CardHeader>
@@ -165,6 +242,7 @@ const SettingsContent = () => {
                             value={formData.checkInTime}
                             onChange={handleInputChange}
                             className="flex-grow"
+                            required
                           />
                         </div>
                       </div>
@@ -179,27 +257,23 @@ const SettingsContent = () => {
                             value={formData.checkOutTime}
                             onChange={handleInputChange}
                             className="flex-grow"
+                            required
                           />
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col space-y-2">
-                      <Label htmlFor="currencySymbol" className="text-lg font-semibold">Currency Symbol</Label>
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="text-gray-500" />
-                        <Input
-                          id="currencySymbol"
-                          name="currencySymbol"
-                          value={formData.currencySymbol}
-                          onChange={handleInputChange}
-                          placeholder="Enter currency symbol"
-                          className="flex-grow"
-                        />
-                      </div>
-                    </div>
+                    {/* <div className="flex items-center space-x-2">
+                      <Switch
+                        id="enableBooking"
+                        checked={formData.enableBooking}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enableBooking: checked }))}
+                      />
+                      <Label htmlFor="enableBooking" className="text-lg font-semibold">Enable Booking</Label>
+                    </div> */}
                   </CardContent>
                 </Card>
               </TabsContent>
+
               <TabsContent value="appearance">
                 <Card>
                   <CardHeader>
@@ -225,9 +299,9 @@ const SettingsContent = () => {
                             Recommended size: 200x200 pixels, Max file size: 2MB
                           </p>
                         </div>
-                        {settings.logoUrl && (
+                        {hotel?.length > 0 && hotel.logoUrl && (
                           <img
-                            src={settings.logoUrl}
+                            src={hotel.logoUrl}
                             alt="Current Logo"
                             className="w-16 h-16 object-contain"
                           />
@@ -237,28 +311,15 @@ const SettingsContent = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
-              <TabsContent value="notifications">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notification Preferences</CardTitle>
-                    <CardDescription>Manage your notification settings</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="flex items-center space-x-2">
-                      <Bell className="text-gray-500" />
-                      <p className="text-lg text-gray-700">
-                        Notification settings will be implemented in a future update.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+
               <Separator className="my-6" />
               <div className="flex justify-end">
-                <Button type="submit" size="lg">Save All Changes</Button>
+                <Button type="submit" size="lg">
+                  {hotel?.length > 0 ? 'Update Hotel' : 'Create Hotel'}
+                </Button>
               </div>
-            </form>
-          </Tabs>
+            </Tabs>
+          </form>
         </CardContent>
       </Card>
     </div>

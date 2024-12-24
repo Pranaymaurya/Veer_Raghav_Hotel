@@ -1,24 +1,12 @@
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/utils/api';
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const AdminContext = createContext();
 
 export const AdminProvider = ({ children }) => {
-    const { getToken } = useAuth();
 
-    const [Guests , setGuests] = useState([]);
-
-    const getAuthConfig = useCallback(async () => {
-        const token = await getToken();
-        return {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        };
-      }, [getToken]);
-
+    const [Guests, setGuests] = useState([]);
 
     const [adminData, setAdminData] = useState({
         users: [],
@@ -28,13 +16,11 @@ export const AdminProvider = ({ children }) => {
 
     const fetchUsers = async () => {
         try {
-            const config = await getAuthConfig();
-            const response = await api.get('/user', config);
+            const response = await api.get('/user');
             // Filter out admin users
             const guestUsers = response.data.filter(user => user.role !== 'admin');
             setGuests(guestUsers);
             return guestUsers;
-            return response.data;
         } catch (error) {
             console.error('Error fetching users:', error);
         }
@@ -42,8 +28,7 @@ export const AdminProvider = ({ children }) => {
 
     const deleteUser = async (userId) => {
         try {
-            const config = await getAuthConfig();
-            const response = await api.delete(`/user/delete/${userId}`, config);
+            const response = await api.delete(`/user/delete/${userId}`);
             return response.data;
         } catch (error) {
             console.error('Error deleting user:', error);

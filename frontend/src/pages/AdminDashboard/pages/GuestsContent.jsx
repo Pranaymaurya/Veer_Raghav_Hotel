@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GuestContent() {
   const { fetchUsers, Guests, deleteUser, updateUser, addUser } = useAdminContext();
@@ -36,9 +37,15 @@ export default function GuestContent() {
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'guest' });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUsers();
+    const loadUsers = async () => {
+      setLoading(true);
+      await fetchUsers();
+      setLoading(false);
+    };
+    loadUsers();
   }, []);
 
   const filteredAndSortedGuests = Guests
@@ -51,13 +58,14 @@ export default function GuestContent() {
 
   const handleDelete = async () => {
     if (deletingUser) {
+      setLoading(true);
       const success = await deleteUser(deletingUser._id);
       if (success) {
         toast({
           title: "User deleted",
           description: "The user has been successfully deleted.",
         });
-        window.location.reload();
+        await fetchUsers();
       } else {
         toast({
           title: "Error",
@@ -66,6 +74,7 @@ export default function GuestContent() {
         });
       }
       setDeletingUser(null);
+      setLoading(false);
     }
   };
 
@@ -74,6 +83,7 @@ export default function GuestContent() {
   };
 
   const handleUpdate = async () => {
+    setLoading(true);
     const success = await updateUser(editingUser);
     if (success) {
       setEditingUser(null);
@@ -81,6 +91,7 @@ export default function GuestContent() {
         title: "User updated",
         description: "The user information has been successfully updated.",
       });
+      await fetchUsers();
     } else {
       toast({
         title: "Error",
@@ -88,9 +99,11 @@ export default function GuestContent() {
         variant: "destructive",
       });
     }
+    setLoading(false);
   };
 
   const handleAdd = async () => {
+    setLoading(true);
     const success = await addUser(newUser);
     if (success) {
       setNewUser({ name: '', email: '', role: 'guest' });
@@ -98,6 +111,7 @@ export default function GuestContent() {
         title: "User added",
         description: "The new user has been successfully added.",
       });
+      await fetchUsers();
     } else {
       toast({
         title: "Error",
@@ -105,21 +119,39 @@ export default function GuestContent() {
         variant: "destructive",
       });
     }
+    setLoading(false);
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Skeleton className="w-[200px] h-[32px] mb-4" />
+        <div className="flex justify-between items-center mb-4">
+          <Skeleton className="w-[200px] h-[40px]" />
+          <Skeleton className="w-[180px] h-[40px]" />
+        </div>
+        <div className="space-y-2">
+          {[...Array(5)].map((_, index) => (
+            <Skeleton key={index} className="w-full h-[52px]" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (Guests.length === 0) {
     return (
       <Card className="w-full mt-4">
-          <CardHeader>
-            <CardTitle>No Users Found</CardTitle>
-            <CardDescription>There are currently no users in the system or matching your search criteria.</CardDescription>
-          </CardHeader>
-        </Card>
+        <CardHeader>
+          <CardTitle>No Users Found</CardTitle>
+          <CardDescription>There are currently no users in the system or matching your search criteria.</CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-6 text-black">
       <h1 className="text-2xl font-bold mb-4">Guest List</h1>
       <div className="flex justify-between items-center mb-4">
         <Input
@@ -216,3 +248,4 @@ export default function GuestContent() {
     </div>
   );
 }
+

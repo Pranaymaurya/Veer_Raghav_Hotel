@@ -22,13 +22,12 @@ import { Badge } from '@/components/ui/badge';
 import { useRoom } from '@/context/RoomContext';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CustomizeRooms = () => {
     const navigate = useNavigate();
     const { Rooms, getAllRooms, deleteRoom, getImageUrl } = useRoom();
     const { user } = useAuth();
-
-    console.log(user);
     
     const [loading, setLoading] = useState(true);
     const [roomToDelete, setRoomToDelete] = useState(null);
@@ -120,10 +119,41 @@ const CustomizeRooms = () => {
         room.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const RoomSkeleton = () => (
+        <Card className="overflow-hidden">
+            <CardHeader className="p-0">
+                <Skeleton className="w-full h-48" />
+            </CardHeader>
+            <CardContent className="p-4">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/4 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-full mb-4" />
+                <div className="grid grid-cols-2 gap-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                </div>
+            </CardContent>
+            <CardFooter className="flex justify-between p-4">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-24" />
+            </CardFooter>
+        </Card>
+    );
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="w-8 h-8 animate-spin" />
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex justify-between items-center mb-6">
+                    <Skeleton className="h-10 w-48" />
+                    <Skeleton className="h-10 w-36" />
+                </div>
+                <Skeleton className="h-10 w-full max-w-sm mb-6" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, index) => (
+                        <RoomSkeleton key={index} />
+                    ))}
+                </div>
             </div>
         );
     }
@@ -294,3 +324,4 @@ const CustomizeRooms = () => {
 };
 
 export default CustomizeRooms;
+
