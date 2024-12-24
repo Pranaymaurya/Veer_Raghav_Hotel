@@ -108,3 +108,46 @@ export const updateUser = async (req, res) => {
       res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
     }
   };
+  export const getUserDetails = async (req, res) => {
+    const userId = req.user.userId; // The ID of the user whose details are to be fetched
+  // console.log(req.user)
+    try {
+      // Check if the user exists
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found."
+        });
+      }
+  
+      // Authorization check: Only allow users to access their own data or admins to access any user's data
+      if (userId !== req.user.userId && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to view this account."
+        });
+      }
+  
+      // Respond with the user's details
+      return res.status(200).json({
+        success: true,
+        message: "User details fetched successfully.",
+        user: {
+          name: user.name,
+          email: user.email,
+          phoneno: user.phoneno,
+          gender: user.gender,
+          age: user.age,
+          address: user.address
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: "Server error. Please try again later."
+      });
+    }
+  };
+  
