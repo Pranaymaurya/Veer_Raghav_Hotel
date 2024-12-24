@@ -17,6 +17,7 @@ export const CreateBooking = async (req, res) => {
     const numberOfNights = (new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24);
     if (numberOfNights <= 0) return res.status(400).json({ message: "Invalid booking dates" });
     const totalPrice = room.pricePerNight * numberOfNights;
+
     const booking = new Booking({
       user: userId,
       room: roomId,
@@ -24,16 +25,22 @@ export const CreateBooking = async (req, res) => {
       checkOutDate,
       totalPrice,
     });
+
     const savedBooking = await booking.save();
 
     room.isAvailable = false;
     await room.save();
 
-    res.status(201).json({ message: "Booking created successfully", booking: savedBooking });
+    res.status(201).json({
+      message: "Booking created successfully",
+      bookingId: savedBooking._id, // Include the booking ID in the response
+      booking: savedBooking,
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to create booking", error: error.message });
   }
 };
+
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
   const { checkInDate, checkOutDate, roomId } = req.body;
@@ -103,6 +110,74 @@ export const UpdateBooking = async (req, res) => {
   }
 };
 
+export const UpdateBookingForAdmin = async (req, res) => {
+  const { id } = req.params;
+  const { checkInDate, checkOutDate, status, roomId } = req.body;
+
+  try {
+    // Fetch the booking by ID
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Check if the user is an admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "You do not have permission to update the booking" });
+    }
+
+    // If status is provided, validate and update the status
+    if (status) {
+      const validStatuses = ['Confirmed', 'Cancelled', 'Pending']; // Add other statuses as needed
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid booking status" });
+      }
+      booking.status = status; // Update the status
+    }
+
+    // If a new roomId is provided, update the room (check availability)
+    if (roomId && roomId !== booking.room.toString()) {
+      const newRoom = await Room.findById(roomId);
+      if (!newRoom) return res.status(404).json({ message: "New room not found" });
+      if (!newRoom.isAvailable) return res.status(400).json({ message: "New room is not available for booking" });
+
+      // Mark the old room as available and the new room as unavailable
+      const oldRoom = await Room.findById(booking.room);
+      oldRoom.isAvailable = true;
+      await oldRoom.save();
+
+      newRoom.isAvailable = false;
+      await newRoom.save();
+
+      booking.room = roomId; // Update the booking to reference the new room
+    }
+
+    // Validate and update booking dates if provided
+    if (checkInDate && checkOutDate) {
+      const startDate = new Date(checkInDate);
+      const endDate = new Date(checkOutDate);
+
+      if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
+        return res.status(400).json({ message: "Invalid booking dates" });
+      }
+
+      const numberOfNights = (endDate - startDate) / (1000 * 60 * 60 * 24);
+      if (numberOfNights <= 0) {
+        return res.status(400).json({ message: "Invalid number of nights" });
+      }
+
+      const room = await Room.findById(booking.room);
+      booking.totalPrice = room.pricePerNight * numberOfNights;
+
+      booking.checkInDate = checkInDate;
+      booking.checkOutDate = checkOutDate;
+    }
+
+    // Save the updated booking
+    const updatedBooking = await booking.save();
+    res.status(200).json({ message: "Booking updated successfully", booking: updatedBooking });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update booking", error: error.message });
+  }
+};
 
 
 // Get all bookings
