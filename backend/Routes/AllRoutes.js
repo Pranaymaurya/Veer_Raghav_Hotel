@@ -8,6 +8,7 @@ import {
   GetBookingById,
   GetUserBookings,
   Putrating,
+  UpdateBooking,
 } from '../Controllers/BookingController.js';
 import {
   AddImagesById,
@@ -34,7 +35,9 @@ router.get('/user/booking',authMiddleware,authorizeRoles('admin','user'),GetUser
 
 // Booking routes
 router.post('/booking',authMiddleware,authorizeRoles('user','admin'), CreateBooking); // Create a booking
-router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking); // Cancel a booking by ID
+router.delete('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking);
+router.put('/booking/:id',authMiddleware,authorizeRoles('user','admin'), UpdateBooking);
+ // Cancel a booking by ID
 router.get('/booking',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
 router.get('/booking/:id',authMiddleware,authorizeRoles('user','admin'), GetBookingById); // Get a booking by ID
 router.post('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), Putrating);
