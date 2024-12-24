@@ -1,32 +1,39 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import api from '@/utils/api';
 
 const BookingContext = createContext();
 
-
 export const BookingProvider = ({ children }) => {
-
-  api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  });
-
-  const createBooking = async (bookingData) => {
+  const createBooking = useCallback(async (bookingData) => {
     try {
       const response = await api.post('/booking', bookingData);
-      return response.data;
+
+      return {
+        success: true,
+        booking: {
+          ...response.data,
+          id: response.data.id || response.data._id,
+          userId: bookingData.userId,
+          roomId: bookingData.roomId,
+          checkInDate: bookingData.checkInDate,
+          checkOutDate: bookingData.checkOutDate,
+          totalPrice: bookingData.totalPrice
+        }
+      };
     } catch (error) {
-      console.error('Error creating booking:', error);
-      throw error;
+      console.error('Booking error:', error);
+
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Failed to create booking',
+        booking: null
+      };
     }
-  };
+  }, []);
 
   const cancelBooking = async (bookingId) => {
     try {
-      const response = await api.put(`/booking/${bookingId}/cancel`);
+      const response = await api.put(`/booking/${bookingId}/cancel`, {});
       return response.data;
     } catch (error) {
       console.error('Error cancelling booking:', error);
@@ -36,8 +43,9 @@ export const BookingProvider = ({ children }) => {
 
   const getAllBookings = async () => {
     try {
-      const response = await api.get('/booking');
-      return response.data;
+      const response = await api.get('/bookings');
+      return Array.isArray(response.data) ? response.data :
+        Array.isArray(response.data.bookings) ? response.data.bookings : [];
     } catch (error) {
       console.error('Error fetching all bookings:', error);
       throw error;
@@ -71,4 +79,3 @@ export const useBooking = () => {
   }
   return context;
 };
-

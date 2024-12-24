@@ -1,15 +1,32 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import Cookies from 'js-cookie';
-import api from "@/utils/api";
+import api, { setAuthContext } from "@/utils/api";
+import { useToast } from "@/hooks/use-toast";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         checkUserLoggedIn();
+        setAuthContext({ logout });
+    }, []);
+
+    const getToken = useCallback(() => {
+        try {
+            const token = Cookies.get('token');
+            if (!token) {
+                throw new Error('No token found');
+            }
+            return token;
+        } catch (error) {
+            console.error('Error getting token:', error);
+            logout();
+            throw new Error('Authentication failed');
+        }
     }, []);
 
     const checkUserLoggedIn = () => {
@@ -29,22 +46,6 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     };
 
-    const getToken = async () => {
-        try {
-            const token = Cookies.get('token');
-            // console.log('bjbj',token);
-
-            if (!token) {
-                throw new Error('No token found');
-            }
-            return token;
-        } catch (error) {
-            console.error('Error getting token:', error);
-            logout();
-            throw new Error('Authentication failed');
-        }
-    };
-
     const login = async (email, password) => {
         try {
             const response = await api.post('/login', { email, password });
@@ -52,6 +53,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(response.data.user);
                 Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
                 Cookies.set('token', response.data.token, { expires: 7 });
+                
                 return {
                     success: true,
                     message: response.data.message,
@@ -76,7 +78,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const registrationData = {
                 ...userData,
-                role: userData.role || 'patient'
+                role: userData.role || 'user'
             };
             const response = await api.post('/register', registrationData);
             if (response.data.success) {
@@ -105,17 +107,24 @@ export const AuthProvider = ({ children }) => {
     const updateUserData = useCallback((newData) => {
         setUser(currentUser => {
             const updatedUser = { ...currentUser, ...newData };
-            // Update the user cookie with the new data
             Cookies.set('user', JSON.stringify(updatedUser), { expires: 7 });
             return updatedUser;
         });
     }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         setUser(null);
         Cookies.remove('user');
         Cookies.remove('token');
-    };
+        localStorage.removeItem('token');
+        toast({
+            title: "Logout successful",
+            description: "You have successfully logged out.",
+            variant: "success",
+            className: "bg-green-200 border-green-400 text-black text-lg",
+            duration: 3000
+        });
+    }, [toast]);
 
     return (
         <AuthContext.Provider value={{

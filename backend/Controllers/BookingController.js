@@ -9,7 +9,7 @@ export const CreateBooking = async (req, res) => {
     const room = await Room.findById(roomId);
     console.log(roomId);
     if (!room) return res.status(404).json({ message: "Room not found" });
-    if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
+    // if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -28,7 +28,6 @@ export const CreateBooking = async (req, res) => {
 
     const savedBooking = await booking.save();
 
-    room.isAvailable = false;
     await room.save();
 
     res.status(201).json({
@@ -274,20 +273,20 @@ export const Putrating = async (req, res) => {
 // Get the average rating of a room
 export const getavgrating = async (req, res) => {
   try {
-    const { id } = req.params;  
+    const { id } = req.params;
     console.log('roomId from params:', id);  // Debugging line
 
     const room = await Room.findById(id);
-    
+
     if (!room) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
-    
+
     const ratings = room.ratings;
     if (ratings.length === 0) {
       return res.status(200).json({ success: true, message: 'No ratings available.', avg: 0 });
     }
-    
+
     const sum = ratings.reduce((acc, cur) => acc + cur.rating, 0);
     const avg = Math.round(sum / ratings.length);
 
