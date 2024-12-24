@@ -8,12 +8,16 @@ export const AddRoom = async (req, res) => {
 
   try {
     const images = req.files ? req.files.map(file => file.path) : [];
-
+    
+    const sanitizedAmenities = Array.isArray(amenities) 
+      ? amenities.filter(amenity => amenity.trim() !== '')
+      : [];
+    
     // Create a new room
     const room = new Room({
       name,
       pricePerNight,
-      amenities: amenities ? amenities.split(',') : [],
+      amenities: sanitizedAmenities,
       description,
       maxOccupancy,
       isAvailable,

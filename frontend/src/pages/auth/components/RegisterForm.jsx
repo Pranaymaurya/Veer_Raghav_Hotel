@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 // import { registerUser } from './api'; // Adjust the path to your API file
 
 export default function RegisterForm() {
@@ -15,6 +17,8 @@ export default function RegisterForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { register } = useAuth();
+  const { toast } = useToast();
 
   const navigate = useNavigate();
 
@@ -34,10 +38,19 @@ export default function RegisterForm() {
 
     try {
       const userData = { name, email, password, phoneno, gender, age };
-      const data = await registerUser(userData);
+      const data = await register(userData);
       // Simulate login and navigate to the home page
-      console.log('User registered:', data);
-      navigate('/');
+      // console.log('User registered:', data);
+      if (data.success) {
+        toast({
+          title: 'Registration successful',
+          description: 'You have successfully registered.',
+          variant: 'success',
+        })
+        navigate('/auth/login');
+      } else {
+        setError(data.message);
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -208,7 +221,7 @@ export default function RegisterForm() {
       </motion.button>
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{' '}
-        <a href="/login" className="font-medium text-orange-600 hover:text-orange-500">
+        <a href="/auth/login" className="font-medium text-orange-600 hover:text-orange-500">
           Log in
         </a>
       </p>

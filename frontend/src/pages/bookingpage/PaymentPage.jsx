@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import {
-  CreditCard,
-  Clock,
-  Shield,
-  CheckCircle2,
-  ArrowLeft,
-  Building,
-  User,
-  CalendarCheck,
-  Lock
-} from 'lucide-react';
+import { CreditCard, Clock, Shield, CheckCircle2, ArrowLeft, Building, User, CalendarCheck, Lock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,10 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentProcessingModal } from './PaymentProcessingModal';
+import { useBooking } from '@/context/BookingContext';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function PaymentPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { createBooking } = useBooking();
+  const { user } = useAuth();
+  // console.log(user.userId);
+  
   const [bookingData, setBookingData] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cardDetails, setCardDetails] = useState({
@@ -31,12 +29,10 @@ export default function PaymentPage() {
     expiry: '',
     cvv: ''
   });
-
-  // UPI state
   const [upiId, setUpiId] = useState('');
 
   useEffect(() => {
-    if (location.state) {
+    if (location.state && location.state.roomId) {
       setBookingData(location.state);
     } else {
       navigate('/rooms');
@@ -47,17 +43,14 @@ export default function PaymentPage() {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    // Format card number with spaces
     if (name === 'number') {
       formattedValue = value.replace(/\s/g, '')
                            .match(/.{1,4}/g)?.join(' ') || '';
     }
-    // Format expiry date
     if (name === 'expiry') {
       formattedValue = value.replace(/\D/g, '')
                            .match(/.{1,2}/g)?.join('/') || '';
     }
-    // Limit CVV to 3 or 4 digits
     if (name === 'cvv') {
       formattedValue = value.slice(0, 4);
     }
@@ -70,7 +63,60 @@ export default function PaymentPage() {
 
   const handlePayment = async (e) => {
     e.preventDefault();
+    if (!bookingData?.roomId) {
+      toast({
+        title: "Error",
+        description: "Room ID is missing. Please try booking again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setShowPaymentModal(true);
+  };
+
+  // console.log('bookingData.roomId', bookingData.roomId, 'userId', user.userId);
+  
+
+  const handleBookingSuccess = async () => {
+    try {
+      const bookingPayload = {
+        userId: user.userId,
+        roomId: bookingData.roomId,
+        checkInDate: bookingData.startDate,
+        checkOutDate: bookingData.endDate,
+        totalPrice: bookingData.price + bookingData.taxesAndFees.total,
+      };
+  
+      const response = await createBooking(bookingPayload);
+      
+      if (response.success) {
+        setShowPaymentModal(false);
+        
+        toast({
+          title: "Booking Success",
+          description: "Your booking has been successfully created.",
+          variant: "default",
+          className: "bg-green-200 border-green-400 text-black"
+        });
+  
+        navigate('/booking/success', {
+          state: {
+            ...response.booking,
+            roomName: bookingData.roomName,
+            roomType: bookingData.roomType
+          }
+        });
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      setShowPaymentModal(false);
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Failed to create booking. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!bookingData) {
@@ -308,12 +354,9 @@ export default function PaymentPage() {
       <PaymentProcessingModal 
         isOpen={showPaymentModal}
         bookingData={bookingData}
-        onSuccess={(confirmedBooking) => {
-          navigate('/booking/success', {
-            state: confirmedBooking
-          });
-        }}
+        onSuccess={handleBookingSuccess}
       />
     </div>
   );
 }
+

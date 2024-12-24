@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     Card,
     CardContent,
@@ -15,46 +15,147 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Pencil, Trash2, Plus, Bed, Users, DollarSign, Star, CheckCircle2, XCircle, Edit } from 'lucide-react';
-import { rooms } from '@/data/room';
+import { Loader2, Plus, Users, DollarSign, Star, CheckCircle2, XCircle, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-
-// Importing the rooms data
-
+import { useRoom } from '@/context/RoomContext';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 
 const CustomizeRooms = () => {
-    const [roomsData, setRoomsData] = useState(rooms);
+    const navigate = useNavigate();
+    const { Rooms, getAllRooms, deleteRoom, getImageUrl } = useRoom();
+    const { user } = useAuth();
+
+    console.log(user);
+    
+    const [loading, setLoading] = useState(true);
     const [roomToDelete, setRoomToDelete] = useState(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeImageIndices, setActiveImageIndices] = useState({});
 
-    const handleDeleteRoom = () => {
+    useEffect(() => {
+        if (!user) {
+            navigate('/login', { state: { from: location.pathname } });
+            return;
+        }
+
+        const fetchRooms = async () => {
+            try {
+                setLoading(true);
+                await getAllRooms();
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: "Failed to fetch rooms. Please try again later.",
+                    variant: "destructive",
+                });
+                if (error.message === 'Authentication required. Please log in again.') {
+                    navigate('/login', { state: { from: location.pathname } });
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRooms();
+    }, [user, navigate]);
+
+    const confirmDelete = (room) => {
+        setRoomToDelete(room);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeleteRoom = async () => {
         if (roomToDelete) {
-            setRoomsData(roomsData.filter(room => room.id !== roomToDelete.id));
-            setIsDeleteDialogOpen(false);
-            setRoomToDelete(null);
-            // Here you would typically make an API call to delete the room
-            // For example: await deleteRoom(roomToDelete.id);
+            try {
+                await deleteRoom(roomToDelete._id);
+                toast({
+                    title: "Success",
+                    description: "Room deleted successfully",
+                });
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: error.message || "Failed to delete room",
+                    variant: "destructive",
+                });
+                if (error.message === 'Authentication required. Please log in again.') {
+                    navigate('/login', { state: { from: location.pathname } });
+                }
+            } finally {
+                setIsDeleteDialogOpen(false);
+                setRoomToDelete(null);
+            }
         }
     };
 
-    const filteredRooms = roomsData.filter(room =>
-        room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        room.type.toLowerCase().includes(searchTerm.toLowerCase())
+    const handleNextImage = (roomId) => {
+        setActiveImageIndices(prev => {
+            const currentIndex = prev[roomId] || 0;
+            const room = Rooms.find(r => r._id === roomId);
+            const maxIndex = room.images.length - 1;
+            return {
+                ...prev,
+                [roomId]: currentIndex >= maxIndex ? 0 : currentIndex + 1
+            };
+        });
+    };
+
+    const handlePrevImage = (roomId) => {
+        setActiveImageIndices(prev => {
+            const currentIndex = prev[roomId] || 0;
+            const room = Rooms.find(r => r._id === roomId);
+            const maxIndex = room.images.length - 1;
+            return {
+                ...prev,
+                [roomId]: currentIndex <= 0 ? maxIndex : currentIndex - 1
+            };
+        });
+    };
+
+    const filteredRooms = Rooms.filter(room =>
+        room.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const toggleAvailability = (roomId) => {
-        setRoomsList(roomsList.map(room =>
-            room.id === roomId
-                ? { ...room, isAvailable: !room.isAvailable }
-                : room
-        ));
-    };
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+        );
+    }
+
+    if (Rooms.length === 0) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold">Customize Rooms</h1>
+                    <Link to="/dashboard/rooms/new">
+                        <Button>
+                            <Plus className="mr-2 h-4 w-4" /> Add New Room
+                        </Button>
+                    </Link>
+                </div>
+                <Card className="text-center py-16">
+                    <CardContent>
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-semibold">No Rooms Available</h2>
+                            <p className="text-gray-500">Get started by adding your first room!</p>
+                            <Button asChild className="mt-4">
+                                <Link to="/dashboard/rooms/new">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create New Room
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -79,13 +180,44 @@ const CustomizeRooms = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredRooms.map((room) => (
-                    <Card key={room.id} className="overflow-hidden">
-                        <CardHeader className="p-0">
-                            <img
-                                src={room.images[0]}
-                                alt={room.name}
-                                className="w-full h-48 object-cover"
-                            />
+                    <Card key={room._id} className="overflow-hidden">
+                        <CardHeader className="p-0 relative">
+                            {room.images && room.images.length > 0 ? (
+                                <>
+                                    <img
+                                        src={getImageUrl(room.images[activeImageIndices[room._id] || 0])}
+                                        alt={room.name}
+                                        className="w-full h-48 object-cover"
+                                    />
+                                    {room.images.length > 1 && (
+                                        <>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                                                onClick={() => handlePrevImage(room._id)}
+                                            >
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                                                onClick={() => handleNextImage(room._id)}
+                                            >
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
+                                            <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm">
+                                                {(activeImageIndices[room._id] || 0) + 1}/{room.images.length}
+                                            </div>
+                                        </>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                    <span className="text-gray-400">No image available</span>
+                                </div>
+                            )}
                         </CardHeader>
                         <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
@@ -99,7 +231,6 @@ const CustomizeRooms = () => {
                                             }
                                             {room.isAvailable ? 'Available' : 'Not Available'}
                                         </Badge>
-                                        <Badge variant="secondary">{room.type}</Badge>
                                     </div>
                                 </div>
                             </div>
@@ -107,43 +238,33 @@ const CustomizeRooms = () => {
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div className="flex items-center gap-1">
                                     <DollarSign className="w-4 h-4" />
-                                    <span>${room.price}/night</span>
+                                    <span className='font-semibold text-base'>{room.pricePerNight} /night</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 text-yellow-400" />
-                                    <span>{room.rating}</span>
-                                </div>
+                                {room.ratings && room.ratings.length > 0 && (
+                                    <div className="flex items-center gap-1">
+                                        <Star className="w-4 h-4 text-yellow-400" />
+                                        <span>
+                                            {(room.ratings.reduce((acc, curr) => acc + curr.rating, 0) / room.ratings.length).toFixed(1)}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1">
                                     <Users className="w-4 h-4" />
-                                    <span>Fits {room.capacity}</span>
+                                    <span>Max {room.maxOccupancy} guests</span>
                                 </div>
                             </div>
                         </CardContent>
-                        <CardFooter className="flex flex-col gap-3 p-4 pt-0">
-                            <div className="flex items-center justify-between w-full">
-                                <span className="text-sm">Availability</span>
-                                {room.isAvailable ? (
-                                    <span className="text-sm text-green-500">Available</span>
-                                ) : (
-                                    <span className="text-sm text-red-500">Not Available</span>
-                                )}
-                            </div>
-                            <div className="flex justify-end gap-2 w-full">
-                                <Link to={`${room.id}`}>
-                                    <Button variant="outline" className="flex items-center gap-2">
-                                        <Edit className="w-4 h-4" />
-                                        Edit
-                                    </Button>
+                        <CardFooter className="flex justify-between p-4">
+                            <Button variant="outline" asChild>
+                                <Link to={`/dashboard/rooms/${room._id}`}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit
                                 </Link>
-                                <Button
-                                    variant="destructive"
-                                    className="flex items-center gap-2"
-                                    onClick={() => confirmDelete(room.id)}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
-                                </Button>
-                            </div>
+                            </Button>
+                            <Button variant="destructive" onClick={() => confirmDelete(room)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                            </Button>
                         </CardFooter>
                     </Card>
                 ))}
@@ -173,4 +294,3 @@ const CustomizeRooms = () => {
 };
 
 export default CustomizeRooms;
-

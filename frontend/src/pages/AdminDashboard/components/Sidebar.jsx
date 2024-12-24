@@ -145,7 +145,7 @@ const Sidebar = () => {
                         <span className="ml-2">Go to Main Website</span>
                     </div>
                 </Link>
-                <LogoutConfirmationModal onClick={handleLogout} >
+                <LogoutConfirmationModal onConfirm={handleLogout} >
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}

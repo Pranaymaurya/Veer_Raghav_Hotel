@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft,
-  Plus,
-  X,
-  Upload,
-  Loader2,
-  Image as ImageIcon
-} from 'lucide-react';
+import { ArrowLeft, Plus, X, Upload, Loader2, Trash2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -26,57 +19,120 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { rooms } from '@/data/room';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useRoom } from '@/context/RoomContext';
+import { useAuth } from '@/hooks/useAuth';
+// import { toast } from '@/components/ui/use-toast';
 
 const RoomsForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isNewRoom = id === 'new';
+  const { addRoom, updateRoom, getRoomById, addImagesToRoom, getImageUrl, deleteRoom } = useRoom();
+  const { user } = useAuth();
+  const isNewRoom = !id;
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    type: 'Room',
-    price: '',
-    capacity: '' || 1,
-    rating: '' || 0,
+    pricePerNight: '',
+    maxOccupancy: '',
     images: [],
+    existingImages: [],
     amenities: [''],
     isAvailable: true
   });
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   useEffect(() => {
-    if (!isNewRoom) {
-      // In a real app, you would fetch the room data from an API
-      const existingRoom = rooms.find(room => room.id === id);
-      if (existingRoom) {
-        setFormData(existingRoom);
-      }
+    // Redirect if not authenticated
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
     }
-  }, [id, isNewRoom]);
+
+    const fetchRoom = async () => {
+      if (!isNewRoom) {
+        try {
+          const roomData = await getRoomById(id);
+          setFormData({
+            ...roomData,
+            pricePerNight: roomData.pricePerNight.toString(),
+            maxOccupancy: roomData.maxOccupancy.toString(),
+            existingImages: roomData.images || [],
+            images: [],
+          });
+        } catch (error) {
+          if (error.message === 'Authentication required. Please log in again.') {
+            navigate('/login', { state: { from: location.pathname } });
+          } else {
+            navigate('/dashboard/rooms');
+          }
+        }
+      }
+    };
+
+    fetchRoom();
+  }, [id, isNewRoom, getRoomById, navigate, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Saving room:', formData);
+      const roomData = {
+        ...formData,
+        pricePerNight: parseFloat(formData.pricePerNight),
+        maxOccupancy: parseInt(formData.maxOccupancy),
+        amenities: formData.amenities.filter(amenity => amenity.trim() !== ''),
+        images: formData.existingImages
+      };
+
+      if (isNewRoom) {
+        // For new rooms, send everything including new images to addRoom
+        const newRoom = await addRoom({...roomData, images: [...roomData.images, ...formData.images]});
+        toast({
+          title: "Success",
+          description: "Room created successfully",
+        });
+        
+      navigate(`/dashboard/rooms/`);
+      } else {
+        // For existing rooms, first update the room data
+        await updateRoom(id, roomData);
+        
+        // Then handle any new images separately
+        if (formData.images.length > 0) {
+          await addImagesToRoom(id, formData.images);
+        }
+        
+        toast({
+          title: "Success",
+          description: "Room updated successfully",
+        });
+      }
+      console.log('Room updated successfully');
+      
       navigate('/dashboard/rooms');
     } catch (error) {
-      console.error('Error saving room:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save room details.",
+        variant: "destructive",
+      });
+      
+      if (error.message === 'Authentication required. Please log in again.') {
+        navigate('/login', { state: { from: location.pathname } });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -84,10 +140,9 @@ const RoomsForm = () => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    const newImages = files.map(file => URL.createObjectURL(file));
     setFormData(prev => ({
       ...prev,
-      images: [...prev.images, ...newImages]
+      images: [...prev.images, ...files]
     }));
   };
 
@@ -110,7 +165,7 @@ const RoomsForm = () => {
       ...prev,
       amenities: prev.amenities.map((amenity, i) => 
         i === index ? value : amenity
-      ).filter(amenity => amenity !== '')
+      )
     }));
   };
 
@@ -119,6 +174,28 @@ const RoomsForm = () => {
       ...prev,
       amenities: prev.amenities.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleDeleteRoom = async () => {
+    try {
+      await deleteRoom();
+      toast({
+        title: "Success",
+        description: "Room deleted successfully",
+      });
+      navigate('/dashboard/rooms');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete room.",
+        variant: "destructive",
+      });
+      if (error.message === 'Authentication required. Please log in again.') {
+        navigate('/login', { state: { from: location.pathname } });
+      }
+    } finally {
+      setIsDeleteModalOpen(false);
+    }
   };
 
   return (
@@ -169,17 +246,23 @@ const RoomsForm = () => {
             {/* Basic Information */}
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Room Name *</Label>
-                <Input
-                  id="name"
+                <Label htmlFor="name">Room Type *</Label>
+                <Select
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({
+                  onValueChange={(value) => setFormData(prev => ({
                     ...prev,
-                    name: e.target.value
+                    name: value
                   }))}
-                  placeholder="Enter room name"
-                  required
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select room type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Premium">Premium</SelectItem>
+                    <SelectItem value="Super Deluxe">Super Deluxe</SelectItem>
+                    <SelectItem value="Deluxe">Deluxe</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid gap-2">
@@ -199,71 +282,36 @@ const RoomsForm = () => {
             </div>
 
             {/* Room Details */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="type">Room Type *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) => setFormData(prev => ({
-                    ...prev,
-                    type: value
-                  }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Room">Standard Room</SelectItem>
-                    <SelectItem value="Suite">Suite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="price">Price per Night ($) *</Label>
+                <Label htmlFor="pricePerNight">Price per Night ($) *</Label>
                 <Input
-                  id="price"
+                  id="pricePerNight"
                   type="number"
                   min="0"
                   step="0.01"
-                  value={formData.price}
+                  placeholder="Enter the price per night"
+                  value={formData.pricePerNight}
                   onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    price: e.target.value
+                    pricePerNight: e.target.value
                   }))}
                   required
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="capacity">Capacity *</Label>
+                <Label htmlFor="maxOccupancy">Max Occupancy *</Label>
                 <Input
-                  id="capacity"
+                  id="maxOccupancy"
                   type="number"
                   min="1"
                   max="10"
-                  value={formData.capacity}
+                  placeholder="Enter the maximum occupancy"
+                  value={formData.maxOccupancy}
                   onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    capacity: e.target.value
-                  }))}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="rating">Rating *</Label>
-                <Input
-                  id="rating"
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  disabled
-                  value={formData.rating}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    rating: e.target.value
+                    maxOccupancy: e.target.value
                   }))}
                   required
                 />
@@ -274,11 +322,34 @@ const RoomsForm = () => {
             <div className="grid gap-4">
               <Label>Room Images</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {formData.images.map((image, index) => (
-                  <div key={index} className="relative group">
+                {formData.existingImages.map((image, index) => (
+                  <div key={`existing-${index}`} className="relative group">
                     <img
-                      src={image}
+                      src={getImageUrl(image)}
                       alt={`Room ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          existingImages: prev.existingImages.filter((_, i) => i !== index)
+                        }));
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {formData.images.map((image, index) => (
+                  <div key={`new-${index}`} className="relative group">
+                    <img
+                      src={URL.createObjectURL(image)}
+                      alt={`New Room ${index + 1}`}
                       className="w-full h-32 object-cover rounded-lg border"
                     />
                     <Button
@@ -352,14 +423,45 @@ const RoomsForm = () => {
           >
             Cancel
           </Button>
+          {!isNewRoom && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setIsDeleteModalOpen(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Room
+            </Button>
+          )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {isNewRoom ? 'Create Room' : 'Update Room'}
           </Button>
         </div>
       </form>
+
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure you want to delete this room?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the room
+              and remove all associated data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteRoom}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default RoomsForm;
+

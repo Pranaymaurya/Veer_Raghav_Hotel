@@ -1,66 +1,88 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { format, differenceInDays } from 'date-fns';
-import {
-  Bed,
-  Users,
-  Star,
-  ChevronLeft,
-  Plus,
-  Minus,
-  Info,
-  AlertCircle
-} from 'lucide-react';
+import { Bed, Users, Star, ChevronLeft, Plus, Minus, Info, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { rooms } from '@/data/room';
+import { useRoom } from '@/context/RoomContext';
 import ImageSlider from './components/ImageSlider';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ViewRoomDetails() {
-  // Extract roomId from URL parameters
   const { id } = useParams();
   const navigate = useNavigate();
-
-
-  // Use search params to get initial date and guests
   const [searchParams] = useSearchParams();
 
-  // Find the room based on the ID from URL
-  const room = rooms.find(r => r.id === id);
+  const { user } = useAuth();
+  const { Rooms, getAllRooms } = useRoom();
 
-  console.log(id);
-
-
-  // Initialize state with search params or defaults
+  // State management
+  const [loading, setLoading] = useState(true);
   const [guests, setGuests] = useState(() => {
     const guestsParam = searchParams.get('guests');
     return guestsParam ? parseInt(guestsParam) : 1;
   });
-
   const [date, setDate] = useState(() => {
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
 
-    if (startDateParam && endDateParam) {
-      return {
-        from: new Date(startDateParam),
-        to: new Date(endDateParam)
-      };
-    }
-
     return {
-      from: new Date(),
-      to: new Date()
+      from: startDateParam ? new Date(startDateParam) : new Date(),
+      to: endDateParam ? new Date(endDateParam) : new Date()
     };
   });
-
   const [roomCount, setRoomCount] = useState(1);
   const [dateError, setDateError] = useState('');
+  const [priceIncreased, setPriceIncreased] = useState(false);
 
-  // Add early return if room is not found
+  // Fetch all rooms and find the specific room
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        await getAllRooms();
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRooms();
+  }, []);
+
+  // Find the current room from Rooms array
+  const room = Rooms.find(room => room._id === id);
+
+  // Handle date, guest, and room count calculations
+  useEffect(() => {
+    if (room && date.from && date.to) {
+      const days = differenceInDays(date.to, date.from);
+
+      if (days <= 0) {
+        setDateError('Check-out date must be after check-in date');
+      } else {
+        setDateError('');
+        const requiredRooms = Math.ceil(guests / room.maxOccupancy);
+        setRoomCount(requiredRooms);
+        setPriceIncreased(requiredRooms > 1);
+      }
+    }
+  }, [date, guests, room?.maxOccupancy]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 text-center">
+        <p>Loading room details...</p>
+      </div>
+    );
+  }
+
+  const handleLogin = () => {
+    navigate('/auth/login');
+  };
+
+  // Room not found state
   if (!room) {
     return (
       <div className="container mx-auto p-4 text-center">
@@ -79,52 +101,59 @@ export default function ViewRoomDetails() {
     );
   }
 
-  // Wrap useEffect to handle date and room count calculations
-  useEffect(() => {
-    if (room && date.from && date.to) {
-      const days = differenceInDays(date.to, date.from);
-
-      if (days <= 0) {
-        setDateError('Check-out date must be after check-in date');
-      } else {
-        setDateError('');
-        // Safely calculate room count with default capacity
-        setRoomCount(Math.ceil(guests / (room.capacity || 1)));
-      }
-    }
-  }, [date, guests, room?.capacity]);
-
   const calculatePrice = () => {
     if (!date.from || !date.to || !room) return 0;
     const nights = differenceInDays(date.to, date.from);
-    // Use default values if room or capacity is undefined
-    return room.price * nights * Math.ceil(guests / (room.capacity || 1));
+    const basePrice = room.pricePerNight * nights;
+
+    const requiredRooms = Math.ceil(guests / room.maxOccupancy);
+    let totalPrice = basePrice * requiredRooms;
+
+    // Apply dynamic pricing based on length of stay
+    if (nights >= 5) return Math.round(totalPrice * 0.9); // 10% discount for 5+ nights
+    if (nights > 1) return Math.round(totalPrice * 0.95); // 5% discount for 2-4 nights
+    return totalPrice;
   };
 
   const getRoomQuality = (rating) => {
+    if (!rating) return "Unrated";
     if (rating > 4.5) return "Excellent";
     if (rating > 4) return "Very Good";
     if (rating >= 3.5) return "Good";
     return "Okay";
   };
 
+  // console.log(user);
+  
+
   const handleBookNow = () => {
     if (!date.from || !date.to || !room) return;
     const nights = differenceInDays(date.to, date.from);
     const price = calculatePrice();
     const booking = {
-      roomId: room.id,
+      roomId: room._id,
       roomName: room.name,
       roomType: room.type,
-      roomCapacity: room.capacity,
-      roomPrice: room.price,
+      roomCapacity: room.maxOccupancy,
+      roomPrice: room.pricePerNight,
       startDate: date.from,
       endDate: date.to,
       guests: guests,
       nights,
       price,
+      roomCount,
     };
-    navigate(`/booking/${room.id}`, { state: { booking } });
+    navigate(`/booking/${room._id}`, { state: { booking } });
+  };
+
+  const handleGuestChange = (increment) => {
+    const newGuestCount = Math.max(1, guests + increment);
+    setGuests(newGuestCount);
+
+    // Recalculate room count based on new guest count
+    const newRoomCount = Math.ceil(newGuestCount / room.maxOccupancy);
+    setRoomCount(newRoomCount);
+    setPriceIncreased(newRoomCount > 1);
   };
 
   return (
@@ -143,7 +172,7 @@ export default function ViewRoomDetails() {
         </div>
         <div className="flex items-center">
           <Star className="text-yellow-500 mr-2" />
-          <span className="font-semibold">{room.rating}</span>
+          <span className="font-semibold">{room.rating || "New"}</span>
           <span className="text-gray-500 ml-2">
             ({getRoomQuality(room.rating)})
           </span>
@@ -154,7 +183,13 @@ export default function ViewRoomDetails() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Image Carousel */}
         <div className="relative">
-          <ImageSlider images={room.images} />
+          {room.images && room.images.length > 0 ? (
+            <ImageSlider images={room.images} />
+          ) : (
+            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
+              <p className="text-gray-500">No images available</p>
+            </div>
+          )}
         </div>
 
         {/* Booking Card */}
@@ -169,13 +204,13 @@ export default function ViewRoomDetails() {
                 <h3 className="font-semibold text-gray-700 flex items-center">
                   <Bed className="mr-2 text-primary" /> Room Type
                 </h3>
-                <p className="text-gray-600">{room.type}</p>
+                <p className="text-gray-600">{room.name}</p>
               </div>
               <div>
                 <h3 className="font-semibold text-gray-700 flex items-center">
                   <Users className="mr-2 text-primary" /> Capacity
                 </h3>
-                <p className="text-gray-600">{room.capacity} Guests</p>
+                <p className="text-gray-600">{room.maxOccupancy} Guests per room</p>
               </div>
             </div>
 
@@ -236,7 +271,7 @@ export default function ViewRoomDetails() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setGuests(Math.max(1, guests - 1))}
+                    onClick={() => handleGuestChange(-1)}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
@@ -244,7 +279,7 @@ export default function ViewRoomDetails() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setGuests(guests + 1)}
+                    onClick={() => handleGuestChange(1)}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -254,45 +289,69 @@ export default function ViewRoomDetails() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Rooms Required
                 </label>
-                <div className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md">
+                <div className="bg-orange-50 text-secondary-foreground px-4 py-2 rounded-md">
                   {roomCount}
                 </div>
               </div>
             </div>
 
             {/* Amenities */}
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">Amenities</h3>
-              <div className="flex flex-wrap gap-2">
-                {room.amenities.map((amenity) => (
-                  <span
-                    key={amenity}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
-                  >
-                    {amenity}
-                  </span>
-                ))}
+            {room.amenities && room.amenities.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-2">Amenities</h3>
+                <div className="flex flex-wrap gap-2">
+                  {room.amenities.map((amenity) => (
+                    <span
+                      key={amenity}
+                      className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
+                    >
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Total Price */}
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <span className="text-xl font-bold text-primary mr-2">
-                  ₹{calculatePrice()}
-                </span>
-                <Info
-                  className="text-gray-500 h-4 w-4"
-                  title="Total price for selected stay duration"
-                />
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <span className="text-xl font-bold text-primary mr-2">
+                    ₹{calculatePrice()}
+                  </span>
+                  <Info
+                    className="text-gray-500 h-4 w-4"
+                    title="Total price for selected stay duration"
+                  />
+                </div>
+                {!user ?
+                  <>
+                  <Button
+                      onClick={handleLogin}
+                      className="w-full max-w-xs bg-orange-600 text-white hover:bg-orange-700 transition-colors duration-200"
+                    >
+                      Login to Book
+                    </Button>
+                  </>
+                  :
+                  <>
+                    <Button
+                      disabled={!!dateError || !date.from || !date.to || !room}
+                      onClick={handleBookNow}
+                      className="w-full max-w-xs"
+                    >
+                      Book Now
+                    </Button>
+                  </>
+                }
+
               </div>
-              <Button
-                disabled={!!dateError}
-                onClick={handleBookNow}
-                className="w-full max-w-xs"
-              >
-                Book Now
-              </Button>
+              {priceIncreased && (
+                <p className="text-sm text-yellow-600 flex items-center">
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Price has increased due to multiple room allocation.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -300,3 +359,4 @@ export default function ViewRoomDetails() {
     </div>
   );
 }
+
