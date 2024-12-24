@@ -6,7 +6,9 @@ import {
   GetAllBookings,
   getavgrating,
   GetBookingById,
+  GetUserBookings,
   Putrating,
+  UpdateBooking,
 } from '../Controllers/BookingController.js';
 import {
   AddImagesById,
@@ -18,7 +20,7 @@ import {
 } from '../Controllers/roomController.js';
 import { uploadMultiple, uploadsingle } from '../Middleware/Multer.js';
 import {authMiddleware,authorizeRoles} from '../Middleware/AuthMiddleware.js';
-import { deleteUser, GetAllUsers, updateUser } from '../Controllers/userController.js';
+import { deleteUser, GetAllUsers, getUserDetails, updateUser } from '../Controllers/userController.js';
 import { AddHotel, GetHotel, updateHotel, UploadHotelLogo } from '../Controllers/HotelController.js';
 const router = express.Router();
 
@@ -27,11 +29,18 @@ router.post('/register', register);
 router.post('/login', login);
 router.put('/user/:id',authMiddleware,authorizeRoles('user','admin'), updateUser);
 router.delete('/user/delete/:id',authMiddleware,authorizeRoles('user','admin'), deleteUser);
-router.get('/user',authMiddleware,authorizeRoles('admin'),GetAllUsers)
+router.get('/user',authMiddleware,authorizeRoles('admin'),GetAllUsers)//used by admin o get all user
+router.get('/userdetails',authMiddleware,authorizeRoles('admin','user'),getUserDetails)//helps to get details of user
+router.get('/user/booking',authMiddleware,authorizeRoles('admin','user'),GetUserBookings)//helps to get booking of a particular user
+
 // Booking routes
 router.post('/booking',authMiddleware,authorizeRoles('user','admin'), CreateBooking); // Create a booking
 router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking); // Cancel a booking by ID
 router.get('/bookings',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
+router.delete('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking);
+router.put('/booking/:id',authMiddleware,authorizeRoles('user','admin'), UpdateBooking);
+ // Cancel a booking by ID
+router.get('/booking',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
 router.get('/booking/:id',authMiddleware,authorizeRoles('user','admin'), GetBookingById); // Get a booking by ID
 router.post('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), Putrating);
 router.get('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), getavgrating);
