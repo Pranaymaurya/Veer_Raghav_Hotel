@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { 
+import {
   Calendar,
-  CreditCard, 
-  UserCircle, 
+  CreditCard,
+  UserCircle,
   Mail,
   Phone,
   MapPin,
@@ -30,7 +30,11 @@ export default function BookingPage() {
   const { user } = useAuth();
   const [bookingData, setBookingData] = useState(null);
   const [isManualBooking, setIsManualBooking] = useState(false);
-  
+
+  if (!user) {
+    navigate('/auth/login');
+  }
+
   const isAdmin = user.role === 'admin';
 
   // Updated form state to use single name field
@@ -38,14 +42,13 @@ export default function BookingPage() {
     name: '',
     email: '',
     phone: '',
-    address: ''
   });
 
   const calculateTaxesAndFees = (basePrice) => {
     const gst = basePrice * 0.18;
     const serviceFee = basePrice * 0.05;
     const municipalTax = basePrice * 0.02;
-    
+
     return {
       gst,
       serviceFee,
@@ -66,8 +69,7 @@ export default function BookingPage() {
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || ''
+        phone: user.phoneno || '',
       });
     }
   }, [location, navigate, user, isAdmin]);
@@ -94,7 +96,7 @@ export default function BookingPage() {
       customerInfo: formData,
       taxesAndFees: calculateTaxesAndFees(bookingData.price)
     };
-    
+
     navigate('/payment', { state: bookingDetails });
   };
 
@@ -118,8 +120,8 @@ export default function BookingPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         className="mb-4"
         onClick={() => navigate(`/rooms/${bookingData.roomId}`)}
       >
@@ -189,17 +191,6 @@ export default function BookingPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    required
-                    value={formData.address}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
                 <Alert>
                   <Calendar className="h-4 w-4" />
                   <AlertTitle>Free Cancellation</AlertTitle>
@@ -217,6 +208,17 @@ export default function BookingPage() {
         </div>
 
         <div className="space-y-6">
+          <Card className="cursor-not-allowed">
+            <CardHeader>
+              <CardTitle>Have a Promo Code?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Enter Promo Code" className="cursor-not-allowed" disabled/>
+                <Button variant="outline" className="cursor-not-allowed" disabled>Apply</Button>
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Booking Summary</CardTitle>
@@ -294,7 +296,23 @@ export default function BookingPage() {
                   <span>₹{totalAmount.toFixed(2)}</span>
                 </div>
               </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  * Taxes and fees are calculated based on the room rate and number of nights.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  * Service fee is a flat rate of 5% of the total amount.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  * Municipal tax is a flat rate of 2% of the total amount.
+                </p>
+              </div>
             </CardContent>
+
+
           </Card>
 
           <Card>

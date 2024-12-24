@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'; // Replacing useRouter wit
 import { motion } from 'framer-motion';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 // import { loginUser } from '@/lib/api'; // Ensure this path is correct in your Vite project
 // import { useAuth } from '@/context/AuthContext'; // Adjust the import path as needed
 
@@ -16,18 +17,28 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate(); // Using useNavigate for navigation
   const { login } = useAuth(); // Using context for login
+  const { toast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     try {
-      const data = await login(email, password); // Call your login API
-      
-      if (data.user.role === 'admin') {
-        navigate('/dashboard'); // Redirect to dashboard if user is admin
-      } else {
-        navigate('/'); // Redirect to home for regular users
+      const response = await login(email, password); // Call your login API
+
+      if (response.success) {
+        toast({
+          title: 'Login successful',
+          description: 'You have successfully logged in.',
+          variant: 'success',
+          className: 'bg-green-200 border-green-400 text-black',
+          duration: 3000
+        })
+        if (response.user.role === 'admin') {
+          navigate('/dashboard/rooms');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       setError(error.message); // Set error if login fails
@@ -115,7 +126,7 @@ export default function LoginForm() {
       </motion.button>
       <div className="flex items-center justify-center mt-4 gap-1">
         Don't have an account?
-        <Link to="/register" className="text-sm underline text-orange-600 hover:text-orange-500">
+        <Link to="/auth/register" className="text-sm underline text-orange-600 hover:text-orange-500">
           Create an account
         </Link>
       </div>

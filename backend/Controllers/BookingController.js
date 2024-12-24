@@ -7,6 +7,7 @@ export const CreateBooking = async (req, res) => {
 
   try {
     const room = await Room.findById(roomId);
+    console.log(roomId);
     if (!room) return res.status(404).json({ message: "Room not found" });
     if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
 
@@ -16,6 +17,7 @@ export const CreateBooking = async (req, res) => {
     const numberOfNights = (new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24);
     if (numberOfNights <= 0) return res.status(400).json({ message: "Invalid booking dates" });
     const totalPrice = room.pricePerNight * numberOfNights;
+
     const booking = new Booking({
       user: userId,
       room: roomId,
@@ -23,12 +25,16 @@ export const CreateBooking = async (req, res) => {
       checkOutDate,
       totalPrice,
     });
+
     const savedBooking = await booking.save();
 
-    room.isAvailable = false;
     await room.save();
 
-    res.status(201).json({ message: "Booking created successfully", booking: savedBooking });
+    res.status(201).json({
+      message: "Booking created successfully",
+      bookingId: savedBooking._id, // Include the booking ID in the response
+      booking: savedBooking,
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to create booking", error: error.message });
   }
@@ -128,20 +134,20 @@ export const Putrating = async (req, res) => {
 // Get the average rating of a room
 export const getavgrating = async (req, res) => {
   try {
-    const { id } = req.params;  
+    const { id } = req.params;
     console.log('roomId from params:', id);  // Debugging line
 
     const room = await Room.findById(id);
-    
+
     if (!room) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
-    
+
     const ratings = room.ratings;
     if (ratings.length === 0) {
       return res.status(200).json({ success: true, message: 'No ratings available.', avg: 0 });
     }
-    
+
     const sum = ratings.reduce((acc, cur) => acc + cur.rating, 0);
     const avg = Math.round(sum / ratings.length);
 

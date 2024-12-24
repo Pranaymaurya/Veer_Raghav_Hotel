@@ -36,6 +36,8 @@ import SettingsContent from './pages/AdminDashboard/pages/SettingsContent';
 import CustomizeRooms from './pages/AdminDashboard/pages/CustomizeRooms';
 import RoomsForm from './pages/AdminDashboard/pages/RoomsForm';
 import UserProdfileLayout from './pages/UserProfile/UserProdfileLayout';
+import { AdminProvider } from './context/AdminContext';
+import { Toaster } from './components/ui/toaster';
 
 
 const router = createBrowserRouter([
@@ -68,7 +70,7 @@ const router = createBrowserRouter([
         )
       },
       {
-        path: "/booking/:id",
+        path: "/booking/:roomId",
         element: (
           <BookingPage />
         )
@@ -88,9 +90,9 @@ const router = createBrowserRouter([
       {
         path: "/profile",
         element: (
-            <UserProdfileLayout />
+          <UserProdfileLayout />
         ),
-      },    
+      },
     ]
   },
   {
@@ -193,7 +195,10 @@ createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <BookingProvider>
         <RoomProvider>
-          <RouterProvider router={router} />
+          <AdminProvider>
+            <RouterProvider router={router} />
+            <Toaster />
+          </AdminProvider>
         </RoomProvider>
       </BookingProvider>
     </AuthProvider>

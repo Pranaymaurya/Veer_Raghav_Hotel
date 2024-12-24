@@ -31,7 +31,7 @@ router.get('/user',authMiddleware,authorizeRoles('admin'),GetAllUsers)
 // Booking routes
 router.post('/booking',authMiddleware,authorizeRoles('user','admin'), CreateBooking); // Create a booking
 router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking); // Cancel a booking by ID
-router.get('/booking',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
+router.get('/bookings',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
 router.get('/booking/:id',authMiddleware,authorizeRoles('user','admin'), GetBookingById); // Get a booking by ID
 router.post('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), Putrating);
 router.get('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), getavgrating);
@@ -40,7 +40,7 @@ router.get('/room/rating/:id',authMiddleware,authorizeRoles('user','admin'), get
 router.post('/room', authMiddleware, authorizeRoles('admin'), uploadMultiple, AddRoom); // Create a new room
 router.post('/room/images/:id', authMiddleware,  authorizeRoles('admin') ,uploadMultiple, AddImagesById);
 router.delete('/room/:id', authMiddleware, authorizeRoles('admin'), DeleteRoom); // Delete a room by ID
-router.get('/room', GetRooms); // Get all rooms (publicly accessible)
+router.get('/rooms', GetRooms); // Get all rooms (publicly accessible)
 router.get('/room/:id', authMiddleware, authorizeRoles('admin'), GetRoomById); // Get a single room by ID
 router.put('/room/:id', authMiddleware, authorizeRoles('admin'), UpdateRoom); // Update a room by ID
 
