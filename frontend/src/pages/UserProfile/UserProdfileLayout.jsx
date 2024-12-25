@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import UserProfile from "./components/UserProfile";
 const UserProfileLayout = () => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
@@ -43,7 +44,7 @@ const UserProfileLayout = () => {
     name: user?.name || "",
     email: user?.email || "",
     phone: user?.phoneno || "",
-    address: user?.address || "",
+    address: user?.address || "N/A",
     age: user?.age || "",
     avatar: user?.avatar || "/api/placeholder/150/150",
   });
@@ -166,10 +167,10 @@ const UserProfileLayout = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold">{userDetails.name}</h1>
-              {/* <p className="text-blue-100">
+              <p className="text-blue-100">
                 Member since{" "}
                 {new Date(userDetails.joinDate).toLocaleDateString()}
-              </p> */}
+              </p>
             </div>
           </div>
         </div>
@@ -177,6 +178,7 @@ const UserProfileLayout = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Information */}
           <div className="lg:col-span-2 space-y-6">
+            <UserProfile />
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Profile Information</CardTitle>

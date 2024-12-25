@@ -1,22 +1,17 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Replacing useRouter with useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-// import { loginUser } from '@/lib/api'; // Ensure this path is correct in your Vite project
-// import { useAuth } from '@/context/AuthContext'; // Adjust the import path as needed
-
-
-
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate(); // Using useNavigate for navigation
-  const { login } = useAuth(); // Using context for login
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e) => {
@@ -24,7 +19,7 @@ export default function LoginForm() {
     setError('');
 
     try {
-      const response = await login(email, password); // Call your login API
+      const response = await login(email, password);
 
       if (response.success) {
         toast({
@@ -32,16 +27,23 @@ export default function LoginForm() {
           description: 'You have successfully logged in.',
           variant: 'success',
           className: 'bg-green-200 border-green-400 text-black',
-          duration: 3000
-        })
+          duration: 3000,
+        });
+
         if (response.user.role === 'admin') {
           navigate('/dashboard/rooms');
         } else {
           navigate('/');
         }
       }
-    } catch (error) {
-      setError(error.message); // Set error if login fails
+    } catch (err) {
+        toast({
+            title: 'Error',
+            description: err.message || 'An error occurred during login.',
+            variant: 'destructive',
+            className: 'bg-red-200 border-red-400 text-black',
+            duration: 3000,
+        })
     }
   };
 
@@ -57,7 +59,7 @@ export default function LoginForm() {
   return (
     <motion.form
       onSubmit={handleSubmit}
-      className="space-y-6 bg-white roooms"
+      className="space-y-6 bg-white"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -84,7 +86,7 @@ export default function LoginForm() {
         <div className="relative">
           <motion.input
             id="password"
-            type={showPassword ? "text" : "password"}
+            type={showPassword ? 'text' : 'password'}
             required
             className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
             value={password}
@@ -97,11 +99,7 @@ export default function LoginForm() {
             className="absolute inset-y-0 right-0 pr-3 flex items-center"
             onClick={() => setShowPassword(!showPassword)}
           >
-            {showPassword ? (
-              <FiEyeOff className="h-5 w-5 text-gray-400" />
-            ) : (
-              <FiEye className="h-5 w-5 text-gray-400" />
-            )}
+            {showPassword ? <FiEyeOff className="h-5 w-5 text-gray-400" /> : <FiEye className="h-5 w-5 text-gray-400" />}
           </button>
         </div>
       </div>

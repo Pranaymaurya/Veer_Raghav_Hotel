@@ -1,9 +1,23 @@
-import React from 'react';
+import { useSettings } from '@/pages/AdminDashboard/SettingsContext';
+import React, { useEffect } from 'react';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaFacebook, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
-
 const Footer = () => {
+  const { hotel, fetchHotel } = useSettings();
+
+  useEffect(() => {
+    fetchHotel();
+  }, []);
+
+  // Safeguard for when the hotel data is not yet available
+  if (!hotel || hotel.length === 0) {
+    return null; // Render nothing if no data
+  }
+
+  const hotelData = hotel[0]; // Access the first hotel data object
+  const { name, address, contactNumbers, checkInTime, checkOutTime } = hotelData;
+
   return (
     <footer 
       className="text-white mt-[10%]"
@@ -20,17 +34,15 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="text-xl font-semibold mb-4">Contact Us</h3>
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <FaPhone className="flex-shrink-0" size={20} />
-                <span className="text-md">Reservation: +91 7376717607</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <FaPhone className="flex-shrink-0" size={20} />
-                <span className="text-md">Booking: +91 7376717607</span>
-              </div>
+              {contactNumbers.map((number, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <FaPhone className="flex-shrink-0" size={20} />
+                  <span className="text-md">{number}</span>
+                </div>
+              ))}
               <div className="flex items-start gap-2">
                 <FaMapMarkerAlt className="flex-shrink-0 mt-1" size={20} />
-                <span className="text-md">259 Uttar Paras math Near kanak bhavan mandir ayodhya 224123 uttar pradesh</span>
+                <span className="text-md">{address}</span>
               </div>
             </div>
           </div>
@@ -70,11 +82,12 @@ const Footer = () => {
         <div className="border-t border-amber-500 pt-8 pb-12">
           <h4 className="text-xl font-semibold mb-4">About Us</h4>
           <p className="text-lg mb-4">
-            We are dedicated to providing exceptional hospitality services in the heart of Ayodhya. 
-            Our commitment to quality and customer satisfaction ensures a memorable stay for all our guests.
+            Welcome to <strong>{name}</strong>, located at the heart of Ayodhya.
+            We are dedicated to providing exceptional hospitality services. 
           </p>
           <p className="text-lg">
             Experience the rich culture and spirituality of Ayodhya while enjoying modern comforts and warm hospitality.
+            Check-in time: <strong>{checkInTime}</strong>, Check-out time: <strong>{checkOutTime}</strong>.
           </p>
         </div>
       </div>
@@ -87,10 +100,10 @@ const Footer = () => {
               © 2024 All rights reserved
             </div>
             <div className="flex space-x-4 text-md">
-              <Link href="/privacy-policy" className="hover:underline">
+              <Link to="/privacy-policy" className="hover:underline">
                 Privacy Policy
               </Link>
-              <Link href="/terms-conditions" className="hover:underline">
+              <Link to="/terms-conditions" className="hover:underline">
                 Terms & Conditions
               </Link>
             </div>
@@ -102,4 +115,3 @@ const Footer = () => {
 };
 
 export default Footer;
-

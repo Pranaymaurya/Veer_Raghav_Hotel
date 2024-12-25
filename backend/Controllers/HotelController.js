@@ -2,8 +2,8 @@ import Hotel from "../Models/HotelModel.js";
 
 export const AddHotel = async (req, res) => {
   try {
-    const { name, address, contactNumbers, checkInTime, checkOutTime } = req.body;
-    if (!name || !address || !contactNumbers || !checkInTime || !checkOutTime) {
+    const { name, address, contactNumbers, checkInTime, checkOutTime, logo } = req.body;
+    if (!name || !address || !contactNumbers || !checkInTime || !checkOutTime || !logo) {
       return res.status(400).json({ message: "All fields are required." });
     }
     if (!Array.isArray(contactNumbers)) {
@@ -15,6 +15,7 @@ export const AddHotel = async (req, res) => {
       contactNumbers,
       checkInTime,
       checkOutTime,
+      logo
     });
     await newHotel.save();
     return res.status(201).json({
