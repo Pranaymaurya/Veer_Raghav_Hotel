@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Clock, Mail, Phone, MapPin, Image, Plus, Trash2, Settings, Edit, X, Loader2, AlertCircle } from 'lucide-react';
-import { useSettings } from '../SettingsContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 // import { validateHotelData } from '../components/hotelValidation';

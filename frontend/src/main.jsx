@@ -38,7 +38,7 @@ import RoomsForm from './pages/AdminDashboard/pages/RoomsForm';
 import UserProdfileLayout from './pages/UserProfile/UserProdfileLayout';
 import { AdminProvider } from './context/AdminContext';
 import { Toaster } from './components/ui/toaster';
-import { SettingsProvider } from './pages/AdminDashboard/SettingsContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 
 const router = createBrowserRouter([

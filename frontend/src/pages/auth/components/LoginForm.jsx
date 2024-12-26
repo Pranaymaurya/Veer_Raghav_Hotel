@@ -21,21 +21,21 @@ export default function LoginForm() {
     try {
       const response = await login(email, password);
 
-      if (response.success) {
-        toast({
-          title: 'Login successful',
-          description: 'You have successfully logged in.',
-          variant: 'success',
-          className: 'bg-green-200 border-green-400 text-black',
-          duration: 3000,
-        });
+      // if (response.success) {
+      //   toast({
+      //     title: 'Login successful',
+      //     description: 'You have successfully logged in.',
+      //     variant: 'success',
+      //     className: 'bg-green-200 border-green-400 text-black',
+      //     duration: 3000,
+      //   });
 
-        if (response.user.role === 'admin') {
-          navigate('/dashboard/rooms');
-        } else {
-          navigate('/');
-        }
-      }
+      //   if (response.user.role === 'admin') {
+      //     navigate('/dashboard/rooms');
+      //   } else {
+      //     navigate('/');
+      //   }
+      // }
     } catch (err) {
         toast({
             title: 'Error',

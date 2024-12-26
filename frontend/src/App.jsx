@@ -4,9 +4,15 @@ import Navbar from './components/Navbar'
 import { Link, Outlet, ScrollRestoration } from 'react-router-dom'
 import Footer from './components/Footer'
 import AnimationPage from './components/animation'
+import { useAuth } from './hooks/useAuth'
 
 const App = () => {
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+
+  console.log(user);
+  
 
   useEffect(() => {
     // Check if the user has visited before

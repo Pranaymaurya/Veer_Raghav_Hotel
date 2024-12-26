@@ -31,21 +31,15 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GuestContent() {
-  const { fetchUsers, Guests, deleteUser, updateUser, addUser } = useAdminContext();
+  const { fetchUsers, Guests, deleteUser, updateUser, addUser, loading } = useAdminContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'guest' });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadUsers = async () => {
-      setLoading(true);
-      await fetchUsers();
-      setLoading(false);
-    };
-    loadUsers();
+    fetchUsers();
   }, []);
 
   const filteredAndSortedGuests = Guests
@@ -56,34 +50,31 @@ export default function GuestContent() {
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
 
-  const handleDelete = async () => {
-    if (deletingUser) {
-      setLoading(true);
-      const success = await deleteUser(deletingUser._id);
-      if (success) {
-        toast({
-          title: "User deleted",
-          description: "The user has been successfully deleted.",
-        });
-        await fetchUsers();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete the user. Please try again.",
-          variant: "destructive",
-        });
+    const handleDelete = async () => {
+      if (deletingUser) {
+        const success = await deleteUser(deletingUser._id);
+        if (success) {
+          setDeletingUser(null);
+          await fetchUsers();
+          toast({
+            title: "User deleted",
+            description: "The user has been successfully deleted.",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to delete the user. Please try again.",
+            variant: "destructive",
+          });
+        }
       }
-      setDeletingUser(null);
-      setLoading(false);
-    }
-  };
+    };
 
   const handleEdit = (user) => {
     setEditingUser({ ...user });
   };
 
   const handleUpdate = async () => {
-    setLoading(true);
     const success = await updateUser(editingUser);
     if (success) {
       setEditingUser(null);
@@ -99,11 +90,9 @@ export default function GuestContent() {
         variant: "destructive",
       });
     }
-    setLoading(false);
   };
 
   const handleAdd = async () => {
-    setLoading(true);
     const success = await addUser(newUser);
     if (success) {
       setNewUser({ name: '', email: '', role: 'guest' });
@@ -119,7 +108,6 @@ export default function GuestContent() {
         variant: "destructive",
       });
     }
-    setLoading(false);
   };
 
   if (loading) {

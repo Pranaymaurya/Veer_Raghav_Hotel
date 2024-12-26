@@ -26,10 +26,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const CustomizeRooms = () => {
     const navigate = useNavigate();
-    const { Rooms, getAllRooms, deleteRoom, getImageUrl } = useRoom();
+    const { Rooms, getAllRooms, deleteRoom, getImageUrl, loading } = useRoom();
     const { user } = useAuth();
     
-    const [loading, setLoading] = useState(true);
     const [roomToDelete, setRoomToDelete] = useState(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -40,26 +39,7 @@ const CustomizeRooms = () => {
             navigate('/login', { state: { from: location.pathname } });
             return;
         }
-
-        const fetchRooms = async () => {
-            try {
-                setLoading(true);
-                await getAllRooms();
-            } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "Failed to fetch rooms. Please try again later.",
-                    variant: "destructive",
-                });
-                if (error.message === 'Authentication required. Please log in again.') {
-                    navigate('/login', { state: { from: location.pathname } });
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchRooms();
+        getAllRooms();
     }, [user, navigate]);
 
     const confirmDelete = (room) => {
@@ -310,11 +290,21 @@ const CustomizeRooms = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={loading}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={handleDeleteRoom}>
-                            Delete
+                        <Button variant="destructive" onClick={handleDeleteRoom} disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                </>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -324,4 +314,3 @@ const CustomizeRooms = () => {
 };
 
 export default CustomizeRooms;
-

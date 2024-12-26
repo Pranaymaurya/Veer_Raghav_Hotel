@@ -11,12 +11,12 @@ const UserProfile = () => {
     const { user, updateProfile, deleteAccount } = useAuth();
     const navigate = useNavigate();
 
-    console.log(user.userId);
+    // console.log(user.userId);
     
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-    console.log(user);
+    // console.log(user);
     const [formData, setFormData] = useState({
         name: user?.name || '',
         email: user?.email || '',

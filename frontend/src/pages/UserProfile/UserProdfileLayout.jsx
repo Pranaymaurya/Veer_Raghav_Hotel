@@ -132,9 +132,9 @@ const UserProfileLayout = () => {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  if (user.role !== "user") {
-    return <Navigate to="/" replace />;
-  }
+  // if (user.role !== "user") {
+  //   return <Navigate to="/" replace />;
+  // }
 
   const handleUpdateProfile = () => {
     // Implement profile update logic here

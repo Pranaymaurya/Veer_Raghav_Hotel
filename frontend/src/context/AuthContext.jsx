@@ -10,46 +10,44 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    useEffect(() => {
-        checkUserLoggedIn();
-    }, []);
 
-    const checkUserLoggedIn = () => {
-        const userFromCookie = Cookies.get('user');
-        
-        if (userFromCookie) {
-            try {
-                const parsedUser = JSON.parse(userFromCookie);
-                setUser(parsedUser);
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-                Cookies.remove('user');
+    const fetchUserProfile = async () => {
+        try {
+            const response = await api.get('/profile');
+            if (response.data.success) {
+                setUser(response.data.user);
             }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+            logout();
+        }
+    };
+
+
+    useEffect(() => {
+        const token = Cookies.get('token');
+        if (token) {
+            fetchUserProfile();
         }
         setLoading(false);
-    };
+    }, []);
+
 
     const login = async (email, password) => {
         try {
             const response = await api.post('/login', { email, password });
             
             if (response.data.success) {
-                const userData = response.data.user;
-                setUser(userData);
-                // Store user data in cookie
-                Cookies.set('user', JSON.stringify(userData), { expires: 1 }); // 1 hour to match backend
-                
+                await fetchUserProfile();
                 return {
                     success: true,
-                    message: response.data.message,
-                    user: userData
-                };
-            } else {
-                return {
-                    success: false,
-                    message: response.data.message || 'Login failed.'
+                    message: response.data.message
                 };
             }
+            return {
+                success: false,
+                message: response.data.message || 'Login failed.'
+            };
         } catch (error) {
             console.error('Error logging in:', error);
             return {
@@ -108,7 +106,7 @@ export const AuthProvider = ({ children }) => {
             if (response.data.success) {
                 const updatedUser = response.data.user;
                 setUser(updatedUser);
-                Cookies.set('user', JSON.stringify(updatedUser), { expires: 1 });
+                // Cookies.set('user', JSON.stringify(updatedUser), { expires: 1 });
                 
                 toast({
                     title: "Profile updated",
@@ -141,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     const logout = useCallback(async () => {
         setUser(null);
         Cookies.remove('user');
+        Cookies.remove('token');
     }, []);
 
     const deleteAccount = async () => {
