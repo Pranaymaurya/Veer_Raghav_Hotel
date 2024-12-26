@@ -5,12 +5,14 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import LogoutConfirmationModal from '@/components/LogoutConfirmationModal';
+import { useToast } from '@/hooks/use-toast';
 
 
 const Sidebar = () => {
     const { user, loading, logout } = useAuth();
     const location = useLocation();
     const [expandedSections, setExpandedSections] = useState({});
+    const { toast } = useToast();
     //   const {notifications} = useAdmin();
 
     if (loading) {
@@ -32,6 +34,13 @@ const Sidebar = () => {
     const handleLogout = () => {
         logout();
         window.location.href = "/auth/login";
+        toast({
+            title: "Logout successful",
+            description: "You have successfully logged out.",
+            variant: "success",
+            className: "bg-green-200 border-green-400 text-black text-lg",
+            duration: 3000
+          });
     };
 
     const getLinkClass = (path, isNested = false) => {
