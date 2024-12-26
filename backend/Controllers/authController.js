@@ -1,11 +1,11 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../Models/userModel.js';
-
+ 
 // Register Function
 export const register = async (req, res) => {
   const { name, email, password, phoneno, gender, age, role } = req.body;
-
+ 
   try {
     // Input validation
     if (!name || !email || !password || !phoneno) {
@@ -14,7 +14,7 @@ export const register = async (req, res) => {
         message: "Name, email, password, and phone number are required."
       });
     }
-
+ 
     // Check for existing user
     const existingUser = await User.findOne({ $or: [{ email }, { phoneno }] });
     if (existingUser) {
@@ -23,11 +23,11 @@ export const register = async (req, res) => {
         message: "A user with this email or phone number already exists."
       });
     }
-
+ 
     // Hash the password
     const salt = await bcryptjs.genSalt(10);
     const hashedPassword = await bcryptjs.hash(password, salt);
-
+ 
     // Create new user
     const newUser = await User.create({
       name,
@@ -38,7 +38,7 @@ export const register = async (req, res) => {
       age,
       role
     });
-
+ 
     return res.status(201).json({
       success: true,
       message: "User registered successfully.",
@@ -58,11 +58,11 @@ export const register = async (req, res) => {
     });
   }
 };
-
+ 
 // Login Function
 export const login = async (req, res) => {
   const { email, password } = req.body;
-
+ 
   try {
     // Input validation
     if (!email || !password) {
@@ -81,7 +81,6 @@ export const login = async (req, res) => {
         message: "User not found or password is missing."
       });
     }
-
     // Check password match
     const isMatch = await bcryptjs.compare(password, user.password);
     if (!isMatch) {
@@ -90,14 +89,12 @@ export const login = async (req, res) => {
         message: "Invalid credentials. Password is incorrect."
       });
     }
-
     // Generate JWT
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '1h' }
     );
-
     // Set cookie with the token
     res.cookie('token', token, {
       httpOnly: true,
@@ -135,7 +132,6 @@ export const logout = (req, res) => {
       secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
       sameSite: 'strict'
     });
-
     return res.status(200).json({
       success: true,
       message: "Logout successful."

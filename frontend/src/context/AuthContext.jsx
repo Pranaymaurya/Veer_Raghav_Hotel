@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import Cookies from 'js-cookie';
-import api, { setAuthContext } from "@/utils/api";
+import api from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
 
 export const AuthContext = createContext();
@@ -12,35 +12,18 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         checkUserLoggedIn();
-        setAuthContext({ logout });
-    }, []);
-
-    const getToken = useCallback(() => {
-        try {
-            const token = Cookies.get('token');
-            if (!token) {
-                throw new Error('No token found');
-            }
-            return token;
-        } catch (error) {
-            console.error('Error getting token:', error);
-            logout();
-            throw new Error('Authentication failed');
-        }
     }, []);
 
     const checkUserLoggedIn = () => {
         const userFromCookie = Cookies.get('user');
-        const tokenFromCookie = Cookies.get('token');
-
-        if (userFromCookie && tokenFromCookie) {
+        
+        if (userFromCookie) {
             try {
                 const parsedUser = JSON.parse(userFromCookie);
                 setUser(parsedUser);
             } catch (error) {
                 console.error('Error parsing user data:', error);
                 Cookies.remove('user');
-                Cookies.remove('token');
             }
         }
         setLoading(false);
@@ -49,15 +32,17 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const response = await api.post('/login', { email, password });
-            if (response.status === 200 && response.data.success) {
-                setUser(response.data.user);
-                Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
-                Cookies.set('token', response.data.token, { expires: 7 });
+            
+            if (response.data.success) {
+                const userData = response.data.user;
+                setUser(userData);
+                // Store user data in cookie
+                Cookies.set('user', JSON.stringify(userData), { expires: 1 }); // 1 hour to match backend
                 
                 return {
                     success: true,
                     message: response.data.message,
-                    user: response.data.user
+                    user: userData
                 };
             } else {
                 return {
@@ -69,7 +54,7 @@ export const AuthProvider = ({ children }) => {
             console.error('Error logging in:', error);
             return {
                 success: false,
-                message: error.response?.data?.message || 'An error occurred. Login failed.'
+                message: error.response?.data?.message || 'An error occurred during login.'
             };
         }
     };
@@ -77,24 +62,36 @@ export const AuthProvider = ({ children }) => {
     const register = async (userData) => {
         try {
             const registrationData = {
-                ...userData,
+                name: userData.name,
+                email: userData.email,
+                password: userData.password,
+                phoneno: userData.phoneno,
+                gender: userData.gender || '',
+                age: userData.age || '',
                 role: userData.role || 'user'
             };
+    
             const response = await api.post('/register', registrationData);
+    
             if (response.data.success) {
-                setUser(response.data.user);
-                Cookies.set('user', JSON.stringify(response.data.user), { expires: 7 });
-                Cookies.set('token', response.data.token, { expires: 7 });
+                toast({
+                    title: "Registration successful",
+                    description: "Please login to continue.",
+                    variant: "success",
+                    className: "bg-green-200 border-green-400 text-black text-lg",
+                    duration: 3000
+                });
+                
                 return {
                     success: true,
-                    user: response.data.user
-                };
-            } else {
-                return {
-                    success: false,
-                    message: response.data.message || 'Registration failed'
+                    message: "Registration successful. Please login to continue."
                 };
             }
+            
+            return {
+                success: false,
+                message: response.data.message || 'Registration failed'
+            };
         } catch (error) {
             console.error('Registration error:', error);
             return {
@@ -104,22 +101,15 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const updateUserData = useCallback((newData) => {
-        setUser(currentUser => {
-            const updatedUser = { ...currentUser, ...newData };
-            Cookies.set('user', JSON.stringify(updatedUser), { expires: 7 });
-            return updatedUser;
-        });
-    }, []);
-
     const updateProfile = async (userData) => {
-        
         try {
-           
-            
             const response = await api.put(`/user/${user.userId}`, userData);
+            
             if (response.data.success) {
-                updateUserData(response.data.user);
+                const updatedUser = response.data.user;
+                setUser(updatedUser);
+                Cookies.set('user', JSON.stringify(updatedUser), { expires: 1 });
+                
                 toast({
                     title: "Profile updated",
                     description: "Your profile has been successfully updated.",
@@ -127,7 +117,8 @@ export const AuthProvider = ({ children }) => {
                     className: "bg-green-200 border-green-400 text-black text-lg",
                     duration: 3000
                 });
-                return { success: true, user: response.data.user };
+                
+                return { success: true, user: updatedUser };
             } else {
                 throw new Error(response.data.message || 'Profile update failed');
             }
@@ -140,13 +131,22 @@ export const AuthProvider = ({ children }) => {
                 className: "bg-red-200 border-red-400 text-black text-lg",
                 duration: 3000
             });
-            return { success: false, message: error.message || 'An error occurred while updating your profile' };
+            return { 
+                success: false, 
+                message: error.message || 'An error occurred while updating your profile' 
+            };
         }
     };
+
+    const logout = useCallback(async () => {
+        setUser(null);
+        Cookies.remove('user');
+    }, []);
 
     const deleteAccount = async () => {
         try {
             const response = await api.delete(`/user/delete/${user._id}`);
+            
             if (response.data.success) {
                 toast({
                     title: "Account deleted",
@@ -155,7 +155,8 @@ export const AuthProvider = ({ children }) => {
                     className: "bg-green-200 border-green-400 text-black text-lg",
                     duration: 3000
                 });
-                logout();
+                
+                await logout();
                 return { success: true };
             } else {
                 throw new Error(response.data.message || 'Account deletion failed');
@@ -169,23 +170,12 @@ export const AuthProvider = ({ children }) => {
                 className: "bg-red-200 border-red-400 text-black text-lg",
                 duration: 3000
             });
-            return { success: false, message: error.message || 'An error occurred while deleting your account' };
+            return { 
+                success: false, 
+                message: error.message || 'An error occurred while deleting your account' 
+            };
         }
     };
-
-    const logout = useCallback(() => {
-        setUser(null);
-        Cookies.remove('user');
-        Cookies.remove('token');
-        localStorage.removeItem('token');
-        toast({
-            title: "Logout successful",
-            description: "You have successfully logged out.",
-            variant: "success",
-            className: "bg-green-200 border-green-400 text-black text-lg",
-            duration: 3000
-        });
-    }, []);
 
     return (
         <AuthContext.Provider value={{
@@ -194,8 +184,6 @@ export const AuthProvider = ({ children }) => {
             login,
             register,
             logout,
-            getToken,
-            updateUserData,
             updateProfile,
             deleteAccount
         }}>

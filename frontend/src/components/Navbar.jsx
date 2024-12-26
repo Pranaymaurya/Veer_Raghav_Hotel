@@ -36,11 +36,13 @@ import {
 import { LiaPrayingHandsSolid } from "react-icons/lia";
 import { useAuth } from "@/hooks/useAuth";
 import LogoutConfirmationModal from "./LogoutConfirmationModal";
+import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isMenuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { toast } = useToast();
 
   const menuItems = [
     { name: "Home", path: "/", icon: Home },
@@ -109,7 +111,7 @@ const Navbar = () => {
 
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <LogoutConfirmationModal onConfirm={logout}>
+            <LogoutConfirmationModal onConfirm={handleLogout}>
               <div className="flex items-center p-2 text-sm hover:bg-red-600 rounded-md hover:text-white w-full cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" /> Logout
               </div>
@@ -118,6 +120,17 @@ const Navbar = () => {
         </DropdownMenuContent>
       </DropdownMenu>
     );
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logout successful",
+      description: "You have successfully logged out.",
+      variant: "success",
+      className: "bg-green-200 border-green-400 text-black text-lg",
+      duration: 3000
+    });
   };
 
   return (
@@ -273,7 +286,7 @@ const Navbar = () => {
               </div>
             ) : (
               <div className="mt-6">
-                <LogoutConfirmationModal onConfirm={logout}>
+                <LogoutConfirmationModal onConfirm={handleLogout}>
                   <Button className="bg-[#FF9933] hover:bg-[#a3611f] text-white absolute bottom-36 right-1/2 transform translate-x-1/2">
                     <LogOut className="mr-2 h-4 w-4" /> Logout
                   </Button>
