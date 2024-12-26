@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }) => {
             className: "bg-green-200 border-green-400 text-black text-lg",
             duration: 3000
         });
-    }, [toast]);
+    }, []);
 
     return (
         <AuthContext.Provider value={{
