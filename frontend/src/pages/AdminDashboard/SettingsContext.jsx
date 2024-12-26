@@ -8,19 +8,19 @@ export const useSettings = () => useContext(SettingsContext);
 
 export const SettingsProvider = ({ children }) => {
 
-  const { getToken } = useAuth();
+  // const { getToken } = useAuth();
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getAuthConfig = useCallback(async () => {
-    const token = await getToken();
-    return {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    };
-  }, [getToken]);
+  // const getAuthConfig = useCallback(async () => {
+  //   const token = await getToken();
+  //   return {
+  //     headers: {
+  //       'Authorization': `Bearer ${token}`,
+  //       'Content-Type': 'application/json',
+  //     },
+  //   };
+  // }, [getToken]);
 
  
 
@@ -30,8 +30,8 @@ export const SettingsProvider = ({ children }) => {
 
   const fetchHotel = async () => {
     try {
-      const config = await getAuthConfig();
-      const response = await api.get('/hotel', config);
+      // const config = await getAuthConfig();
+      const response = await api.get('/hotel');
       if (response.data) {
         setHotel(response.data);
       }
@@ -45,7 +45,7 @@ export const SettingsProvider = ({ children }) => {
   const createHotel = async (hotelData) => {
     try {
       const config = await getAuthConfig();
-      const response = await api.post('/hotel', hotelData, config);
+      const response = await api.post('/hotel', hotelData);
       setHotel(response.data);
       return response.data;
     } catch (error) {
@@ -56,8 +56,7 @@ export const SettingsProvider = ({ children }) => {
 
   const updateHotel = async (hotelId, hotelData) => {
     try {
-      const config = await getAuthConfig();
-      
+    
       // Ensure data is properly formatted
       const formattedData = {
         name: hotelData.name || '',
@@ -71,7 +70,7 @@ export const SettingsProvider = ({ children }) => {
   
       console.log('Sending data:', formattedData); // For debugging
   
-      const response = await api.put(`/hotel/${hotelId}`, formattedData, config);
+      const response = await api.put(`/hotel/${hotelId}`, formattedData);
       
       if (response.data) {
         setHotel(Array.isArray(response.data) ? response.data : [response.data]);
@@ -92,11 +91,10 @@ export const SettingsProvider = ({ children }) => {
 
   const uploadLogo = async (file) => {
     try {
-      const config = await getAuthConfig();
       const formData = new FormData();
       formData.append('logo', file);
       const response = await api.put('/hotel/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }, config
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       setHotel(prevHotel => ({ ...prevHotel, logoUrl: response.data.logoUrl }));
       return response.data;

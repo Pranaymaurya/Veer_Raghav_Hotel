@@ -70,25 +70,28 @@ export const AuthProvider = ({ children }) => {
                 age: userData.age || '',
                 role: userData.role || 'user'
             };
-
+    
             const response = await api.post('/register', registrationData);
-            
+    
             if (response.data.success) {
-                const newUser = response.data.user;
-                setUser(newUser);
-                Cookies.set('user', JSON.stringify(newUser), { expires: 1 });
+                toast({
+                    title: "Registration successful",
+                    description: "Please login to continue.",
+                    variant: "success",
+                    className: "bg-green-200 border-green-400 text-black text-lg",
+                    duration: 3000
+                });
                 
                 return {
                     success: true,
-                    message: response.data.message,
-                    user: newUser
-                };
-            } else {
-                return {
-                    success: false,
-                    message: response.data.message || 'Registration failed'
+                    message: "Registration successful. Please login to continue."
                 };
             }
+            
+            return {
+                success: false,
+                message: response.data.message || 'Registration failed'
+            };
         } catch (error) {
             console.error('Registration error:', error);
             return {
@@ -136,13 +139,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = useCallback(async () => {
-        try {
-            await api.post('/logout');
-            setUser(null);
-            Cookies.remove('user');
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
+        setUser(null);
+        Cookies.remove('user');
     }, []);
 
     const deleteAccount = async () => {

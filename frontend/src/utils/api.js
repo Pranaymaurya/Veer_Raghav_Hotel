@@ -1,9 +1,11 @@
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
-  withCredentials: true,
+  withCredentials: true, // Important for sending/receiving cookies
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 let authContext = null;
@@ -12,24 +14,19 @@ export const setAuthContext = (context) => {
   authContext = context;
 };
 
-api.interceptors.request.use(
-  (config) => {
-    const token = Cookies.get('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401 && authContext) {
-      authContext.logout();
+  async (error) => {
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401) {
+      if (authContext) {
+        try {
+          await authContext.logout();
+        } catch (logoutError) {
+          console.error('Error during logout:', logoutError);
+        }
+      }
     }
     return Promise.reject(error);
   }
