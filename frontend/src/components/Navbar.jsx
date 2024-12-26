@@ -204,7 +204,6 @@ const Navbar = () => {
                 </Link>
               ))}
 
-              {/* Admin-specific mobile menu items */}
               {user &&
                 <>
                   {user?.role === 'admin' ? (

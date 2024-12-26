@@ -9,6 +9,8 @@ export const useSettings = () => useContext(SettingsContext);
 export const SettingsProvider = ({ children }) => {
 
   const { getToken } = useAuth();
+  const [hotel, setHotel] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const getAuthConfig = useCallback(async () => {
     const token = await getToken();
@@ -20,8 +22,7 @@ export const SettingsProvider = ({ children }) => {
     };
   }, [getToken]);
 
-  const [hotel, setHotel] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+ 
 
   useEffect(() => {
     fetchHotel();
@@ -53,14 +54,38 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
-  const updateHotel = async (hotelData) => {
+  const updateHotel = async (hotelId, hotelData) => {
     try {
       const config = await getAuthConfig();
-      const response = await api.put('/hotel', hotelData, config);
-      setHotel(response.data);
-      return response.data;
+      
+      // Ensure data is properly formatted
+      const formattedData = {
+        name: hotelData.name || '',
+        contactNumbers: Array.isArray(hotelData.contactNumbers) 
+          ? hotelData.contactNumbers.filter(num => num.trim() !== '')
+          : [],
+        address: hotelData.address || '',
+        checkInTime: hotelData.checkInTime || '',
+        checkOutTime: hotelData.checkOutTime || '',
+      };
+  
+      console.log('Sending data:', formattedData); // For debugging
+  
+      const response = await api.put(`/hotel/${hotelId}`, formattedData, config);
+      
+      if (response.data) {
+        setHotel(Array.isArray(response.data) ? response.data : [response.data]);
+        return response.data;
+      }
+      
+      throw new Error('No data received from server');
     } catch (error) {
       console.error('Failed to update hotel:', error);
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      }
       throw error;
     }
   };
@@ -83,7 +108,7 @@ export const SettingsProvider = ({ children }) => {
 
 
   return (
-    <SettingsContext.Provider value={{ hotel, isLoading, createHotel, updateHotel, uploadLogo }}>
+    <SettingsContext.Provider value={{ hotel, isLoading, createHotel, updateHotel, uploadLogo, fetchHotel }}>
       {children}
     </SettingsContext.Provider>
   );

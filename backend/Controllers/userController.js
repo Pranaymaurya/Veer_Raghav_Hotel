@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../Models/userModel.js';
 export const updateUser = async (req, res) => {
     const { name, email,phoneno, gender, age,address} = req.body;
-    const userId = req.params.id;  // The ID of the user to update, passed via URL parameter
+    const userId = req.params._id;  // The ID of the user to update, passed via URL parameter
   
     try {
       // Check if the user exists

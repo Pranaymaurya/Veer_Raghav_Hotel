@@ -112,6 +112,67 @@ export const AuthProvider = ({ children }) => {
         });
     }, []);
 
+    const updateProfile = async (userData) => {
+        
+        try {
+           
+            
+            const response = await api.put(`/user/${user.userId}`, userData);
+            if (response.data.success) {
+                updateUserData(response.data.user);
+                toast({
+                    title: "Profile updated",
+                    description: "Your profile has been successfully updated.",
+                    variant: "success",
+                    className: "bg-green-200 border-green-400 text-black text-lg",
+                    duration: 3000
+                });
+                return { success: true, user: response.data.user };
+            } else {
+                throw new Error(response.data.message || 'Profile update failed');
+            }
+        } catch (error) {
+            console.error('Profile update error:', error);
+            toast({
+                title: "Update failed",
+                description: error.message || 'An error occurred while updating your profile',
+                variant: "destructive",
+                className: "bg-red-200 border-red-400 text-black text-lg",
+                duration: 3000
+            });
+            return { success: false, message: error.message || 'An error occurred while updating your profile' };
+        }
+    };
+
+    const deleteAccount = async () => {
+        try {
+            const response = await api.delete(`/user/delete/${user._id}`);
+            if (response.data.success) {
+                toast({
+                    title: "Account deleted",
+                    description: "Your account has been successfully deleted.",
+                    variant: "success",
+                    className: "bg-green-200 border-green-400 text-black text-lg",
+                    duration: 3000
+                });
+                logout();
+                return { success: true };
+            } else {
+                throw new Error(response.data.message || 'Account deletion failed');
+            }
+        } catch (error) {
+            console.error('Account deletion error:', error);
+            toast({
+                title: "Deletion failed",
+                description: error.message || 'An error occurred while deleting your account',
+                variant: "destructive",
+                className: "bg-red-200 border-red-400 text-black text-lg",
+                duration: 3000
+            });
+            return { success: false, message: error.message || 'An error occurred while deleting your account' };
+        }
+    };
+
     const logout = useCallback(() => {
         setUser(null);
         Cookies.remove('user');
@@ -124,7 +185,7 @@ export const AuthProvider = ({ children }) => {
             className: "bg-green-200 border-green-400 text-black text-lg",
             duration: 3000
         });
-    }, [toast]);
+    }, []);
 
     return (
         <AuthContext.Provider value={{
@@ -134,7 +195,9 @@ export const AuthProvider = ({ children }) => {
             register,
             logout,
             getToken,
-            updateUserData
+            updateUserData,
+            updateProfile,
+            deleteAccount
         }}>
             {children}
         </AuthContext.Provider>

@@ -2,20 +2,32 @@ import { useAuth } from '@/hooks/useAuth';
 import React, { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { Menu, X } from 'lucide-react';
-import { Outlet } from 'react-router-dom';
-import { SettingsProvider } from './SettingsContext';
+import { X } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router-dom';
+// import { SettingsProvider } from './SettingsContext';
 
 const DashboardLayout = () => {
     const { user } = useAuth();
+    // const navigate = useNavigate();
 
-    if (!user || user.role !== 'admin') {
+    // useEffect(() => {
+    //     if (!user || user.role !== 'admin') {
+    //         navigate('/auth/login');
+    //     }
+    // }, [user, navigate]);
+
+    if (!user) {
+        return null; // Render nothing while redirecting
+    }
+
+    if (user.role !== 'admin') {
         return (
             <div className='flex justify-center items-center min-h-screen'>
                 <p className='text-red-500 text-5xl'>You are not authorized to access this page.</p>
             </div>
-        )
+        );
     }
+
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
