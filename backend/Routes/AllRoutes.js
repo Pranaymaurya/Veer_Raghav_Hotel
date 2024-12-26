@@ -9,6 +9,7 @@ import {
   GetUserBookings,
   Putrating,
   UpdateBooking,
+  UpdateBookingForAdmin,
 } from '../Controllers/BookingController.js';
 import {
   AddImagesById,
@@ -39,6 +40,7 @@ router.put('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), 
 router.get('/bookings',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
 router.delete('/booking/:id/cancel',authMiddleware,authorizeRoles('user','admin'), CancelBooking);
 router.put('/booking/:id',authMiddleware,authorizeRoles('user','admin'), UpdateBooking);
+router.put('/booking/admin/:id',authMiddleware,authorizeRoles('admin'), UpdateBookingForAdmin);
  // Cancel a booking by ID
 router.get('/booking',authMiddleware,authorizeRoles('user','admin'),GetAllBookings); // Get all bookings
 router.get('/booking/:id',authMiddleware,authorizeRoles('user','admin'), GetBookingById); // Get a booking by ID
