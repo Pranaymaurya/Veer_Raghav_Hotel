@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
-
+import cookieParser from 'cookie-parser';
 // Get __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +32,10 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Connect to the database
 connectDB();
 
+
+
+// Middleware to parse cookies
+app.use(cookieParser());
 // Routes
 app.use("/api/v3/", router);
 

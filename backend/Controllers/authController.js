@@ -64,6 +64,7 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // Input validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -71,7 +72,8 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }); // Case-insensitive email check
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user || !user.password) {
       return res.status(400).json({
@@ -80,6 +82,7 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check password match
     const isMatch = await bcryptjs.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({
@@ -88,15 +91,24 @@ export const login = async (req, res) => {
       });
     }
 
+    // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role }, // Include 'role' here
+      { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '1h' }
     );
+
+    // Set cookie with the token
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'strict', // Protect against CSRF
+      maxAge: 60 * 60 * 1000 // 1 hour
+    });
+    // Send response
     return res.status(200).json({
       success: true,
       message: "Login successful.",
-      token,
       user: {
         userId: user._id,
         name: user.name,
@@ -106,6 +118,27 @@ export const login = async (req, res) => {
         age: user.age,
         role: user.role
       }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later."
+    });
+  }
+};
+export const logout = (req, res) => {
+  try {
+    // Clear the token cookie
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'strict'
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful."
     });
   } catch (error) {
     console.error(error);

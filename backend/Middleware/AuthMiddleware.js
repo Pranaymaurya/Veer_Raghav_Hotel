@@ -1,16 +1,14 @@
 import jwt from 'jsonwebtoken';
 import User from '../Models/userModel.js';
 
+// Authentication middleware to verify JWT from Authorization header or cookies
 const authMiddleware = (req, res, next) => {
   if (!req || !res) {
     return res.status(400).json({ message: 'Request or Response object is missing' });
   }
-
-  if (!req.headers || !req.headers.authorization) {
-    return res.status(401).json({ message: 'Authentication required.' });
-  }
-
-  const token = req.headers.authorization.split(' ')[1]; // "Bearer <token>"
+  // console.log(req.cookies.token);
+  // Check if the token is sent via the Authorization header or cookies
+  const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]); // "Bearer <token>"
 
   if (!token) {
     return res.status(401).json({ message: 'Authentication required.' });
@@ -29,6 +27,7 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+// Authorization middleware to check if the user has the required roles
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     const currentUser = req.user;
@@ -36,7 +35,6 @@ const authorizeRoles = (...roles) => {
     if (!currentUser) {
       return res.status(401).json({ message: 'User not authenticated.' });
     }
-    console.log(currentUser)
 
     console.log("User Role from Token:", currentUser.role);  // Debugging line
     console.log("Expected roles:", roles);  // Debugging line
@@ -49,6 +47,5 @@ const authorizeRoles = (...roles) => {
     next();
   };
 };
-
 
 export { authMiddleware, authorizeRoles };
