@@ -10,7 +10,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { LogOut } from 'lucide-react';
 
 const LogoutConfirmationModal = ({ onConfirm, children }) => {

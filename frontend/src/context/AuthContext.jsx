@@ -8,6 +8,7 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [ isAuthenticated, setIsAuthenticated ] = useState(false);
     const { toast } = useToast();
 
 
@@ -18,25 +19,22 @@ export const AuthProvider = ({ children }) => {
                 setUser(response.data.user);
             }
         } catch (error) {
-            console.error('Error fetching user profile:', error);
-            logout();
+            // console.error('Error fetching user profile:', error);
+            // logout();
         }
     };
 
 
     useEffect(() => {
-        const token = Cookies.get('token');
-        if (token) {
-            fetchUserProfile();
-        }
+        fetchUserProfile();
         setLoading(false);
-    }, []);
+    }, [isAuthenticated]);
 
 
     const login = async (email, password) => {
         try {
             const response = await api.post('/login', { email, password });
-            
+            setIsAuthenticated(true);
             if (response.data.success) {
                 await fetchUserProfile();
                 return {
@@ -99,9 +97,26 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const logout = useCallback(async () => {
+        try {
+            await api.get('/logout');
+            setIsAuthenticated(false);
+            setUser(null);
+        } catch (error) {
+            console.error('Logout error:', error);
+            toast({
+                title: "Logout failed",
+                description: error.message || 'An error occurred while logging out',
+                variant: "destructive",
+                className: "bg-red-200 border-red-400 text-black text-lg",
+                duration: 3000
+            });
+         }
+    }, []);
+
     const updateProfile = async (userData) => {
         try {
-            const response = await api.put(`/user/${user.userId}`, userData);
+            const response = await api.put(`/user/${user._id}`, userData);
             
             if (response.data.success) {
                 const updatedUser = response.data.user;
@@ -136,11 +151,49 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = useCallback(async () => {
-        setUser(null);
-        Cookies.remove('user');
-        Cookies.remove('token');
-    }, []);
+    const uploadProfilePicture = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('profilePicture', file);
+
+            const response = await api.post('/upload-profile-picture', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data.success) {
+                const updatedUser = { ...user, profilePicture: response.data.profilePictureUrl };
+                setUser(updatedUser);
+
+                toast({
+                    title: "Profile picture updated",
+                    description: "Your profile picture has been successfully updated.",
+                    variant: "success",
+                    className: "bg-green-200 border-green-400 text-black text-lg",
+                    duration: 3000
+                });
+
+                return { success: true, profilePictureUrl: response.data.profilePictureUrl };
+            } else {
+                throw new Error(response.data.message || 'Profile picture upload failed');
+            }
+        } catch (error) {
+            console.error('Profile picture upload error:', error);
+            toast({
+                title: "Upload failed",
+                description: error.message || 'An error occurred while uploading your profile picture',
+                variant: "destructive",
+                className: "bg-red-200 border-red-400 text-black text-lg",
+                duration: 3000
+            });
+            return { 
+                success: false, 
+                message: error.message || 'An error occurred while uploading your profile picture' 
+            };
+        }
+    };
+
 
     const deleteAccount = async () => {
         try {
@@ -184,6 +237,7 @@ export const AuthProvider = ({ children }) => {
             register,
             logout,
             updateProfile,
+            uploadProfilePicture,
             deleteAccount
         }}>
             {children}

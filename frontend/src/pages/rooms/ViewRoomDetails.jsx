@@ -1,15 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, addDays, isBefore, isToday } from 'date-fns';
 import { Bed, Users, Star, ChevronLeft, Plus, Minus, Info, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useRoom } from '@/context/RoomContext';
 import ImageSlider from './components/ImageSlider';
 import { useAuth } from '@/hooks/useAuth';
+
+const RoomDetailsSkeleton = () => (
+  <div className="container mx-auto p-4 space-y-6">
+    <div className="flex justify-between items-center mb-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-6 w-32" />
+      </div>
+      <Skeleton className="h-6 w-24" />
+    </div>
+
+    <div className="grid md:grid-cols-2 gap-6">
+      <Skeleton className="aspect-video rounded-lg" />
+
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-7 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
+          <Skeleton className="h-20" />
+          <Skeleton className="h-12 w-full" />
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
 
 export default function ViewRoomDetails() {
   const { id } = useParams();
@@ -17,49 +53,78 @@ export default function ViewRoomDetails() {
   const [searchParams] = useSearchParams();
 
   const { user } = useAuth();
-  const { Rooms, getAllRooms } = useRoom();
+  const { Rooms, getAllRooms, loading: roomsLoading } = useRoom();
 
   // State management
-  const [loading, setLoading] = useState(true);
   const [guests, setGuests] = useState(() => {
     const guestsParam = searchParams.get('guests');
     return guestsParam ? parseInt(guestsParam) : 1;
   });
-  const [date, setDate] = useState(() => {
-    const startDateParam = searchParams.get('startDate');
-    const endDateParam = searchParams.get('endDate');
 
-    return {
-      from: startDateParam ? new Date(startDateParam) : new Date(),
-      to: endDateParam ? new Date(endDateParam) : new Date()
-    };
+  const [date, setDate] = useState(() => {
+    try {
+      const startDateParam = searchParams.get('startDate');
+      const endDateParam = searchParams.get('endDate');
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const tomorrow = addDays(today, 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      return {
+        from: startDateParam ? new Date(startDateParam) : today,
+        to: endDateParam ? new Date(endDateParam) : tomorrow
+      };
+    } catch (error) {
+      console.error('Error initializing dates:', error);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const tomorrow = addDays(today, 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      return {
+        from: today,
+        to: tomorrow
+      };
+    }
   });
+
   const [roomCount, setRoomCount] = useState(1);
   const [dateError, setDateError] = useState('');
   const [priceIncreased, setPriceIncreased] = useState(false);
 
-  // Fetch all rooms and find the specific room
+  // Fetch all rooms
   useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        await getAllRooms();
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRooms();
+    getAllRooms();
   }, []);
 
   // Find the current room from Rooms array
-  const room = Rooms.find(room => room._id === id);
+  const room = Rooms?.find(room => room._id === id);
 
-  // Handle date, guest, and room count calculations
+  // Date validation and room count calculations
   useEffect(() => {
-    if (room && date.from && date.to) {
+    if (room && date?.from && date?.to) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Validate check-in date
+      if (isBefore(date.from, today) && !isToday(date.from)) {
+        setDateError('Check-in date cannot be in the past');
+        return;
+      }
+
+      // Validate check-out date
+      if (date.to && isBefore(date.to, date.from)) {
+        setDateError('Check-out date must be after check-in date');
+        return;
+      }
+
       const days = differenceInDays(date.to, date.from);
 
-      if (days <= 0) {
-        setDateError('Check-out date must be after check-in date');
+      if (days < 1) {
+        setDateError('Minimum stay is 1 night');
       } else {
         setDateError('');
         const requiredRooms = Math.ceil(guests / room.maxOccupancy);
@@ -69,15 +134,12 @@ export default function ViewRoomDetails() {
     }
   }, [date, guests, room?.maxOccupancy]);
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="container mx-auto p-4 text-center">
-        <p>Loading room details...</p>
-      </div>
-    );
+  // Show skeleton loading state
+  if (roomsLoading) {
+    return <RoomDetailsSkeleton />;
   }
 
+  // Handle login redirect
   const handleLogin = () => {
     navigate('/auth/login');
   };
@@ -102,32 +164,30 @@ export default function ViewRoomDetails() {
   }
 
   const calculatePrice = () => {
-    if (!date.from || !date.to || !room) return 0;
-    const nights = differenceInDays(date.to, date.from);
-    const basePrice = room.pricePerNight * nights;
+    if (!room || !isValidDateRange(date)) return 0;
 
+    const nights = calculateNights(date);
+    if (nights === 0) return 0;
+
+    const basePrice = room.pricePerNight * nights;
     const requiredRooms = Math.ceil(guests / room.maxOccupancy);
     let totalPrice = basePrice * requiredRooms;
 
-    // Apply dynamic pricing based on length of stay
-    if (nights >= 5) return Math.round(totalPrice * 0.9); // 10% discount for 5+ nights
-    if (nights > 1) return Math.round(totalPrice * 0.95); // 5% discount for 2-4 nights
+    if (nights >= 5) return Math.round(totalPrice * 0.9);
+    if (nights > 1) return Math.round(totalPrice * 0.95);
     return totalPrice;
   };
 
   const getRoomQuality = (rating) => {
-    if (!rating) return "Unrated";
+    if (!rating) return "New";
     if (rating > 4.5) return "Excellent";
     if (rating > 4) return "Very Good";
     if (rating >= 3.5) return "Good";
     return "Okay";
   };
 
-  // console.log(user);
-  
-
   const handleBookNow = () => {
-    if (!date.from || !date.to || !room) return;
+    if (!date?.from || !date?.to || !room) return;
     const nights = differenceInDays(date.to, date.from);
     const price = calculatePrice();
     const booking = {
@@ -138,7 +198,7 @@ export default function ViewRoomDetails() {
       roomPrice: room.pricePerNight,
       startDate: date.from,
       endDate: date.to,
-      guests: guests,
+      guests,
       nights,
       price,
       roomCount,
@@ -150,10 +210,58 @@ export default function ViewRoomDetails() {
     const newGuestCount = Math.max(1, guests + increment);
     setGuests(newGuestCount);
 
-    // Recalculate room count based on new guest count
-    const newRoomCount = Math.ceil(newGuestCount / room.maxOccupancy);
-    setRoomCount(newRoomCount);
-    setPriceIncreased(newRoomCount > 1);
+    if (room) {
+      const newRoomCount = Math.ceil(newGuestCount / room.maxOccupancy);
+      setRoomCount(newRoomCount);
+      setPriceIncreased(newRoomCount > 1);
+    }
+  };
+
+
+  const isValidDateRange = (dateRange) => {
+    if (!dateRange || !dateRange.from || !dateRange.to) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      return (
+        dateRange.from instanceof Date &&
+        dateRange.to instanceof Date &&
+        !isNaN(dateRange.from) &&
+        !isNaN(dateRange.to) &&
+        (isToday(dateRange.from) || isBefore(today, dateRange.from))
+      );
+    } catch (error) {
+      console.error('Error validating date range:', error);
+      return false;
+    }
+  };
+
+  const formatDateRange = (dateRange) => {
+    try {
+      if (!isValidDateRange(dateRange)) {
+        return "Select dates";
+      }
+
+      return `${format(dateRange.from, "EEE, MMM d, yyyy")} - ${format(dateRange.to, "EEE, MMM d, yyyy")}`;
+    } catch (error) {
+      console.error('Error formatting date range:', error);
+      return "Select dates";
+    }
+  };
+
+  const calculateNights = (dateRange) => {
+    try {
+      if (!isValidDateRange(dateRange)) return 0;
+      return Math.max(differenceInDays(dateRange.to, dateRange.from), 0);
+    } catch (error) {
+      console.error('Error calculating nights:', error);
+      return 0;
+    }
+  };
+
+  const disabledDays = {
+    before: new Date(),
   };
 
   return (
@@ -172,7 +280,9 @@ export default function ViewRoomDetails() {
         </div>
         <div className="flex items-center">
           <Star className="text-yellow-500 mr-2" />
-          <span className="font-semibold">{room.rating || "New"}</span>
+          <span className="font-semibold">
+            {room.rating?.toFixed(1) || "New"}
+          </span>
           <span className="text-gray-500 ml-2">
             ({getRoomQuality(room.rating)})
           </span>
@@ -183,7 +293,7 @@ export default function ViewRoomDetails() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Image Carousel */}
         <div className="relative">
-          {room.images && room.images.length > 0 ? (
+          {room.images?.length > 0 ? (
             <ImageSlider images={room.images} />
           ) : (
             <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
@@ -225,31 +335,27 @@ export default function ViewRoomDetails() {
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !date.from && "text-muted-foreground"
+                      !isValidDateRange(date) && "text-muted-foreground"
                     )}
                   >
-                    {date.from ? (
-                      date.to ? (
-                        <>
-                          {format(date.from, "LLL dd, y")} -{" "}
-                          {format(date.to, "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(date.from, "LLL dd, y")
-                      )
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    {formatDateRange(date)}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     initialFocus
                     mode="range"
-                    defaultMonth={date.from}
-                    selected={date}
-                    onSelect={setDate}
+                    defaultMonth={isValidDateRange(date) ? date.from : new Date()}
+                    selected={isValidDateRange(date) ? date : undefined}
+                    onSelect={(newDate) => {
+                      setDate(newDate || {
+                        from: new Date(),
+                        to: addDays(new Date(), 1)
+                      });
+                    }}
                     numberOfMonths={2}
+                    disabled={disabledDays}
+                    className="rounded-md border"
                   />
                 </PopoverContent>
               </Popover>
@@ -259,7 +365,15 @@ export default function ViewRoomDetails() {
                   {dateError}
                 </div>
               )}
+              {isValidDateRange(date) && !dateError && (
+                <div className="text-sm text-primary mt-2 flex justify-end">
+                  <span className="font-normal">
+                    {calculateNights(date)} {calculateNights(date) === 1 ? 'night' : 'nights'} selected
+                  </span>
+                </div>
+              )}
             </div>
+
 
             {/* Guests and Rooms */}
             <div className="grid grid-cols-2 gap-4">
@@ -326,7 +440,7 @@ export default function ViewRoomDetails() {
                 </div>
                 {!user ?
                   <>
-                  <Button
+                    <Button
                       onClick={handleLogin}
                       className="w-full max-w-xs bg-orange-600 text-white hover:bg-orange-700 transition-colors duration-200"
                     >
@@ -338,7 +452,7 @@ export default function ViewRoomDetails() {
                     <Button
                       disabled={!!dateError || !date.from || !date.to || !room}
                       onClick={handleBookNow}
-                      className="w-full max-w-xs"
+                      className="w-full max-w-xs bg-orange-600 text-white hover:bg-orange-700 transition-colors duration-200"
                     >
                       Book Now
                     </Button>

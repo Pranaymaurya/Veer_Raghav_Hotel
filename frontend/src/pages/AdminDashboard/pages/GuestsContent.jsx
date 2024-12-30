@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAdminContext } from '@/context/AdminContext';
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -9,14 +9,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -24,9 +24,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -36,7 +35,8 @@ export default function GuestContent() {
   const [sortOrder, setSortOrder] = useState('asc');
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'guest' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchUsers();
@@ -45,68 +45,41 @@ export default function GuestContent() {
   const filteredAndSortedGuests = Guests
     .filter(guest => guest.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => {
-      const dateA = new Date(a.joinDate);
-      const dateB = new Date(b.joinDate);
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-    });
+    })
+    .map(guest => ({
+      ...guest,
+      isBooked: true // Setting default isBooked to true as requested
+    }));
 
-    const handleDelete = async () => {
-      if (deletingUser) {
-        const success = await deleteUser(deletingUser._id);
-        if (success) {
-          setDeletingUser(null);
-          await fetchUsers();
-          toast({
-            title: "User deleted",
-            description: "The user has been successfully deleted.",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to delete the user. Please try again.",
-            variant: "destructive",
-          });
-        }
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAndSortedGuests.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedGuests = filteredAndSortedGuests.slice(startIndex, startIndex + itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handleDelete = async () => {
+    if (deletingUser) {
+      const success = await deleteUser(deletingUser._id);
+      if (success) {
+        setDeletingUser(null);
+        await fetchUsers();
+        toast({
+          title: "User deleted",
+          description: "The user has been successfully deleted.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete the user. Please try again.",
+          variant: "destructive",
+        });
       }
-    };
-
-  const handleEdit = (user) => {
-    setEditingUser({ ...user });
-  };
-
-  const handleUpdate = async () => {
-    const success = await updateUser(editingUser);
-    if (success) {
-      setEditingUser(null);
-      toast({
-        title: "User updated",
-        description: "The user information has been successfully updated.",
-      });
-      await fetchUsers();
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to update the user. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAdd = async () => {
-    const success = await addUser(newUser);
-    if (success) {
-      setNewUser({ name: '', email: '', role: 'guest' });
-      toast({
-        title: "User added",
-        description: "The new user has been successfully added.",
-      });
-      await fetchUsers();
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to add the new user. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -141,6 +114,7 @@ export default function GuestContent() {
   return (
     <div className="container mx-auto p-6 text-black">
       <h1 className="text-2xl font-bold mb-4">Guest List</h1>
+      <p className="mb-4 text-gray-600 text-sm italic">In here the guest list is shown that who's are booked the rooms</p>
       <div className="flex justify-between items-center mb-4">
         <Input
           type="text"
@@ -149,7 +123,7 @@ export default function GuestContent() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <Select onValueChange={(value) => setSortOrder(value)}>
+        <Select value={sortOrder} onValueChange={setSortOrder}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Sort by join date" />
           </SelectTrigger>
@@ -165,15 +139,21 @@ export default function GuestContent() {
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Join Date</TableHead>
+            {/* <TableHead>Booking Status</TableHead> */}
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredAndSortedGuests.map((guest) => (
+          {paginatedGuests.map((guest) => (
             <TableRow key={guest._id}>
               <TableCell>{guest.name}</TableCell>
               <TableCell>{guest.email}</TableCell>
-              <TableCell>{new Date(guest.joinDate).toLocaleDateString()}</TableCell>
+              <TableCell>{new Date(guest.createdAt).toLocaleDateString()}</TableCell>
+              {/* <TableCell>
+                <span className={`px-2 py-1 rounded-full text-sm ${guest.isBooked ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {guest.isBooked ? 'Booked' : 'Not Booked'}
+                </span>
+              </TableCell> */}
               <TableCell>
                 <Button variant="destructive" onClick={() => setDeletingUser(guest)}>Delete</Button>
               </TableCell>
@@ -182,40 +162,33 @@ export default function GuestContent() {
         </TableBody>
       </Table>
 
-      {/* Edit User Dialog */}
-      {editingUser && (
-        <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>Make changes to the user information.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-name" className="text-right">Name</Label>
-                <Input
-                  id="edit-name"
-                  value={editingUser.name}
-                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-email" className="text-right">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editingUser.email}
-                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleUpdate}>Update User</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          {[...Array(totalPages)].map((_, index) => (
+            <Button
+              key={index + 1}
+              variant={currentPage === index + 1 ? "default" : "outline"}
+              onClick={() => handlePageChange(index + 1)}
+            >
+              {index + 1}
+            </Button>
+          ))}
+          <Button
+            variant="outline"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
       )}
 
       {/* Delete Confirmation Dialog */}
@@ -236,4 +209,3 @@ export default function GuestContent() {
     </div>
   );
 }
-

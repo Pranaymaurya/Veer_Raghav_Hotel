@@ -4,7 +4,11 @@ import api from '@/utils/api';
 const BookingContext = createContext();
 
 export const BookingProvider = ({ children }) => {
+
+
   const createBooking = useCallback(async (bookingData) => {
+    console.log('Booking data:', bookingData);
+    
     try {
       const response = await api.post('/booking', bookingData);
 
@@ -13,7 +17,7 @@ export const BookingProvider = ({ children }) => {
         booking: {
           ...response.data,
           id: response.data.id || response.data._id,
-          userId: bookingData.userId,
+          userId: bookingData._id,
           roomId: bookingData.roomId,
           checkInDate: bookingData.checkInDate,
           checkOutDate: bookingData.checkOutDate,

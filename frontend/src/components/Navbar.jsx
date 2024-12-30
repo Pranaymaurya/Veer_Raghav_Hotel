@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import Typewriter from "typewriter-effect";
@@ -31,18 +31,32 @@ import {
   ShieldCheck,
   Users,
   BarChart,
-  Image
+  Image,
+  CircleUserRound
 } from 'lucide-react';
 import { LiaPrayingHandsSolid } from "react-icons/lia";
 import { useAuth } from "@/hooks/useAuth";
 import LogoutConfirmationModal from "./LogoutConfirmationModal";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/context/SettingsContext";
 
 const Navbar = () => {
   const [isMenuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
   const { toast } = useToast();
+
+  const { gethotel, hotelData } = useSettings();
+  
+
+  useEffect(() => {
+    const fetchHotelInfo = async () => {
+      await gethotel();
+    };
+
+    fetchHotelInfo();
+  }, []);
+
 
   const menuItems = [
     { name: "Home", path: "/", icon: Home },
@@ -86,13 +100,13 @@ const Navbar = () => {
             </>
             : <>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/profile#mybookings" className="flex items-center">
-                  <BookOpen className="mr-2 h-4 w-4" /> My Bookings
+                <Link to="/profile" className="flex items-center">
+                  <CircleUserRound className="mr-2 h-4 w-4" /> My Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4" /> Settings
+                <Link to="/profile#mybookings" className="flex items-center">
+                  <BookOpen className="mr-2 h-4 w-4" /> My Bookings
                 </Link>
               </DropdownMenuItem>
             </>}
@@ -142,7 +156,7 @@ const Navbar = () => {
     >
       <div className="max-w-screen-xl mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="items-center text-[#FF9933] pr-5">
-          <h1 className="text-xl font-bold">Veer Raghav</h1>
+          <h1 className="text-xl font-bold">{hotelData?.name}</h1>
           <motion.div className="flex ml-4">
             <Typewriter
               options={{
@@ -164,8 +178,8 @@ const Navbar = () => {
               to={item.path}
               className={
                 location.pathname === item.path
-                  ? "py-2 px-3 shadow-lg bg-[#FF9933] text-black hover:bg-[#FF9933] hover:text-white transition duration-200 rounded-md relative cursor-pointer border-double"
-                  : "py-1.5 px-3 text-[#FF9933] hover:bg-[#FF9933] hover:text-white transition duration-200 rounded-md"
+                  ? "py-2 px-3 shadow-lg bg-[#FF9933] hover:text-black hover:bg-[#FF9933] text-white transition duration-200 rounded-md relative cursor-pointer border-double"
+                  : "py-1.5 px-3 text-[#FF9933] hover:bg-[#FF9933] hover:text-black transition duration-200 rounded-md"
               }
             >
               {item.name}
@@ -249,8 +263,8 @@ const Navbar = () => {
                       <DropdownMenuSeparator className="my-2" />
                       <div className="text-sm font-semibold text-gray-500 px-4 mb-2">My Controls</div>
                       {[
+                        { name: "My Profile", path: "/profile", icon: CircleUserRound },
                         { name: "My Bookings", path: "/bookings", icon: BookOpen },
-                        { name: "Settings", path: "/settings", icon: Settings },
                       ].map((item) => (
                         <Link
                           key={item.name}

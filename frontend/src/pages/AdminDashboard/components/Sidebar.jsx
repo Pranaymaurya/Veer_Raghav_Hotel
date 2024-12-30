@@ -62,6 +62,7 @@ const Sidebar = () => {
         { icon: Home, label: 'Dashboard', path: '/dashboard' },
         { icon: Calendar, label: 'Bookings', path: '/dashboard/bookings' },
         { icon: Users, label: 'Guests', path: '/dashboard/guests' },
+        { icon: UserCog, label: 'Users', path: '/dashboard/users' },
         { icon: House, label: 'Rooms', path: '/dashboard/Rooms' },
         { icon: CreditCard, label: 'Payments', path: '/dashboard/payments' },
         { icon: BarChart, label: 'Reports', path: '/dashboard/reports' },

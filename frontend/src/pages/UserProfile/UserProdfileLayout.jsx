@@ -31,8 +31,9 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import UserProfile from "./components/UserProfile";
+import UserBookings from "./components/UserBookings";
 const UserProfileLayout = () => {
-  const { user, isLoading } = useAuth();
+  const { user, loading, deleteAccount } = useAuth();
   const location = useLocation();
   const bookingsRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -120,7 +121,7 @@ const UserProfileLayout = () => {
     }
   }, [location.hash, location.pathname]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin w-6 h-6 border-4 border-orange-500 border-t-transparent rounded-full" />
@@ -129,7 +130,7 @@ const UserProfileLayout = () => {
   }
 
   if (!user) {
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    return <Navigate to="/auth/login" replace />;
   }
 
   // if (user.role !== "user") {
@@ -141,8 +142,27 @@ const UserProfileLayout = () => {
     setIsEditing(false);
   };
 
-  const handleDeleteAccount = () => {
-    // Implement account deletion logic here
+  const handleDeleteAccount = async () => {
+    const response = await deleteAccount();
+
+    if (response.success) {
+      toast({
+        title: "Account deleted",
+        description: "Your account has been successfully deleted.",
+        variant: "success",
+        className: "bg-green-200 border-green-400 text-black text-lg",
+        duration: 3000,
+      });
+    } else {
+      toast({
+        title: "Deletion failed",
+        description: response.message || "An error occurred while deleting your account",
+        variant: "destructive",
+        className: "bg-red-200 border-red-400 text-black text-lg",
+        duration: 3000,
+      });
+    }
+
     setShowDeleteDialog(false);
   };
 
@@ -160,7 +180,7 @@ const UserProfileLayout = () => {
               /> */}
 
               <FcBusinessman
-              className="w-24 h-24 rounded-full border-4 border-white" />
+                className="w-24 h-24 rounded-full border-4 border-white" />
               <button className="absolute bottom-0 right-0 bg-white p-2 rounded-full text-orange-600 hover:bg-gray-100">
                 <Camera className="w-4 h-4" />
               </button>
@@ -176,129 +196,14 @@ const UserProfileLayout = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Information */}
           <div className="lg:col-span-2 space-y-6">
+
+            {/* Profile Information */}
             <UserProfile />
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Profile Information</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  {isEditing ? "Cancel" : "Edit Profile"}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {isEditing ? (
-                    <form className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Name
-                        </label>
-                        <Input
-                          value={userDetails.name}
-                          onChange={(e) =>
-                            setUserDetails({
-                              ...userDetails,
-                              name: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Email
-                        </label>
-                        <Input
-                          type="email"
-                          value={userDetails.email}
-                          onChange={(e) =>
-                            setUserDetails({
-                              ...userDetails,
-                              email: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Phone
-                        </label>
-                        <Input
-                          value={userDetails.phone}
-                          onChange={(e) =>
-                            setUserDetails({
-                              ...userDetails,
-                              phone: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Age
-                        </label>
-                        <Input
-                          value={userDetails.age}
-                          onChange={(e) =>
-                            setUserDetails({
-                              ...userDetails,
-                              age: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Address
-                        </label>
-                        <Input
-                          value={userDetails.address}
-                          onChange={(e) =>
-                            setUserDetails({
-                              ...userDetails,
-                              address: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <Button onClick={handleUpdateProfile}>
-                        Save Changes
-                      </Button>
-                    </form>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>{userDetails.name}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>{userDetails.email}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>{userDetails.phone}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Command className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>{userDetails.age}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>{userDetails.address}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+
 
             {/* Bookings Section */}
+            <UserBookings />
             <Card ref={bookingsRef} id="mybookings">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -542,9 +447,10 @@ const UserProfileLayout = () => {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Delete Account</DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-sm text-black ">
                           Are you sure you want to delete your account? This
-                          action cannot be undone.
+                          action cannot be undone. The account will be
+                          permanently deleted from our system.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="flex justify-end space-x-2">

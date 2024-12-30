@@ -21,29 +21,25 @@ export default function LoginForm() {
     try {
       const response = await login(email, password);
 
-      // if (response.success) {
-      //   toast({
-      //     title: 'Login successful',
-      //     description: 'You have successfully logged in.',
-      //     variant: 'success',
-      //     className: 'bg-green-200 border-green-400 text-black',
-      //     duration: 3000,
-      //   });
-
-      //   if (response.user.role === 'admin') {
-      //     navigate('/dashboard/rooms');
-      //   } else {
-      //     navigate('/');
-      //   }
-      // }
-    } catch (err) {
+      if (response.success) {
         toast({
-            title: 'Error',
-            description: err.message || 'An error occurred during login.',
-            variant: 'destructive',
-            className: 'bg-red-200 border-red-400 text-black',
-            duration: 3000,
-        })
+          title: 'Login successful',
+          description: 'You have successfully logged in.',
+          variant: 'success',
+          className: 'bg-green-200 border-green-400 text-black',
+          duration: 3000,
+        });
+
+        if (response.user.role === 'admin') {
+          navigate('/dashboard/rooms');
+        } else {
+          navigate('/');
+        }
+      } else {
+        setError(response.message);
+      }
+    } catch (err) {
+      console.error('Error logging in:', err);
     }
   };
 

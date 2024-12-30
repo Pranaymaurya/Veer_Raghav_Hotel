@@ -147,7 +147,8 @@ export const RoomProvider = ({ children }) => {
     getRoomById,
     updateRoom,
     Rooms,
-    getImageUrl
+    getImageUrl,
+    loading
   };
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;

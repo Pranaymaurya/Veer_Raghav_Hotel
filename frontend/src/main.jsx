@@ -39,6 +39,7 @@ import UserProdfileLayout from './pages/UserProfile/UserProdfileLayout';
 import { AdminProvider } from './context/AdminContext';
 import { Toaster } from './components/ui/toaster';
 import { SettingsProvider } from './context/SettingsContext';
+import UserContent from './pages/AdminDashboard/pages/UserContent';
 
 
 const router = createBrowserRouter([
@@ -143,6 +144,12 @@ const router = createBrowserRouter([
         path: "guests",
         element: (
           <GuestsContent />
+        )
+      },
+      {
+        path: "users",
+        element: (
+          <UserContent />
         )
       },
       {

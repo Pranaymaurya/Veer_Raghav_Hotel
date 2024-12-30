@@ -46,6 +46,8 @@ export default function RegisterForm() {
           title: 'Registration successful',
           description: 'You have successfully registered.',
           variant: 'success',
+          className: 'bg-green-200 border-green-400 text-black',
+          duration: 3000,
         })
         navigate('/auth/login');
       } else {

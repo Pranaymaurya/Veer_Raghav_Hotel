@@ -12,6 +12,7 @@ export const SettingsProvider = ({ children }) => {
   const [hotel, setHotel] = useState(null);
   const [ hotelInfo, setHotelInfo ] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hotelData, setHotelData] = useState(null);
 
   // const getAuthConfig = useCallback(async () => {
   //   const token = await getToken();
@@ -49,6 +50,7 @@ export const SettingsProvider = ({ children }) => {
       const response = await api.get('/hotel');
       if (response.data) {
         setHotelInfo(response.data);
+        setHotelData(response.data[0]);
       }
     } catch (error) {
       console.error('Failed to fetch hotel:', error);
@@ -119,7 +121,7 @@ export const SettingsProvider = ({ children }) => {
 
 
   return (
-    <SettingsContext.Provider value={{ hotel, isLoading, createHotel, updateHotel, uploadLogo, fetchHotel, gethotel, hotelInfo }}>
+    <SettingsContext.Provider value={{ hotel, isLoading, createHotel, updateHotel, uploadLogo, fetchHotel, gethotel, hotelInfo,hotelData }}>
       {children}
     </SettingsContext.Provider>
   );
