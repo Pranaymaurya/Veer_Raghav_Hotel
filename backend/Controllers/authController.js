@@ -71,17 +71,16 @@ export const login = async (req, res) => {
         message: "Email and password are required."
       });
     }
- 
+
     // Find user by email
     const user = await User.findOne({ email: email.toLowerCase() });
- 
+
     if (!user || !user.password) {
       return res.status(400).json({
         success: false,
         message: "User not found or password is missing."
       });
     }
- 
     // Check password match
     const isMatch = await bcryptjs.compare(password, user.password);
     if (!isMatch) {
@@ -90,14 +89,12 @@ export const login = async (req, res) => {
         message: "Invalid credentials. Password is incorrect."
       });
     }
- 
     // Generate JWT
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '1h' }
     );
- 
     // Set cookie with the token
     res.cookie('token', token, {
       httpOnly: true,
@@ -105,7 +102,6 @@ export const login = async (req, res) => {
       sameSite: 'strict', // Protect against CSRF
       maxAge: 60 * 60 * 1000 // 1 hour
     });
- 
     // Send response
     return res.status(200).json({
       success: true,
@@ -136,7 +132,6 @@ export const logout = (req, res) => {
       secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
       sameSite: 'strict'
     });
- 
     return res.status(200).json({
       success: true,
       message: "Logout successful."

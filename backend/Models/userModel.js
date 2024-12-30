@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 18,
     },
+    IsBooking:{
+      type:Boolean,
+      default:false
+    },
     gender: {
       type: String,
       enum: ['Male', 'Female', 'other'],

@@ -37,6 +37,10 @@ connectDB();
 // Middleware to parse cookies
 app.use(cookieParser());
 
+
+
+// Middleware to parse cookies
+app.use(cookieParser());
 // Routes
 app.use("/api/v3/", router);
  

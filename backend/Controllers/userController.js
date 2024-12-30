@@ -103,14 +103,15 @@ export const deleteUser = async (req, res) => {
 
 export const GetAllUsers = async (req, res) => {
   try {
-    const bookings = await User.find();
-    res.status(200).json(bookings);
+    const users = await User.find().select('-password'); // Excludes the password field
+    res.status(200).json(users);
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Failed to fetch bookings", error: error.message });
+      .json({ message: "Failed to fetch users", error: error.message });
   }
 };
+
 export const getUserDetails = async (req, res) => {
   const userId = req.user.userId; // The ID of the user whose details are to be fetched
   // console.log(req.user)
