@@ -28,7 +28,9 @@ const bookingSchema = new mongoose.Schema({
       enum: ['Pending', 'Confirmed', 'Cancelled'],
       default: 'Pending',
     },
-  });
+  },{
+    timestamps: true, // Adds createdAt and updatedAt fields
+  })
   
   const Booking= mongoose.model('Booking', bookingSchema);
   export default Booking;
