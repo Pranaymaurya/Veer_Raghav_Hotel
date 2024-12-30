@@ -120,6 +120,8 @@ router.get(
   authorizeRoles("user", "admin"),
   GetBookingById
 ); // Get a booking by ID
+
+//booking by userid
 router.post(
   "/room/rating/:id",
   authMiddleware,
