@@ -7,9 +7,7 @@ export const CreateBooking = async (req, res) => {
 
   try {
     const room = await Room.findById(roomId);
-    console.log(roomId);
     if (!room) return res.status(404).json({ message: "Room not found" });
-    // if (!room.isAvailable) return res.status(400).json({ message: "Room is not available for booking" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -28,17 +26,20 @@ export const CreateBooking = async (req, res) => {
 
     const savedBooking = await booking.save();
 
-    await room.save();
+    // Update user to set isBooking to true
+    user.IsBooking = true;
+    await user.save();
 
     res.status(201).json({
       message: "Booking created successfully",
-      bookingId: savedBooking._id, // Include the booking ID in the response
+      bookingId: savedBooking._id,
       booking: savedBooking,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to create booking", error: error.message });
   }
 };
+
 
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
