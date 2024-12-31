@@ -7,9 +7,11 @@ import {
   getavgrating,
   GetBookingById,
   GetUserBookings,
+  GetUserBookingsById,
   Putrating,
   UpdateBooking,
   UpdateBookingForAdmin,
+  UpdateForAdmin,
 } from "../Controllers/BookingController.js";
 import {
   AddImagesById,
@@ -107,6 +109,12 @@ router.put(
   authorizeRoles("admin"),
   UpdateBookingForAdmin
 );
+router.put(
+  "/booking/status/:id",
+  authMiddleware,
+  authorizeRoles("admin"),
+  UpdateForAdmin
+);
 // Cancel a booking by ID
 router.get(
   "/booking",
@@ -120,6 +128,13 @@ router.get(
   authorizeRoles("user", "admin"),
   GetBookingById
 ); // Get a booking by ID
+router.get(
+  "/booking/user/:id",
+  authMiddleware,
+  authorizeRoles("user", "admin"),
+  GetUserBookingsById
+);
+//booking by userid
 router.post(
   "/room/rating/:id",
   authMiddleware,
