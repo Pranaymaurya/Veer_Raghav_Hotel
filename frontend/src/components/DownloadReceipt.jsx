@@ -5,6 +5,9 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 const ReceiptContent = ({ bookingData }) => {
+
+  console.log(bookingData);
+  
   const roomRate = (bookingData.totalPrice / 1.18).toFixed(2);
   const taxesAndFees = (bookingData.totalPrice - bookingData.totalPrice / 1.18).toFixed(2);
 

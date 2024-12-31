@@ -1,9 +1,14 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useState } from 'react';
 import api from '@/utils/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const BookingContext = createContext();
 
 export const BookingProvider = ({ children }) => {
+  const {user} = useAuth();
+  const [userBookings , setUserBookings] = useState([]);
+  const { toast } = useToast();
 
 
   const createBooking = useCallback(async (bookingData) => {
@@ -66,11 +71,76 @@ export const BookingProvider = ({ children }) => {
     }
   };
 
+  const getBookingsByUserId = async () => {
+    try {
+      const response = await api.get(`/booking/user/${user._id}`);
+      // console.log('Bookings by user:', response.data);
+      setUserBookings(response.data);
+      if (response.data.success) {
+        toast({
+          title: 'Success',
+          description: response.data.message,
+          variant: 'success',
+        })
+        return response.data;
+      } else {
+        toast({
+          title: 'Error',
+          description: response.data.message,
+          variant: 'destructive',
+        })
+        return response.data;
+      }
+      
+    } catch (error) {
+      console.error('Error fetching bookings by user:', error);
+      throw error;
+    }
+  };
+
+  const getBookingsByUserIdbyAdmin = async (userId) => {
+    try {
+      const response = await api.get(`/booking/user/${userId}`);
+      console.log('Bookings by user:', response.data);
+      setUserBookings(response.data);
+      if (response.data.success) {
+        toast({
+          title: 'Success',
+          description: response.data.message,
+          variant: 'success',
+        })
+        return response.data;
+      } else {
+        console.log(response.data.message);
+        return response.data;
+      }
+      
+    } catch (error) {
+      console.error('Error fetching bookings by user:', error);
+      throw error;
+    }
+  };
+
+  const UpdateBookingStatus = async (bookingId, status) => {
+    try {
+      const response = await api.put(`/booking/status/${bookingId}`, { status });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      throw error;
+    }
+  };
+
+
   const value = {
     createBooking,
     cancelBooking,
     getAllBookings,
     getBookingById,
+    getBookingsByUserId,
+    userBookings,
+    getBookingsByUserIdbyAdmin,
+    UpdateBookingStatus
   };
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

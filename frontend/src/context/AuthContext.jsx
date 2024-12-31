@@ -37,6 +37,16 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             if (response.data.success) {
                 await fetchUserProfile();
+
+                const userRole = response.data.user.role;
+
+                // Perform redirection logic based on role
+                if (userRole === 'admin') {
+                    window.location.href = '/dashboard'; // Redirect to admin dashboard
+                } else {
+                    window.location.href = '/'; // Redirect to user dashboard
+                }
+
                 return {
                     success: true,
                     message: response.data.message

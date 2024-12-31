@@ -96,9 +96,9 @@ const UserProfile = () => {
     };
 
     return (
-        <Card className="w-full max-w-4xl mx-auto">
+        <Card className="w-full max-w-4xl ">
             <CardHeader>
-                <CardTitle className="text-3xl font-bold text-center">User Profile</CardTitle>
+                <CardTitle className="text-3xl font-bold text-left">Your Profile</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="flex justify-center mb-6">

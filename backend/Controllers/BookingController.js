@@ -179,6 +179,35 @@ export const UpdateBookingForAdmin = async (req, res) => {
   }
 };
 
+export const UpdateForAdmin = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    // Fetch the booking by ID
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    // Check if the user is an admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "You do not have permission to update the booking" });
+    }
+    // Validate and update the status
+    if (status) {
+      const validStatuses = ['Confirmed', 'Cancelled', 'Pending']; // Add other statuses as needed
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid booking status" });
+      }
+      booking.status = status; // Update the status
+    } else {
+      return res.status(400).json({ message: "Status is required" });
+    }
+    // Save the updated booking
+    const updatedBooking = await booking.save();
+    res.status(200).json({ message: "Booking status updated successfully", booking: updatedBooking });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update booking", error: error.message });
+  }
+};
+
 
 // Get all bookings
 export const GetAllBookings = async (req, res) => {
@@ -199,6 +228,19 @@ export const GetBookingById = async (req, res) => {
     res.status(200).json(booking);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch booking", error: error.message });
+  }
+};
+
+export const GetUserBookingsById = async (req, res) => {
+  try {
+    const userId = req.params.id; // Extract userId from the request parameters
+    const bookings = await Booking.find({ user: userId }).populate("user").populate("room");
+    if (bookings.length === 0) {
+      return res.status(404).json({ message: "No bookings found for this user" });
+    }
+    res.status(200).json(bookings); // Return all bookings for the user
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
   }
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { format, differenceInDays, addDays, isBefore, isToday } from 'date-fns';
 import { Bed, Users, Star, ChevronLeft, Plus, Minus, Info, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export default function ViewRoomDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const { user } = useAuth();
   const { Rooms, getAllRooms, loading: roomsLoading } = useRoom();
@@ -72,9 +73,11 @@ export default function ViewRoomDetails() {
       const tomorrow = addDays(today, 1);
       tomorrow.setHours(0, 0, 0, 0);
 
+      // Make sure we return a valid date range object even if one or both dates are null
       return {
         from: startDateParam ? new Date(startDateParam) : today,
-        to: endDateParam ? new Date(endDateParam) : tomorrow
+        to: endDateParam ? new Date(endDateParam) : tomorrow,
+        selecting: false // Add this flag to track selection state
       };
     } catch (error) {
       console.error('Error initializing dates:', error);
@@ -86,10 +89,51 @@ export default function ViewRoomDetails() {
 
       return {
         from: today,
-        to: tomorrow
+        to: tomorrow,
+        selecting: false
       };
     }
   });
+
+  const handleDateSelect = (newDate) => {
+    if (!newDate) {
+      // Reset to default dates if selection is cleared
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = addDays(today, 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      setDate({
+        from: today,
+        to: tomorrow,
+        selecting: false
+      });
+      return;
+    }
+
+    if (!newDate.from) {
+      // First click - start new selection
+      setDate({
+        from: null,
+        to: null,
+        selecting: true
+      });
+    } else if (!newDate.to) {
+      // Second click - update the "to" date
+      setDate({
+        from: newDate.from,
+        to: null,
+        selecting: true
+      });
+    } else {
+      // Final state - complete the selection
+      setDate({
+        from: newDate.from,
+        to: newDate.to,
+        selecting: false
+      });
+    }
+  };
 
   const [roomCount, setRoomCount] = useState(1);
   const [dateError, setDateError] = useState('');
@@ -141,7 +185,12 @@ export default function ViewRoomDetails() {
 
   // Handle login redirect
   const handleLogin = () => {
-    navigate('/auth/login');
+    navigate('/auth/login', {
+      state: {
+        from: location,
+        message: 'You need to be logged in to book a room.',
+      },
+    });
   };
 
   // Room not found state
@@ -345,14 +394,12 @@ export default function ViewRoomDetails() {
                   <Calendar
                     initialFocus
                     mode="range"
-                    defaultMonth={isValidDateRange(date) ? date.from : new Date()}
-                    selected={isValidDateRange(date) ? date : undefined}
-                    onSelect={(newDate) => {
-                      setDate(newDate || {
-                        from: new Date(),
-                        to: addDays(new Date(), 1)
-                      });
+                    defaultMonth={date.from || new Date()}
+                    selected={{
+                      from: date.from,
+                      to: date.to
                     }}
+                    onSelect={handleDateSelect}
                     numberOfMonths={2}
                     disabled={disabledDays}
                     className="rounded-md border"

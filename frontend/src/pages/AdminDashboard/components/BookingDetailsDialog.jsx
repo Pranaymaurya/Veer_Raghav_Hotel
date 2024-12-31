@@ -115,6 +115,10 @@ const BookingDetailsDialog = ({ booking }) => {
                     <p className="font-medium">₹ {booking.totalPrice}</p>
                   </div>
                   <div>
+                    <p className="text-sm text-gray-500">Booking Created At</p>
+                    <p className="font-medium">{booking.createdAtFormatted} </p>
+                  </div>
+                  <div>
                     <p className="text-sm text-gray-500">Number of Nights</p>
                     <p className="font-medium">
                       {Math.ceil(

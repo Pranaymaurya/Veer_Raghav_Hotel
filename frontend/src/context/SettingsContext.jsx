@@ -108,9 +108,7 @@ export const SettingsProvider = ({ children }) => {
     try {
       const formData = new FormData();
       formData.append('logo', file);
-      const response = await api.put('/hotel/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await api.put(`/hotel/image/${hotelData._id}`, formData);
       setHotel(prevHotel => ({ ...prevHotel, logoUrl: response.data.logoUrl }));
       return response.data;
     } catch (error) {

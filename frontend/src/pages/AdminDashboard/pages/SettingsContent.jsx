@@ -160,7 +160,7 @@ const SettingsContent = () => {
       if (logo && response?.hotel?._id) {
         const logoFormData = new FormData();
         logoFormData.append('logo', logo);
-        await uploadLogo(response.hotel._id, logoFormData);
+        await uploadLogo(logoFormData);
       }
 
       // Simulate a longer loading time for better UX
@@ -171,7 +171,7 @@ const SettingsContent = () => {
         description: hotel?.length > 0 ? "Your changes have been saved successfully." : "New hotel has been created successfully.",
       });
       setIsEditing(false);
-      window.location.reload();
+      // window.location.reload();
     } catch (error) {
       console.error('Failed to save hotel:', error);
       toast({
@@ -253,10 +253,10 @@ const SettingsContent = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2 mb-24 sm:mb-6 bg-orange-50">
+            <TabsList className="w-full flex flex-col md:flex-row gap-2 h-full mb-5 sm:mb-6 bg-orange-50">
               <TabsTrigger value="general" className="w-full">General</TabsTrigger>
               <TabsTrigger value="booking" className="w-full">Booking</TabsTrigger>
-              <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger>
+              {/* <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="general">
@@ -420,7 +420,7 @@ const SettingsContent = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="appearance">
+            {/* <TabsContent value="appearance">
               <Card>
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-xl sm:text-2xl">Appearance Settings</CardTitle>
@@ -477,7 +477,7 @@ const SettingsContent = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
         </CardContent>
       </Card>

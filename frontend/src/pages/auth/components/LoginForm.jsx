@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,7 +10,12 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
+
+
   const { login } = useAuth();
   const { toast } = useToast();
 
@@ -29,12 +34,8 @@ export default function LoginForm() {
           className: 'bg-green-200 border-green-400 text-black',
           duration: 3000,
         });
+        
 
-        if (response.user.role === 'admin') {
-          navigate('/dashboard/rooms');
-        } else {
-          navigate('/');
-        }
       } else {
         setError(response.message);
       }

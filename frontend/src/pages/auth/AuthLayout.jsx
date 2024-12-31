@@ -10,9 +10,13 @@ export default function AuthLayout() {
   const location = useLocation(); // Using useLocation to get the current path
   const [isLogin, setIsLogin] = useState(true);
 
+  // const from = location.state?.from?.pathname || "/";
+
   const { user } = useAuth();
   
-  if (user) {
+  if (user && user.role === 'admin') {
+    window.location.href = '/dashboard'; // Redirect if user is already logged in
+  } else if (user && user.role === 'user') {
     window.location.href = '/'; // Redirect if user is already logged in
   }
 
