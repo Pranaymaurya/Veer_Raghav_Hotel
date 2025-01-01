@@ -249,19 +249,18 @@ export const GetUserBookingsById = async (req, res) => {
   }
 };
 
-
-export const GetUserBookingsById = async (req, res) => {
-  try {
-    const userId = req.params.id; // Extract userId from the request parameters
-    const bookings = await Booking.find({ user: userId }).populate("user").populate("room");
-    if (bookings.length === 0) {
-      return res.status(404).json({ message: "No bookings found for this user" });
-    }
-    res.status(200).json(bookings); // Return all bookings for the user
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
-  }
-};
+// export const GetUserBookingsById = async (req, res) => {
+//   try {
+//     const userId = req.params.id; // Extract userId from the request parameters
+//     const bookings = await Booking.find({ user: userId }).populate("user").populate("room");
+//     if (bookings.length === 0) {
+//       return res.status(404).json({ message: "No bookings found for this user" });
+//     }
+//     res.status(200).json(bookings); // Return all bookings for the user
+//   } catch (error) {
+//     res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
+//   }
+// };
 
 // Cancel a booking
 export const CancelBooking = async (req, res) => {
