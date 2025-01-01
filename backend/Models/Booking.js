@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema({
-    user: {
+
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
@@ -31,6 +32,10 @@ const bookingSchema = new mongoose.Schema({
 }, {
   timestamps: true, // Automatically adds createdAt and updatedAt fields
 });
-  
+
   const Booking= mongoose.model('Booking', bookingSchema);
   export default Booking;
+
+
+const Booking = mongoose.model('Booking', bookingSchema);
+export default Booking;

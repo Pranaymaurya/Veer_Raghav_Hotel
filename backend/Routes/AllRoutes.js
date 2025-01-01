@@ -136,6 +136,7 @@ router.get(
   GetUserBookingsById
 );
 
+//booking by userid
 router.post(
   "/room/rating/:id",
   authMiddleware,
