@@ -181,5 +181,4 @@ router.put(
 );
 router.get("/hotel", GetHotel);
 
-
 export default router;
