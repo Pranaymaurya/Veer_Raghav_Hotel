@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRoom } from '@/context/RoomContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 // import { toast } from '@/components/ui/use-toast';
 
 const RoomsForm = () => {
@@ -39,7 +40,8 @@ const RoomsForm = () => {
   const { user } = useAuth();
   const isNewRoom = !id;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -87,7 +89,7 @@ const RoomsForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const roomData = {
         ...formData,
@@ -99,37 +101,37 @@ const RoomsForm = () => {
 
       if (isNewRoom) {
         // For new rooms, send everything including new images to addRoom
-        const newRoom = await addRoom({...roomData, images: [...roomData.images, ...formData.images]});
+        const newRoom = await addRoom({ ...roomData, images: [...roomData.images, ...formData.images] });
         toast({
           title: "Success",
           description: "Room created successfully",
         });
-        
-      navigate(`/dashboard/rooms/`);
+
+        navigate(`/dashboard/rooms/`);
       } else {
         // For existing rooms, first update the room data
         await updateRoom(id, roomData);
-        
+
         // Then handle any new images separately
         if (formData.images.length > 0) {
           await addImagesToRoom(id, formData.images);
         }
-        
+
+        navigate('/dashboard/rooms');
         toast({
           title: "Success",
           description: "Room updated successfully",
         });
       }
       console.log('Room updated successfully');
-      
-      navigate('/dashboard/rooms');
+
     } catch (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to save room details.",
         variant: "destructive",
       });
-      
+
       if (error.message === 'Authentication required. Please log in again.') {
         navigate('/login', { state: { from: location.pathname } });
       }
@@ -163,7 +165,7 @@ const RoomsForm = () => {
   const updateAmenity = (index, value) => {
     setFormData(prev => ({
       ...prev,
-      amenities: prev.amenities.map((amenity, i) => 
+      amenities: prev.amenities.map((amenity, i) =>
         i === index ? value : amenity
       )
     }));
@@ -237,7 +239,7 @@ const RoomsForm = () => {
               </div>
               <Switch
                 checked={formData.isAvailable}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setFormData(prev => ({ ...prev, isAvailable: checked }))
                 }
               />

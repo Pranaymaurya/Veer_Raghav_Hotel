@@ -128,12 +128,14 @@ router.get(
   authorizeRoles("user", "admin"),
   GetBookingById
 ); // Get a booking by ID
+
 router.get(
   "/booking/user/:id",
   authMiddleware,
   authorizeRoles("user", "admin"),
   GetUserBookingsById
 );
+
 //booking by userid
 router.post(
   "/room/rating/:id",
@@ -178,4 +180,6 @@ router.put(
   UploadHotelLogo
 );
 router.get("/hotel", GetHotel);
+
+
 export default router;

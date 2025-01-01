@@ -7,6 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_UPLOAD_URL;
 
 export const RoomProvider = ({ children }) => {
   const [Rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const getImageUrl = useCallback((imagePath) => {
     if (!imagePath) return '/placeholder-room.jpg';
@@ -87,21 +88,27 @@ export const RoomProvider = ({ children }) => {
 
   const deleteRoom = async (roomId) => {
     try {
-      console.log('Deleting room with ID:', roomId);
+      setLoading(true);
       const response = await api.delete(`/room/${roomId}`);
+      await getAllRooms();
       return response.data;
     } catch (error) {
       handleApiError(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const getAllRooms = async () => {
     try {
+      setLoading(true);
       const response = await api.get('/rooms');
       setRooms(response.data);
       return response.data;
     } catch (error) {
       handleApiError(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,7 +147,8 @@ export const RoomProvider = ({ children }) => {
     getRoomById,
     updateRoom,
     Rooms,
-    getImageUrl
+    getImageUrl,
+    loading
   };
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;

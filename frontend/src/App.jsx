@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { Button } from './components/ui/button'
 import Navbar from './components/Navbar'
 import { Link, Outlet, ScrollRestoration } from 'react-router-dom'
 import Footer from './components/Footer'

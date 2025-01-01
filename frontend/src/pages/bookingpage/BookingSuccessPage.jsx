@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
   CheckCircle2,
@@ -9,7 +9,8 @@ import {
   Building,
   Phone,
   Mail,
-  ArrowLeft
+  ArrowLeft,
+  CreditCard
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,13 +19,19 @@ import { Separator } from "@/components/ui/separator";
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import { useToast } from '@/hooks/use-toast';
 import DownloadReceipt from '@/components/DownloadReceipt';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function BookingSuccessPage() {
+  const { user } = useAuth();
+
   const location = useLocation();
   const navigate = useNavigate();
   const bookingData = location.state;
-  const { toast } = useToast();  
+  const { toast } = useToast();
 
+  if (!user) {
+    return <Navigate to="/" />;
+  }
 
   useEffect(() => {
     if (!bookingData) {
@@ -57,8 +64,8 @@ export default function BookingSuccessPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         className="mb-4"
         onClick={() => navigate('/rooms')}
       >
@@ -157,7 +164,26 @@ export default function BookingSuccessPage() {
             <DownloadReceipt bookingData={bookingData} />
           </CardContent>
         </Card>
+        <Separator />
+        <div className='flex justify-center'>
+          <Button variant="outline" className="w-1/2 bg-orange-800 hover:bg-orange-500 text-white" onClick={() => navigate('/profile#mybookings')}>Back to My Bookings</Button>
+        </div>
 
+        <Separator />
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="font-medium">Payment Method</p>
+                <p className="text-sm text-muted-foreground">Visa ending in 4242</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Communication Preferences</CardTitle>

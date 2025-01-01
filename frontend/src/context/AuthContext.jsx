@@ -8,48 +8,54 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [ isAuthenticated, setIsAuthenticated ] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        checkUserLoggedIn();
-    }, []);
 
-    const checkUserLoggedIn = () => {
-        const userFromCookie = Cookies.get('user');
-        
-        if (userFromCookie) {
-            try {
-                const parsedUser = JSON.parse(userFromCookie);
-                setUser(parsedUser);
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-                Cookies.remove('user');
+    const fetchUserProfile = async () => {
+        try {
+            const response = await api.get('/profile');
+            if (response.data.success) {
+                setUser(response.data.user);
             }
+        } catch (error) {
+            // console.error('Error fetching user profile:', error);
+            // logout();
         }
-        setLoading(false);
     };
+
+
+    useEffect(() => {
+        fetchUserProfile();
+        setLoading(false);
+    }, [isAuthenticated]);
+
 
     const login = async (email, password) => {
         try {
             const response = await api.post('/login', { email, password });
-            
+            setIsAuthenticated(true);
             if (response.data.success) {
-                const userData = response.data.user;
-                setUser(userData);
-                // Store user data in cookie
-                Cookies.set('user', JSON.stringify(userData), { expires: 1 }); // 1 hour to match backend
-                
+                await fetchUserProfile();
+
+                const userRole = response.data.user.role;
+
+                // Perform redirection logic based on role
+                if (userRole === 'admin') {
+                    window.location.href = '/dashboard'; // Redirect to admin dashboard
+                } else {
+                    window.location.href = '/'; // Redirect to user dashboard
+                }
+
                 return {
                     success: true,
-                    message: response.data.message,
-                    user: userData
-                };
-            } else {
-                return {
-                    success: false,
-                    message: response.data.message || 'Login failed.'
+                    message: response.data.message
                 };
             }
+            return {
+                success: false,
+                message: response.data.message || 'Login failed.'
+            };
         } catch (error) {
             console.error('Error logging in:', error);
             return {
@@ -101,14 +107,31 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const logout = useCallback(async () => {
+        try {
+            await api.get('/logout');
+            setIsAuthenticated(false);
+            setUser(null);
+        } catch (error) {
+            console.error('Logout error:', error);
+            toast({
+                title: "Logout failed",
+                description: error.message || 'An error occurred while logging out',
+                variant: "destructive",
+                className: "bg-red-200 border-red-400 text-black text-lg",
+                duration: 3000
+            });
+         }
+    }, []);
+
     const updateProfile = async (userData) => {
         try {
-            const response = await api.put(`/user/${user.userId}`, userData);
+            const response = await api.put(`/user/${user._id}`, userData);
             
             if (response.data.success) {
                 const updatedUser = response.data.user;
                 setUser(updatedUser);
-                Cookies.set('user', JSON.stringify(updatedUser), { expires: 1 });
+                // Cookies.set('user', JSON.stringify(updatedUser), { expires: 1 });
                 
                 toast({
                     title: "Profile updated",
@@ -138,10 +161,49 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = useCallback(async () => {
-        setUser(null);
-        Cookies.remove('user');
-    }, []);
+    const uploadProfilePicture = async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('profilePicture', file);
+
+            const response = await api.post('/upload-profile-picture', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data.success) {
+                const updatedUser = { ...user, profilePicture: response.data.profilePictureUrl };
+                setUser(updatedUser);
+
+                toast({
+                    title: "Profile picture updated",
+                    description: "Your profile picture has been successfully updated.",
+                    variant: "success",
+                    className: "bg-green-200 border-green-400 text-black text-lg",
+                    duration: 3000
+                });
+
+                return { success: true, profilePictureUrl: response.data.profilePictureUrl };
+            } else {
+                throw new Error(response.data.message || 'Profile picture upload failed');
+            }
+        } catch (error) {
+            console.error('Profile picture upload error:', error);
+            toast({
+                title: "Upload failed",
+                description: error.message || 'An error occurred while uploading your profile picture',
+                variant: "destructive",
+                className: "bg-red-200 border-red-400 text-black text-lg",
+                duration: 3000
+            });
+            return { 
+                success: false, 
+                message: error.message || 'An error occurred while uploading your profile picture' 
+            };
+        }
+    };
+
 
     const deleteAccount = async () => {
         try {
@@ -185,6 +247,7 @@ export const AuthProvider = ({ children }) => {
             register,
             logout,
             updateProfile,
+            uploadProfilePicture,
             deleteAccount
         }}>
             {children}

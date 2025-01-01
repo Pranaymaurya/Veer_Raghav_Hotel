@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Clock, Mail, Phone, MapPin, Image, Plus, Trash2, Settings, Edit, X, Loader2, AlertCircle } from 'lucide-react';
-import { useSettings } from '../SettingsContext';
+import { useSettings } from '../../../context/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 // import { validateHotelData } from '../components/hotelValidation';
@@ -160,7 +160,7 @@ const SettingsContent = () => {
       if (logo && response?.hotel?._id) {
         const logoFormData = new FormData();
         logoFormData.append('logo', logo);
-        await uploadLogo(response.hotel._id, logoFormData);
+        await uploadLogo(logoFormData);
       }
 
       // Simulate a longer loading time for better UX
@@ -171,7 +171,7 @@ const SettingsContent = () => {
         description: hotel?.length > 0 ? "Your changes have been saved successfully." : "New hotel has been created successfully.",
       });
       setIsEditing(false);
-      window.location.reload();
+      // window.location.reload();
     } catch (error) {
       console.error('Failed to save hotel:', error);
       toast({
@@ -221,117 +221,136 @@ const SettingsContent = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <Card className="w-full">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
           <div>
-            <CardTitle className="text-3xl font-bold">
+            <CardTitle className="text-2xl sm:text-3xl font-bold">
               Hotel Information
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="mt-1">
               {isEditing ? 'Edit your hotel settings' : 'View your hotel settings'}
             </CardDescription>
           </div>
-          {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)} variant="outline">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Settings
-            </Button>
-          ) : (
-            <div className="flex space-x-2">
-              <Button onClick={handleCancel} variant="outline">
-                <X className="mr-2 h-4 w-4" />
-                Cancel
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+            {!isEditing ? (
+              <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full sm:w-auto">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Settings
               </Button>
-              <Button onClick={handleSubmit} type="submit">
-                Save Changes
-              </Button>
-            </div>
-          )}
+            ) : (
+              <>
+                <Button onClick={handleCancel} variant="outline" className="w-full sm:w-auto">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit} type="submit" className="w-full sm:w-auto">
+                  Save Changes
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <TabsList className="w-full flex flex-col md:flex-row gap-2 h-full mb-5 sm:mb-6 bg-orange-50">
               <TabsTrigger value="general" className="w-full">General</TabsTrigger>
               <TabsTrigger value="booking" className="w-full">Booking</TabsTrigger>
-              <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger>
+              {/* <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="general">
               <Card>
-                <CardHeader>
-                  <CardTitle>General Information</CardTitle>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-xl sm:text-2xl">General Information</CardTitle>
                   <CardDescription>Basic details about your hotel</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6">
                   {isEditing ? (
-                    <>
-                      <div className="flex flex-col space-y-2">
-                        <Label htmlFor="name" className="text-lg font-semibold">Hotel Name</Label>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-base sm:text-lg font-semibold">Hotel Name</Label>
                         <Input
                           id="name"
                           name="name"
                           value={formData.name}
                           onChange={handleInputChange}
                           placeholder="Enter hotel name"
-                          className="flex-grow"
-                          required
+                          className="w-full"
                         />
                       </div>
-                      <div className="flex flex-col space-y-2">
-                        <Label className="text-lg font-semibold">Contact Numbers</Label>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-base sm:text-lg font-semibold">Contact Numbers</Label>
                         {formData.contactNumbers.map((phone, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <Phone className="text-gray-500" />
-                            <Input
-                              value={phone}
-                              onChange={(e) => handlePhoneChange(index, e.target.value)}
-                              placeholder="Enter contact phone"
-                              className="flex-grow"
-                              required
-                            />
+                          <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <div className="flex-1 flex items-center w-full gap-2">
+                              <Phone className="flex-shrink-0 text-gray-500" />
+                              <Input
+                                value={phone}
+                                onChange={(e) => handlePhoneChange(index, e.target.value)}
+                                placeholder="Enter contact phone"
+                                className="flex-1"
+                              />
+                            </div>
                             {index > 0 && (
-                              <Button type="button" variant="ghost" size="icon" onClick={() => removePhone(index)}>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => removePhone(index)}
+                                className="flex-shrink-0"
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
                         ))}
-                        <Button type="button" variant="outline" onClick={addPhone}>
+                        <Button type="button" variant="outline" onClick={addPhone} className="w-full sm:w-auto">
                           <Plus className="mr-2 h-4 w-4" /> Add Phone
                         </Button>
                       </div>
-                      <div className="flex flex-col space-y-2">
-                        <Label htmlFor="address" className="text-lg font-semibold">Address</Label>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="text-gray-500" />
+
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="text-base sm:text-lg font-semibold">Address</Label>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="flex-shrink-0 text-gray-500" />
                           <Input
                             id="address"
                             name="address"
                             value={formData.address}
                             onChange={handleInputChange}
                             placeholder="Enter hotel address"
-                            className="flex-grow"
-                            required
+                            className="flex-1"
                           />
                         </div>
                       </div>
-                    </>
+                    </div>
                   ) : (
                     <div className="space-y-6">
-                      {renderValue('Hotel Name', formData.name)}
+                      <div className="space-y-1">
+                        <span className="text-sm text-gray-500">Hotel Name</span>
+                        <p className="text-base sm:text-lg">{formData.name || 'Not set'}</p>
+                      </div>
+                      
                       <div className="space-y-2">
                         <span className="text-sm text-gray-500">Contact Numbers</span>
-                        {formData.contactNumbers.map((phone, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <Phone className="text-gray-500" />
-                            <span className="text-lg">{phone}</span>
-                          </div>
-                        ))}
+                        <div className="space-y-2">
+                          {formData.contactNumbers.map((phone, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <Phone className="flex-shrink-0 text-gray-500" />
+                              <span className="text-base sm:text-lg">{phone}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="text-gray-500" />
-                        {renderValue('Address', formData.address)}
+
+                      <div className="space-y-1">
+                        <span className="text-sm text-gray-500">Address</span>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="flex-shrink-0 text-gray-500" />
+                          <p className="text-base sm:text-lg">{formData.address || 'Not set'}</p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -341,54 +360,58 @@ const SettingsContent = () => {
 
             <TabsContent value="booking">
               <Card>
-                <CardHeader>
-                  <CardTitle>Booking Configuration</CardTitle>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-xl sm:text-2xl">Booking Configuration</CardTitle>
                   <CardDescription>Set up your booking preferences</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {isEditing ? (
                       <>
-                        <div className="flex flex-col space-y-2">
-                          <Label htmlFor="checkInTime" className="text-lg font-semibold">Check-in Time</Label>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="text-gray-500" />
+                        <div className="space-y-2">
+                          <Label htmlFor="checkInTime" className="text-base sm:text-lg font-semibold">Check-in Time</Label>
+                          <div className="flex items-center gap-2">
+                            <Clock className="flex-shrink-0 text-gray-500" />
                             <Input
                               id="checkInTime"
                               name="checkInTime"
                               type="time"
                               value={formData.checkInTime}
                               onChange={handleInputChange}
-                              className="flex-grow"
-                              required
+                              className="flex-1"
                             />
                           </div>
                         </div>
-                        <div className="flex flex-col space-y-2">
-                          <Label htmlFor="checkOutTime" className="text-lg font-semibold">Check-out Time</Label>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="text-gray-500" />
+                        <div className="space-y-2">
+                          <Label htmlFor="checkOutTime" className="text-base sm:text-lg font-semibold">Check-out Time</Label>
+                          <div className="flex items-center gap-2">
+                            <Clock className="flex-shrink-0 text-gray-500" />
                             <Input
                               id="checkOutTime"
                               name="checkOutTime"
                               type="time"
                               value={formData.checkOutTime}
                               onChange={handleInputChange}
-                              className="flex-grow"
-                              required
+                              className="flex-1"
                             />
                           </div>
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="text-gray-500" />
-                          {renderValue('Check-in Time', formData.checkInTime)}
+                        <div className="space-y-1">
+                          <span className="text-sm text-gray-500">Check-in Time</span>
+                          <div className="flex items-center gap-2">
+                            <Clock className="flex-shrink-0 text-gray-500" />
+                            <span className="text-base sm:text-lg">{formData.checkInTime || 'Not set'}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="text-gray-500" />
-                          {renderValue('Check-out Time', formData.checkOutTime)}
+                        <div className="space-y-1">
+                          <span className="text-sm text-gray-500">Check-out Time</span>
+                          <div className="flex items-center gap-2">
+                            <Clock className="flex-shrink-0 text-gray-500" />
+                            <span className="text-base sm:text-lg">{formData.checkOutTime || 'Not set'}</span>
+                          </div>
                         </div>
                       </>
                     )}
@@ -397,40 +420,42 @@ const SettingsContent = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="appearance">
+            {/* <TabsContent value="appearance">
               <Card>
-                <CardHeader>
-                  <CardTitle>Appearance Settings</CardTitle>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-xl sm:text-2xl">Appearance Settings</CardTitle>
                   <CardDescription>Customize your hotel's visual identity</CardDescription>
                 </CardHeader>
-                <CardContent className="p-4 md:p-6 space-y-6">
+                <CardContent className="space-y-6">
                   <div className="space-y-4">
-                    <Label htmlFor="logo" className="text-lg font-semibold">Hotel Logo</Label>
+                    <Label htmlFor="logo" className="text-base sm:text-lg font-semibold">Hotel Logo</Label>
                     {fileError && (
                       <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>{fileError}</AlertDescription>
                       </Alert>
                     )}
-                    <div className="flex flex-col md:flex-row gap-4 items-start">
-                      <div className="w-full md:w-1/3">
+                    <div className="flex flex-col sm:flex-row gap-6">
+                      <div className="w-full sm:w-1/3">
                         {hotel?.[0]?.logo ? (
                           <img
                             src={hotel[0].logo}
                             alt="Hotel Logo"
-                            className="w-full max-w-[200px] h-auto object-contain rounded-lg border"
+                            className="w-full max-w-[200px] h-auto object-contain rounded-lg border mx-auto sm:mx-0"
                           />
                         ) : (
-                          <div className='flex items-center gap-4'>
-                            <div className="w-full max-w-[200px] h-[200px] bg-muted rounded-lg flex items-center justify-center">
+                          <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <div className="w-full max-w-[200px] h-[200px] bg-muted rounded-lg flex items-center justify-center mx-auto sm:mx-0">
                               <Image className="h-12 w-12 text-muted-foreground" />
                             </div>
-                            <span className='text-muted-foreground text-sm italic'>{isEditing ? 'Upload a logo' : 'No logo uploaded'}</span>
+                            <span className="text-muted-foreground text-sm italic text-center sm:text-left">
+                              {isEditing ? 'Upload a logo' : 'No logo uploaded'}
+                            </span>
                           </div>
                         )}
                       </div>
                       {isEditing && (
-                        <div className="w-full md:w-2/3 space-y-4">
+                        <div className="w-full sm:w-2/3 space-y-4">
                           <Input
                             id="logo"
                             type="file"
@@ -452,7 +477,7 @@ const SettingsContent = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
         </CardContent>
       </Card>

@@ -1,21 +1,21 @@
-import { useSettings } from '@/pages/AdminDashboard/SettingsContext';
+import { useSettings } from '@/context/SettingsContext';
 import React, { useEffect } from 'react';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaFacebook, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 const Footer = () => {
-  const { hotel, fetchHotel } = useSettings();
+  const { hotelInfo, gethotel } = useSettings();
 
   useEffect(() => {
-    fetchHotel();
+    gethotel();
   }, []);
 
-  // Safeguard for when the hotel data is not yet available
-  if (!hotel || hotel.length === 0) {
+  // Safeguard for when the hotelInfo data is not yet available
+  if (!hotelInfo || hotelInfo.length === 0) {
     return null; // Render nothing if no data
   }
 
-  const hotelData = hotel[0]; // Access the first hotel data object
+  const hotelData = hotelInfo[0]; // Access the first hotelInfo data object
   const { name, address, contactNumbers, checkInTime, checkOutTime } = hotelData;
 
   return (

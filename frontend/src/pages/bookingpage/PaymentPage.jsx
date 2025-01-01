@@ -19,7 +19,7 @@ export default function PaymentPage() {
   const { toast } = useToast();
   const { createBooking } = useBooking();
   const { user } = useAuth();
-  // console.log(user.userId);
+  // console.log(user._id);
   
   const [bookingData, setBookingData] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -80,11 +80,11 @@ export default function PaymentPage() {
   const handleBookingSuccess = async () => {
     try {
       const bookingPayload = {
-        userId: user.userId,
-        roomId: bookingData.roomId,
-        checkInDate: bookingData.startDate,
-        checkOutDate: bookingData.endDate,
-        totalPrice: bookingData.price + bookingData.taxesAndFees.total,
+        userId: user?._id,
+        roomId: bookingData?.roomId,
+        checkInDate: bookingData?.startDate,
+        checkOutDate: bookingData?.endDate,
+        totalPrice: bookingData?.price + bookingData?.taxesAndFees.total,
       };
   
       const response = await createBooking(bookingPayload);
