@@ -2,6 +2,7 @@
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../Models/userModel.js";
+import DeletedUser from "../Models/UserDelete.js";
 export const updateUser = async (req, res) => {
   const { name, email, phoneno, gender, age, address } = req.body;
   const userId = req.params.id; // The ID of the user to update, passed via URL parameter
@@ -59,48 +60,60 @@ export const updateUser = async (req, res) => {
   }
 };
 
-  export const deleteUser = async (req, res) => {
-    const userId = req.params.id;  // The ID of the user to delete
-    const loggedInUserId = req.user.userId;  // The ID from the JWT token (authenticated user)
-    const loggedInUserRole = req.user.role;  // The role from the JWT token (e.g., user or admin)
-  
-    try {
-      // Check if the user exists
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found."
-        });
-      }
-  
-      // Authorization check: only the user themselves or an admin can delete an account
-      if (userId !== loggedInUserId && loggedInUserRole !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: "You are not authorized to delete this account."
-        });
-      }
-  
-      // Optional: Handle any associated data (e.g., bookings, ratings) that need to be cleaned up before deleting the user
-      // Example: await Booking.deleteMany({ userId: userId }); // If you have a bookings collection, delete related records
-  
-      // Delete the user using findByIdAndDelete
-      await User.findByIdAndDelete(userId);
-  
-      return res.status(200).json({
-        success: true,
-        message: "User deleted successfully."
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({
+export const deleteUser = async (req, res) => {
+  const userId = req.params.id; // The ID of the user to delete
+  const loggedInUserId = req.user.userId; // The ID from the JWT token (authenticated user)
+  const loggedInUserRole = req.user.role; // The role from the JWT token (e.g., user or admin)
+
+  try {
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: "Server error. Please try again later."
+        message: 'User not found.',
       });
     }
-  };
-  
+
+    // Authorization check: only the user themselves or an admin can delete an account
+    if (userId !== loggedInUserId && loggedInUserRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to delete this account.',
+      });
+    }
+
+    // Store the deleted user information in the DeletedUser model
+    const deletedUser = new DeletedUser({
+      name: user.name,
+      email: user.email,
+      password: user.password, // If you are storing hashed passwords, ensure this is secure.
+      age: user.age,
+      IsBooking: user.IsBooking,
+      gender: user.gender,
+      role: user.role,
+      phoneno: user.phoneno,
+      address: user.address,
+      reasonForDeletion: req.body.reasonForDeletion || 'No reason provided', // Optionally include reason from request
+    });
+
+    await deletedUser.save();
+
+    // Delete the user from the User collection
+    await User.findByIdAndDelete(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted successfully and archived.',
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again later.',
+    });
+  }
+};
   export const GetAllUsers = async (req, res) => {
     try {
       const bookings = await User.find();
@@ -176,3 +189,64 @@ export const profile = async (req, res) => {
     });
   }
 };
+
+export const changePassword = async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const userId = req.user.userId; // Authenticated user ID from JWT token
+
+  try {
+    // Validate inputs
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Both oldPassword and newPassword are required.",
+      });
+    }
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Check if the password exists
+    if (!user.password) {
+      return res.status(500).json({
+        success: false,
+        message: "Password is not set for this user.",
+      });
+    }
+
+    // Verify the old password
+    const isPasswordMatch = await bcryptjs.compare(oldPassword, user.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Old password is incorrect.",
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcryptjs.hash(newPassword, 10);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully.",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later.",
+    });
+  }
+};
+
+
