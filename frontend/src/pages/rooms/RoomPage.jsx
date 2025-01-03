@@ -126,10 +126,10 @@ export default function RoomsPage() {
           amenity.toLowerCase().includes(filters.searchQuery.toLowerCase())
         );
 
-      return priceMatch && typeMatch 
-      // &&
-      //  guestsMatch
-       && availabilityMatch && searchMatch;
+      return priceMatch && typeMatch
+        // &&
+        //  guestsMatch
+        && availabilityMatch && searchMatch;
     });
   }, [Rooms, filters]);
 
@@ -363,7 +363,11 @@ export default function RoomsPage() {
                   </div>
                 </div>
 
-                <p className="text-gray-600 text-sm">{room.description}</p>
+                <p className="text-gray-600 text-sm">
+                  {room.description?.length > 100
+                    ? `${room.description.slice(0, 100)}...`
+                    : room.description}
+                </p>
 
                 <div className="flex items-center justify-between text-gray-500">
                   <div className="flex items-center">
@@ -377,11 +381,19 @@ export default function RoomsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {room.amenities?.map(amenity => (
-                    <Badge key={amenity} variant="secondary">
+                  {room.amenities?.slice(0, 5).map((amenity) => (
+                    <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
                       {amenity}
-                    </Badge>
+                    </span>
                   ))}
+                  {room.amenities?.length > 5 && (
+                    <Button
+                      variant="outline"
+                      className="text-primary"
+                    >
+                      +{room.amenities.length - 5} more
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center">

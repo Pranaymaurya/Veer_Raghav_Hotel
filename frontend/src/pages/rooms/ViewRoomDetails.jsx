@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { format, differenceInDays, addDays, isBefore, isToday } from 'date-fns';
-import { Bed, Users, Star, ChevronLeft, Plus, Minus, Info, AlertCircle } from 'lucide-react';
+import {
+  Bed, Users, Star, ChevronLeft, Plus, Minus, Info,
+  AlertCircle, User, MessageSquare, Clock, Languages,
+  ChevronRight,
+  Check
+} from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useRoom } from '@/context/RoomContext';
 import ImageSlider from './components/ImageSlider';
 import { useAuth } from '@/hooks/useAuth';
+import { Separator } from '@/components/ui/separator';
 
-// Loading skeleton component
+// Loading skeleton component (same as before)
 const RoomDetailsSkeleton = () => (
   <div className="container mx-auto p-4 space-y-6">
     <div className="flex justify-between items-center mb-6">
@@ -54,30 +61,34 @@ export default function ViewRoomDetails() {
   const { user } = useAuth();
   const { Rooms, getAllRooms, loading: roomsLoading } = useRoom();
 
+  // States for new UI elements
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  // const [showAllFoodDining, setShowAllFoodDining] = useState(false);
+  const [showHostInfo, setShowHostInfo] = useState(false);
+
   // Find the current room from Rooms array
   const room = Rooms?.find(room => room._id === id);
 
-  // Initialize states
+  // Initialize states (same as before)
   const [roomCount, setRoomCount] = useState(() => {
     try {
-      // Check URL parameters first
       const roomsParam = searchParams.get('rooms');
       if (roomsParam) {
         const parsedRooms = parseInt(roomsParam);
         return parsedRooms > 0 ? parsedRooms : 1;
       }
 
-      // Then check location state
       const locationRooms = location.state?.rooms;
       if (locationRooms) {
         const parsedLocationRooms = parseInt(locationRooms);
         return parsedLocationRooms > 0 ? parsedLocationRooms : 1;
       }
 
-      return 1; // Default value
+      return 1;
     } catch (error) {
       console.error('Error initializing room count:', error);
-      return 1; // Fallback to default
+      return 1;
     }
   });
 
@@ -95,10 +106,10 @@ export default function ViewRoomDetails() {
         return parsedLocationGuests > 0 ? parsedLocationGuests : 1;
       }
 
-      return 1; // Default value
+      return 1;
     } catch (error) {
       console.error('Error initializing guests count:', error);
-      return 1; // Fallback to default
+      return 1;
     }
   });
 
@@ -106,7 +117,7 @@ export default function ViewRoomDetails() {
     try {
       const checkIn = searchParams.get('checkIn');
       const checkOut = searchParams.get('checkOut');
-      
+
       const locationStartDate = location.state?.startDate;
       const locationEndDate = location.state?.endDate;
 
@@ -136,7 +147,7 @@ export default function ViewRoomDetails() {
   const [dateError, setDateError] = useState('');
   const [priceIncreased, setPriceIncreased] = useState(false);
 
-  // Effects
+  // Effects (same as before)
   useEffect(() => {
     getAllRooms();
   }, []);
@@ -148,11 +159,8 @@ export default function ViewRoomDetails() {
       const currentGuests = guests;
       const currentRooms = roomCount;
       const maxGuestsPerRoom = room.maxOccupancy;
-
-      // Calculate minimum required rooms
       const minimumRequiredRooms = Math.ceil(currentGuests / maxGuestsPerRoom);
 
-      // Check if current room count can accommodate all guests
       if (currentRooms * maxGuestsPerRoom < currentGuests) {
         setRoomCount(minimumRequiredRooms);
         setPriceIncreased(minimumRequiredRooms > 1);
@@ -203,7 +211,7 @@ export default function ViewRoomDetails() {
     }
   }, [date, room]);
 
-  // Handlers
+  // Handlers (same as before)
   const handleDateSelect = (newDate) => {
     if (!newDate) {
       const today = new Date();
@@ -244,7 +252,6 @@ export default function ViewRoomDetails() {
     const newGuestCount = Math.max(1, guests + increment);
     setGuests(newGuestCount);
 
-    // Only auto-adjust rooms if not manually set in URL
     if (!searchParams.get('rooms')) {
       const minimumRequiredRooms = Math.ceil(newGuestCount / room.maxOccupancy);
       if (minimumRequiredRooms !== roomCount) {
@@ -265,10 +272,10 @@ export default function ViewRoomDetails() {
 
   const handleBookNow = () => {
     if (!date?.from || !date?.to || !room) return;
-    
+
     const nights = differenceInDays(date.to, date.from);
     const price = calculatePrice();
-    
+
     const booking = {
       roomId: room._id,
       roomName: room.name,
@@ -282,11 +289,11 @@ export default function ViewRoomDetails() {
       price,
       roomCount,
     };
-    
+
     navigate(`/booking/${room._id}`, { state: { booking } });
   };
 
-  // Utility functions
+  // Utility functions (same as before)
   const calculatePrice = () => {
     if (!room || !isValidDateRange(date)) return 0;
 
@@ -377,7 +384,7 @@ export default function ViewRoomDetails() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="container mx-auto p-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -401,186 +408,335 @@ export default function ViewRoomDetails() {
         </div>
       </div>
 
-      {/* Room Content */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Image Carousel */}
-        <div className="relative">
-          {room.images?.length > 0 ? (
-            <ImageSlider images={room.images} />
-          ) : (
-            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500">No images available</p>
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Left Section - 2/3 width */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Image Slider */}
+          <div className="relative">
+            <ImageSlider images={room.images || []} />
+          </div>
+
+          {/* Room Info */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div>
+              <h3 className="font-semibold text-gray-700 flex items-center">
+                <Bed className="mr-2 text-primary" /> Room Type
+              </h3>
+              <p className="text-gray-600">{room.name}</p>
             </div>
-          )}
+            <div>
+              <h3 className="font-semibold text-gray-700 flex items-center">
+                <Users className="mr-2 text-primary" /> Capacity
+              </h3>
+              <p className="text-gray-600">Fits {room.maxOccupancy} Guests</p>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Description</h3>
+            <p className="text-gray-600">
+              {room.description?.length > 150
+                ? `${room.description.slice(0, 150)}...`
+                : room.description}
+              {room.description?.length > 150 && (
+                <Button
+                  variant="link"
+                  onClick={() => setShowFullDescription(true)}
+                  className="text-primary"
+                >
+                  Read more
+                </Button>
+              )}
+            </p>
+          </div>
+
+          {/* Amenities */}
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Amenities</h3>
+            <div className="flex flex-wrap gap-2">
+              {room.amenities?.slice(0, 5).map((amenity) => (
+                <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                  {amenity}
+                </span>
+              ))}
+              {room.amenities?.length > 5 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAllAmenities(true)}
+                  className="text-primary"
+                >
+                  +{room.amenities.length - 5} more
+                </Button>
+              )}
+            </div>
+          </div>
+
+            <Separator />  
+          {/* Food & Dining */}
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">Food & Dining</h3>
+            <div className="flex textblack ">
+              <div>
+                <h1>Meal options are provided at the property</h1>
+                <ul className='text-base list-disc'>
+                  <li className='text-sm ml-5'>Meals offered: Breakfast, Lunch, Dinner</li>
+                  <li className='text-sm ml-5'>Only veg meals will be served by the property</li>
+                  <li className='text-sm ml-5'>Cuisines available: Local, South Indian, North Indian, Chinese</li>
+                  <li className='text-sm ml-5'>Meal charges (approx): INR 200 per person per meal</li>
+                </ul>
+              </div>
+
+              <div>
+                <h1>Additional information</h1>
+                <ul className='text-base list-disc'>
+                  <li className='text-sm ml-5'>Outside food is allowed</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <Separator />  
+          {/* Host Information Card */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Hosted by Ankur</h3>
+                  <p className="text-gray-600">Hosting since 2024</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Languages className="text-primary" />
+                  <span>Speaks English, Hindi</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="text-primary" />
+                  <span>Responds within 24 hours</span>
+                </div>
+              </div>
+
+              <p className="text-gray-600">
+                During your stay, you will be hosted by Ankur. He has been hosting since 2024.
+                Ankur is an affable person and loves hosting guests from various corners of the world...
+                <Button
+                  variant="link"
+                  onClick={() => setShowHostInfo(true)}
+                  className="text-primary"
+                >
+                  Read more
+                </Button>
+              </p>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">
+                  During your stay, a Caretaker will be available at the property.
+                </h4>
+                <p className="text-gray-600">
+                  <strong>Caretaker Responsibilities:</strong> Cleaning kitchen/utensils,
+                  Cab bookings, Car/bike rentals, Gardening, Help buying groceries,
+                  Restaurant reservations, Pick up and Drop services
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={handleLogin}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  LOGIN TO MESSAGE HOST
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Booking Card */}
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Book Your Stay</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Room Details */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-semibold text-gray-700 flex items-center">
-                  <Bed className="mr-2 text-primary" /> Room Type
-                </h3>
-                <p className="text-gray-600">{room.name}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-700 flex items-center">
-                  <Users className="mr-2 text-primary" /> Capacity
-                </h3>
-                <p className="text-gray-600">{room.maxOccupancy} Guests per room</p>
-              </div>
-            </div>
+        {/* Right Section - 1/3 width */}
+        <div className="md:col-span-1">
+          <Card className="sticky top-4">
+            <CardContent className="p-6 space-y-4">
+              <div className="space-y-4">
+                {/* Date Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Select Stay Dates
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !isValidDateRange(date) && "text-muted-foreground"
+                        )}
+                      >
+                        {formatDateRange(date)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date.from || new Date()}
+                        selected={{
+                          from: date.from,
+                          to: date.to
+                        }}
+                        onSelect={handleDateSelect}
+                        numberOfMonths={2}
+                        disabled={disabledDays}
+                        className="rounded-md border"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {dateError && (
+                    <div className="text-red-500 text-sm flex items-center">
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      {dateError}
+                    </div>
+                  )}
+                </div>
 
-            {/* Date Selection */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Select Stay Dates
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
+                {/* Guests and Rooms */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Guests
+                    </label>
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleGuestChange(-1)}
+                        disabled={guests <= 1}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span>{guests} {guests === 1 ? 'Guest' : 'Guests'}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleGuestChange(1)}
+                        disabled={guests >= room.maxOccupancy * roomCount}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Rooms Required
+                    </label>
+                    <div className="bg-orange-50 text-secondary-foreground px-4 py-2 rounded-md text-center">
+                      {roomCount} {roomCount === 1 ? 'Room' : 'Rooms'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price Display */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg">Total Price</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary">
+                        ₹{calculatePrice()}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        + ₹{room.taxesAndFees || 0} taxes & fees
+                      </div>
+                    </div>
+                  </div>
+                  {priceIncreased && (
+                    <p className="text-sm text-yellow-600 flex items-center">
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      Price adjusted for multiple rooms
+                    </p>
+                  )}
+                </div>
+
+                {/* Book Now Button */}
+                {!user ? (
                   <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !isValidDateRange(date) && "text-muted-foreground"
-                    )}
+                    onClick={handleLogin}
+                    className="w-full bg-orange-600 text-white hover:bg-orange-700"
                   >
-                    {formatDateRange(date)}
+                    Login to Book
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={date.from || new Date()}
-                    selected={{
-                      from: date.from,
-                      to: date.to
-                    }}
-                    onSelect={handleDateSelect}
-                    numberOfMonths={2}
-                    disabled={disabledDays}
-                    className="rounded-md border"
-                  />
-                </PopoverContent>
-              </Popover>
-              {dateError && (
-                <div className="text-red-500 text-sm flex items-center">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  {dateError}
-                </div>
-              )}
-              {isValidDateRange(date) && !dateError && (
-                <div className="text-sm text-primary mt-2 flex justify-end">
-                  <span className="font-normal">
-                    {calculateNights(date)} {calculateNights(date) === 1 ? 'night' : 'nights'} selected
-                  </span>
-                </div>
-              )}
-            </div>
-
-
-            {/* Guests and Rooms */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Guests
-                </label>
-                <div className="flex items-center">
+                ) : (
                   <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleGuestChange(-1)}
+                    disabled={!!dateError || !date.from || !date.to}
+                    onClick={handleBookNow}
+                    className="w-full bg-orange-600 text-white hover:bg-orange-700"
                   >
-                    <Minus className="h-4 w-4" />
+                    Book Now
                   </Button>
-                  <span className="mx-4">{guests}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleGuestChange(1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rooms Required
-                </label>
-                <div className="bg-orange-50 text-secondary-foreground px-4 py-2 rounded-md">
-                  {roomCount}
-                </div>
-              </div>
-            </div>
-
-            {/* Amenities */}
-            {room.amenities && room.amenities.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Amenities</h3>
-                <div className="flex flex-wrap gap-2">
-                  {room.amenities.map((amenity) => (
-                    <span
-                      key={amenity}
-                      className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
-                    >
-                      {amenity}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Total Price */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <span className="text-xl font-bold text-primary mr-2">
-                    ₹{calculatePrice()}
-                  </span>
-                  <Info
-                    className="text-gray-500 h-4 w-4"
-                    title="Total price for selected stay duration"
-                  />
-                </div>
-                {!user ?
-                  <>
-                    <Button
-                      onClick={handleLogin}
-                      className="w-full max-w-xs bg-orange-600 text-white hover:bg-orange-700 transition-colors duration-200"
-                    >
-                      Login to Book
-                    </Button>
-                  </>
-                  :
-                  <>
-                    <Button
-                      disabled={!!dateError || !date.from || !date.to || !room}
-                      onClick={handleBookNow}
-                      className="w-full max-w-xs bg-orange-600 text-white hover:bg-orange-700 transition-colors duration-200"
-                    >
-                      Book Now
-                    </Button>
-                  </>
-                }
-
-              </div>
-              {priceIncreased && (
-                <p className="text-sm text-yellow-600 flex items-center">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Price has increased due to multiple room allocation.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* Modals */}
+      <Dialog open={showFullDescription} onOpenChange={setShowFullDescription}>
+        <DialogContent  className='textblack'>
+          <DialogHeader>
+            <DialogTitle>Room Description</DialogTitle>
+          </DialogHeader>
+          <Separator />
+          <p className="text-gray-600">{room.description}</p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAllAmenities} onOpenChange={setShowAllAmenities}>
+        <DialogContent className='textblack'>
+          <DialogHeader>
+            <DialogTitle>All Amenities</DialogTitle>
+          </DialogHeader>
+          <Separator />
+          <div className="grid grid-cols-2 gap-4">
+            {room.amenities?.map((amenity) => (
+              <div key={amenity} className="flex items-center gap-2">
+                <Check className="text-primary h-4 w-4" />
+                <span>{amenity}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showHostInfo} onOpenChange={setShowHostInfo}>
+        <DialogContent  className='textblack'>
+          <DialogHeader>
+            <DialogTitle>About Your Host</DialogTitle>
+          </DialogHeader>
+          <Separator />
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              During your stay, you will be hosted by Ankur. He has been hosting since 2024.
+              Ankur is an affable person and loves hosting guests from various corners of the world.
+              Besides hosting, Ankur likes travelling, listening to music, reading and playing sports.
+              He has always been passionate about donning the hat of a perfect host.
+            </p>
+            <div>
+              <h4 className="font-semibold mb-2">Caretaker Services</h4>
+              <ul className="space-y-2">
+                <li>• Cleaning kitchen/utensils</li>
+                <li>• Cab bookings</li>
+                <li>• Car/bike rentals</li>
+                <li>• Gardening</li>
+                <li>• Help buying groceries</li>
+                <li>• Restaurant reservations</li>
+                <li>• Pick up and Drop services</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
