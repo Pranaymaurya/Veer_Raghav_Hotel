@@ -10,6 +10,7 @@ import { Clock, Mail, Phone, MapPin, Image, Plus, Trash2, Settings, Edit, X, Loa
 import { useSettings } from '../../../context/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useRoom } from '@/context/RoomContext';
 // import { validateHotelData } from '../components/hotelValidation';
 
 
@@ -50,6 +51,7 @@ const SettingsContent = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [fileError, setFileError] = useState('');
+  const {getImageUrl} = useRoom();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -72,6 +74,9 @@ const SettingsContent = () => {
       });
     }
   }, []);
+
+  console.log(hotel[0].logo);
+  
 
 
   const validateLogoFile = (file) => {
@@ -256,7 +261,7 @@ const SettingsContent = () => {
             <TabsList className="w-full flex flex-col md:flex-row gap-2 h-full mb-5 sm:mb-6 bg-orange-50">
               <TabsTrigger value="general" className="w-full">General</TabsTrigger>
               <TabsTrigger value="booking" className="w-full">Booking</TabsTrigger>
-              {/* <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger> */}
+              <TabsTrigger value="appearance" className="w-full">Appearance</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general">
@@ -420,7 +425,7 @@ const SettingsContent = () => {
               </Card>
             </TabsContent>
 
-            {/* <TabsContent value="appearance">
+            <TabsContent value="appearance">
               <Card>
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-xl sm:text-2xl">Appearance Settings</CardTitle>
@@ -439,7 +444,7 @@ const SettingsContent = () => {
                       <div className="w-full sm:w-1/3">
                         {hotel?.[0]?.logo ? (
                           <img
-                            src={hotel[0].logo}
+                          src={getImageUrl(hotel[0].logo)}
                             alt="Hotel Logo"
                             className="w-full max-w-[200px] h-auto object-contain rounded-lg border mx-auto sm:mx-0"
                           />
@@ -477,7 +482,7 @@ const SettingsContent = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent> */}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
