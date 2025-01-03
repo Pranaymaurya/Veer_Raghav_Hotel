@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from "date-fns";
-import { CalendarIcon, BedIcon, UsersIcon, ArrowRight } from 'lucide-react';
+import { CalendarIcon, ArrowRight } from 'lucide-react';
 import { useRoom } from '@/context/RoomContext';
 
 import { cn } from "@/lib/utils";
@@ -23,6 +23,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import ImageSlider from '@/pages/rooms/components/ImageSlider';
+
+// Define room types constant to match schema
+const ROOM_TYPES = ['Premium', 'Super Deluxe', 'Deluxe'];
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -59,11 +62,6 @@ const HotelBookingSystem = () => {
     getAllRooms();
   }, []);
 
-  const roomTypes = Rooms.map(room => ({
-    value: room.name,
-    label: room.name
-  }));
-
   const handleSearch = (e) => {
     e.preventDefault();
     const searchParams = new URLSearchParams();
@@ -94,6 +92,11 @@ const HotelBookingSystem = () => {
       children !== 0;
   };
 
+  const calculateAverageRating = (ratings) => {
+    if (!ratings || ratings.length === 0) return "New";
+    const average = ratings.reduce((acc, curr) => acc + curr.rating, 0) / ratings.length;
+    return average.toFixed(1);
+  };
 
   return (
     <motion.div
@@ -196,9 +199,9 @@ const HotelBookingSystem = () => {
                       <SelectValue placeholder="Select room type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roomTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
+                      {ROOM_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -268,7 +271,7 @@ const HotelBookingSystem = () => {
 
         {/* Featured Rooms */}
         <motion.div className="space-y-6 max-w-6xl mx-auto" variants={containerVariants}>
-          <motion.h2 
+          <motion.h2
             className="text-2xl font-semibold text-center text-gray-800"
             variants={itemVariants}
           >
@@ -308,12 +311,15 @@ const HotelBookingSystem = () => {
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
-                          <span className="text-gray-600">{room.ratings && room.ratings.length > 0
-                            ? (room.ratings.reduce((acc, curr) => acc + curr.rating, 0) / room.ratings.length).toFixed(1)
-                            : "New"}</span>
+                          <span className="text-gray-600">{calculateAverageRating(room.ratings)}</span>
                         </div>
                       </div>
-                      <p className="text-gray-600 mb-4">{room.description}</p>
+                      <p className="text-gray-600 mb-4">
+                        {room.description?.length > 150
+                          ? `${room.description.slice(0, 150)}...`
+                          : room.description}
+
+                      </p>
                       <div className="flex justify-between items-center">
                         <span className="text-2xl font-bold text-orange-600">₹{room.pricePerNight}</span>
                       </div>

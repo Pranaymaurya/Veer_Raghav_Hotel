@@ -13,7 +13,7 @@ import { BookingProvider } from './context/BookingContext';
 import { RoomProvider } from './context/RoomContext';
 
 // pages
-import Home from './pages/home/home';
+import Home from './pages/gallery/home/home';
 import Gallery from './pages/gallery/Gallery';
 import RoomsPage from './pages/rooms/RoomPage';
 import ViewRoomDetails from './pages/rooms/ViewRoomDetails';
