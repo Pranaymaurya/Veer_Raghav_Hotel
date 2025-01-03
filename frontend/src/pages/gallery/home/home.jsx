@@ -7,15 +7,19 @@ import Hmap from '@/components/Hmap'
 import Rooms from '@/components/Rooms'
 import TextAnimation from '@/components/TextAnimation'
 import HotelBookingForm from '@/components/SearchBar'
+import ReviewSlider from '@/components/Review'
+import ImageSliderCards from '@/components/Imageslider'
 
 const Home = () => {
     return (
         <div>
             <HeroSection />
             <HotelBookingForm/>
-            <LayoutGrid />
+            <ImageSliderCards/>
+            {/* <LayoutGrid /> */}
             <TextAnimation />
-            <Rooms />
+            <ReviewSlider/>
+            {/* <Rooms /> */}
             <Hmap />
         </div>
     )
