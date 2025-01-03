@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { format, differenceInDays, addDays, isBefore, isToday } from 'date-fns';
 import { Bed, Users, Star, ChevronLeft, Plus, Minus, Info, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useRoom } from '@/context/RoomContext';
 import ImageSlider from './components/ImageSlider';
 import { useAuth } from '@/hooks/useAuth';
 
+// Loading skeleton component
 const RoomDetailsSkeleton = () => (
   <div className="container mx-auto p-4 space-y-6">
     <div className="flex justify-between items-center mb-6">
@@ -21,10 +22,8 @@ const RoomDetailsSkeleton = () => (
       </div>
       <Skeleton className="h-6 w-24" />
     </div>
-
     <div className="grid md:grid-cols-2 gap-6">
       <Skeleton className="aspect-video rounded-lg" />
-
       <Card>
         <CardHeader>
           <Skeleton className="h-7 w-48" />
@@ -52,41 +51,80 @@ export default function ViewRoomDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-
   const { user } = useAuth();
   const { Rooms, getAllRooms, loading: roomsLoading } = useRoom();
 
-  // State management
+  // Find the current room from Rooms array
+  const room = Rooms?.find(room => room._id === id);
+
+  // Initialize states
+  const [roomCount, setRoomCount] = useState(() => {
+    try {
+      // Check URL parameters first
+      const roomsParam = searchParams.get('rooms');
+      if (roomsParam) {
+        const parsedRooms = parseInt(roomsParam);
+        return parsedRooms > 0 ? parsedRooms : 1;
+      }
+
+      // Then check location state
+      const locationRooms = location.state?.rooms;
+      if (locationRooms) {
+        const parsedLocationRooms = parseInt(locationRooms);
+        return parsedLocationRooms > 0 ? parsedLocationRooms : 1;
+      }
+
+      return 1; // Default value
+    } catch (error) {
+      console.error('Error initializing room count:', error);
+      return 1; // Fallback to default
+    }
+  });
+
   const [guests, setGuests] = useState(() => {
-    const guestsParam = searchParams.get('guests');
-    return guestsParam ? parseInt(guestsParam) : 1;
+    try {
+      const guestsParam = searchParams.get('guests');
+      if (guestsParam) {
+        const parsedGuests = parseInt(guestsParam);
+        return parsedGuests > 0 ? parsedGuests : 1;
+      }
+
+      const locationGuests = location.state?.guests;
+      if (locationGuests) {
+        const parsedLocationGuests = parseInt(locationGuests);
+        return parsedLocationGuests > 0 ? parsedLocationGuests : 1;
+      }
+
+      return 1; // Default value
+    } catch (error) {
+      console.error('Error initializing guests count:', error);
+      return 1; // Fallback to default
+    }
   });
 
   const [date, setDate] = useState(() => {
     try {
-      const startDateParam = searchParams.get('startDate');
-      const endDateParam = searchParams.get('endDate');
+      const checkIn = searchParams.get('checkIn');
+      const checkOut = searchParams.get('checkOut');
+      
+      const locationStartDate = location.state?.startDate;
+      const locationEndDate = location.state?.endDate;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       const tomorrow = addDays(today, 1);
       tomorrow.setHours(0, 0, 0, 0);
 
-      // Make sure we return a valid date range object even if one or both dates are null
       return {
-        from: startDateParam ? new Date(startDateParam) : today,
-        to: endDateParam ? new Date(endDateParam) : tomorrow,
-        selecting: false // Add this flag to track selection state
+        from: checkIn ? new Date(checkIn) : locationStartDate ? new Date(locationStartDate) : today,
+        to: checkOut ? new Date(checkOut) : locationEndDate ? new Date(locationEndDate) : tomorrow,
+        selecting: false
       };
     } catch (error) {
       console.error('Error initializing dates:', error);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       const tomorrow = addDays(today, 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
       return {
         from: today,
         to: tomorrow,
@@ -95,71 +133,61 @@ export default function ViewRoomDetails() {
     }
   });
 
-  const handleDateSelect = (newDate) => {
-    if (!newDate) {
-      // Reset to default dates if selection is cleared
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = addDays(today, 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
-      setDate({
-        from: today,
-        to: tomorrow,
-        selecting: false
-      });
-      return;
-    }
-
-    if (!newDate.from) {
-      // First click - start new selection
-      setDate({
-        from: null,
-        to: null,
-        selecting: true
-      });
-    } else if (!newDate.to) {
-      // Second click - update the "to" date
-      setDate({
-        from: newDate.from,
-        to: null,
-        selecting: true
-      });
-    } else {
-      // Final state - complete the selection
-      setDate({
-        from: newDate.from,
-        to: newDate.to,
-        selecting: false
-      });
-    }
-  };
-
-  const [roomCount, setRoomCount] = useState(1);
   const [dateError, setDateError] = useState('');
   const [priceIncreased, setPriceIncreased] = useState(false);
 
-  // Fetch all rooms
+  // Effects
   useEffect(() => {
     getAllRooms();
   }, []);
 
-  // Find the current room from Rooms array
-  const room = Rooms?.find(room => room._id === id);
+  useEffect(() => {
+    if (!room) return;
 
-  // Date validation and room count calculations
+    const validateRoomAssignment = () => {
+      const currentGuests = guests;
+      const currentRooms = roomCount;
+      const maxGuestsPerRoom = room.maxOccupancy;
+
+      // Calculate minimum required rooms
+      const minimumRequiredRooms = Math.ceil(currentGuests / maxGuestsPerRoom);
+
+      // Check if current room count can accommodate all guests
+      if (currentRooms * maxGuestsPerRoom < currentGuests) {
+        setRoomCount(minimumRequiredRooms);
+        setPriceIncreased(minimumRequiredRooms > 1);
+      }
+    };
+
+    validateRoomAssignment();
+  }, [room, guests]);
+
+  useEffect(() => {
+    if (!room) return;
+
+    const params = new URLSearchParams(searchParams);
+    params.set('guests', guests.toString());
+    params.set('rooms', roomCount.toString());
+    if (date.from) params.set('checkIn', date.from.toISOString());
+    if (date.to) params.set('checkOut', date.to.toISOString());
+
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}?${params.toString()}`
+    );
+  }, [guests, roomCount, date, room]);
+
   useEffect(() => {
     if (room && date?.from && date?.to) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Validate check-in date
       if (isBefore(date.from, today) && !isToday(date.from)) {
         setDateError('Check-in date cannot be in the past');
         return;
       }
 
-      // Validate check-out date
       if (date.to && isBefore(date.to, date.from)) {
         setDateError('Check-out date must be after check-in date');
         return;
@@ -171,19 +199,61 @@ export default function ViewRoomDetails() {
         setDateError('Minimum stay is 1 night');
       } else {
         setDateError('');
-        const requiredRooms = Math.ceil(guests / room.maxOccupancy);
-        setRoomCount(requiredRooms);
-        setPriceIncreased(requiredRooms > 1);
       }
     }
-  }, [date, guests, room?.maxOccupancy]);
+  }, [date, room]);
 
-  // Show skeleton loading state
-  if (roomsLoading) {
-    return <RoomDetailsSkeleton />;
-  }
+  // Handlers
+  const handleDateSelect = (newDate) => {
+    if (!newDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = addDays(today, 1);
+      setDate({
+        from: today,
+        to: tomorrow,
+        selecting: false
+      });
+      return;
+    }
 
-  // Handle login redirect
+    if (!newDate.from) {
+      setDate({
+        from: null,
+        to: null,
+        selecting: true
+      });
+    } else if (!newDate.to) {
+      setDate({
+        from: newDate.from,
+        to: null,
+        selecting: true
+      });
+    } else {
+      setDate({
+        from: newDate.from,
+        to: newDate.to,
+        selecting: false
+      });
+    }
+  };
+
+  const handleGuestChange = (increment) => {
+    if (!room) return;
+
+    const newGuestCount = Math.max(1, guests + increment);
+    setGuests(newGuestCount);
+
+    // Only auto-adjust rooms if not manually set in URL
+    if (!searchParams.get('rooms')) {
+      const minimumRequiredRooms = Math.ceil(newGuestCount / room.maxOccupancy);
+      if (minimumRequiredRooms !== roomCount) {
+        setRoomCount(minimumRequiredRooms);
+        setPriceIncreased(minimumRequiredRooms > 1);
+      }
+    }
+  };
+
   const handleLogin = () => {
     navigate('/auth/login', {
       state: {
@@ -193,52 +263,12 @@ export default function ViewRoomDetails() {
     });
   };
 
-  // Room not found state
-  if (!room) {
-    return (
-      <div className="container mx-auto p-4 text-center">
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Room Not Found</h2>
-            <p className="text-muted-foreground mb-4">
-              The room you are looking for does not exist or has been removed.
-            </p>
-            <Button onClick={() => navigate('/rooms')}>
-              Back to Rooms
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const calculatePrice = () => {
-    if (!room || !isValidDateRange(date)) return 0;
-
-    const nights = calculateNights(date);
-    if (nights === 0) return 0;
-
-    const basePrice = room.pricePerNight * nights;
-    const requiredRooms = Math.ceil(guests / room.maxOccupancy);
-    let totalPrice = basePrice * requiredRooms;
-
-    if (nights >= 5) return Math.round(totalPrice * 0.9);
-    if (nights > 1) return Math.round(totalPrice * 0.95);
-    return totalPrice;
-  };
-
-  const getRoomQuality = (rating) => {
-    if (!rating) return "New";
-    if (rating > 4.5) return "Excellent";
-    if (rating > 4) return "Very Good";
-    if (rating >= 3.5) return "Good";
-    return "Okay";
-  };
-
   const handleBookNow = () => {
     if (!date?.from || !date?.to || !room) return;
+    
     const nights = differenceInDays(date.to, date.from);
     const price = calculatePrice();
+    
     const booking = {
       roomId: room._id,
       roomName: room.name,
@@ -252,20 +282,23 @@ export default function ViewRoomDetails() {
       price,
       roomCount,
     };
+    
     navigate(`/booking/${room._id}`, { state: { booking } });
   };
 
-  const handleGuestChange = (increment) => {
-    const newGuestCount = Math.max(1, guests + increment);
-    setGuests(newGuestCount);
+  // Utility functions
+  const calculatePrice = () => {
+    if (!room || !isValidDateRange(date)) return 0;
 
-    if (room) {
-      const newRoomCount = Math.ceil(newGuestCount / room.maxOccupancy);
-      setRoomCount(newRoomCount);
-      setPriceIncreased(newRoomCount > 1);
-    }
+    const nights = calculateNights(date);
+    if (nights === 0) return 0;
+
+    const basePrice = room.pricePerNight * nights * roomCount;
+
+    if (nights >= 5) return Math.round(basePrice * 0.9);
+    if (nights > 1) return Math.round(basePrice * 0.95);
+    return basePrice;
   };
-
 
   const isValidDateRange = (dateRange) => {
     if (!dateRange || !dateRange.from || !dateRange.to) return false;
@@ -291,7 +324,6 @@ export default function ViewRoomDetails() {
       if (!isValidDateRange(dateRange)) {
         return "Select dates";
       }
-
       return `${format(dateRange.from, "EEE, MMM d, yyyy")} - ${format(dateRange.to, "EEE, MMM d, yyyy")}`;
     } catch (error) {
       console.error('Error formatting date range:', error);
@@ -308,6 +340,37 @@ export default function ViewRoomDetails() {
       return 0;
     }
   };
+
+  const getRoomQuality = (rating) => {
+    if (!rating) return "New";
+    if (rating > 4.5) return "Excellent";
+    if (rating > 4) return "Very Good";
+    if (rating >= 3.5) return "Good";
+    return "Okay";
+  };
+
+  // Loading and error states
+  if (roomsLoading) {
+    return <RoomDetailsSkeleton />;
+  }
+
+  if (!room) {
+    return (
+      <div className="container mx-auto p-4 text-center">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Room Not Found</h2>
+            <p className="text-muted-foreground mb-4">
+              The room you are looking for does not exist or has been removed.
+            </p>
+            <Button onClick={() => navigate('/rooms')}>
+              Back to Rooms
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const disabledDays = {
     before: new Date(),
