@@ -46,25 +46,25 @@ router.post("/register", register);
 router.post("/login", login);
 router.get("/logout", logout);
 router.get("/profile", authMiddleware, profile);
-router.put(
-  "/user/:id",
-  authMiddleware,
-  authorizeRoles("user", "admin"),
-  updateUser
-);
-router.delete(
-  "/user/delete/:id",
-  authMiddleware,
-  authorizeRoles("user", "admin"),
-  deleteUser
-);
-router.get("/user", authMiddleware, authorizeRoles("admin"), GetAllUsers); //used by admin o get all user
-router.get(
-  "/userdetails",
-  authMiddleware,
-  authorizeRoles("admin", "user"),
-  getUserDetails
-); //helps to get details of user
+// router.put(
+//   "/user/:id",
+//   authMiddleware,
+//   authorizeRoles("user", "admin"),
+//   updateUser
+// );
+// router.delete(
+//   "/user/delete/:id",
+//   authMiddleware,
+//   authorizeRoles("user", "admin"),
+//   deleteUser
+// );
+// router.get("/user", authMiddleware, authorizeRoles("admin"), GetAllUsers); //used by admin o get all user
+// router.get(
+//   "/userdetails",
+//   authMiddleware,
+//   authorizeRoles("admin", "user"),
+//   getUserDetails
+// ); //helps to get details of user
 router.get(
   "/user/booking",
   authMiddleware,
