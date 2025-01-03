@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 import cookieParser from 'cookie-parser';
+import router2 from "./Routes/UserRoutes.js";
 // Get __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,7 @@ app.use(cookieParser());
 app.use(cookieParser());
 // Routes
 app.use("/api/v3/", router);
+app.use('/api/v3',router2)
  
 // Start the server
 const PORT = process.env.PORT||5000;
