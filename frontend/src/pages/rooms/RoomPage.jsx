@@ -116,8 +116,8 @@ export default function RoomsPage() {
       const priceMatch = room.pricePerNight >= filters.priceRange[0] &&
         room.pricePerNight <= filters.priceRange[1];
       const typeMatch = !filters.type || room.name === filters.type;
-      const guestsMatch = !filters.guests ||
-        room.maxOccupancy >= parseInt(filters.guests || "0");
+      // const guestsMatch = !filters.guests ||
+      //   room.maxOccupancy >= parseInt(filters.guests || "0");
       const availabilityMatch = room.isAvailable;
       const searchMatch = !filters.searchQuery ||
         room.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
@@ -126,7 +126,10 @@ export default function RoomsPage() {
           amenity.toLowerCase().includes(filters.searchQuery.toLowerCase())
         );
 
-      return priceMatch && typeMatch && guestsMatch && availabilityMatch && searchMatch;
+      return priceMatch && typeMatch 
+      // &&
+      //  guestsMatch
+       && availabilityMatch && searchMatch;
     });
   }, [Rooms, filters]);
 
