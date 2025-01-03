@@ -1,6 +1,7 @@
 import express from "express";
 import { login, logout, register } from "../Controllers/authController.js";
 import {
+  All,
   CancelBooking,
   CreateBooking,
   GetAllBookings,
@@ -180,5 +181,5 @@ router.put(
   UploadHotelLogo
 );
 router.get("/hotel", GetHotel);
-
+router.get("/admindashboard",All)
 export default router;

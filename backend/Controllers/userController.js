@@ -116,7 +116,7 @@ export const deleteUser = async (req, res) => {
 };
   export const GetAllUsers = async (req, res) => {
     try {
-      const bookings = await User.find();
+      const bookings = await User.find().select("-password");
       res.status(200).json(bookings);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
@@ -168,7 +168,9 @@ export const deleteUser = async (req, res) => {
 export const profile = async (req, res) => {
   const userId = req.user.userId;
   try {
-    const user = await User.findById(userId);
+    // Exclude the password field using the select method
+    const user = await User.findById(userId).select("-password");
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -189,6 +191,7 @@ export const profile = async (req, res) => {
     });
   }
 };
+
 
 export const changePassword = async (req, res) => {
   const { oldPassword, newPassword } = req.body;
