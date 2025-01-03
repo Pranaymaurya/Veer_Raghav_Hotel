@@ -71,9 +71,9 @@ export const BookingProvider = ({ children }) => {
     }
   };
 
-  const getBookingsByUserId = async () => {
+  const getBookingsByUserId = async (userId) => {
     try {
-      const response = await api.get(`/booking/user/${user._id}`);
+      const response = await api.get(`/booking/user/${userId}`);
       // console.log('Bookings by user:', response.data);
       setUserBookings(response.data);
       if (response.data.success) {
@@ -83,15 +83,7 @@ export const BookingProvider = ({ children }) => {
           variant: 'success',
         })
         return response.data;
-      } else {
-        toast({
-          title: 'Error',
-          description: response.data.message,
-          variant: 'destructive',
-        })
-        return response.data;
       }
-      
     } catch (error) {
       console.error('Error fetching bookings by user:', error);
       throw error;

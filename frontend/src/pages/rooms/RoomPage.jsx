@@ -17,13 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import {
-  Bed,
   Users,
   Star,
   Search,
-  SortAsc,
-  ArrowUpDown,
-  RotateCcw
+  RotateCcw,
+  Bed,
+  Home
 } from 'lucide-react';
 import {
   Popover,
@@ -33,58 +32,68 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from "@/components/ui/checkbox";
-import ImageSlider from './components/ImageSlider';
 import { useRoom } from '@/context/RoomContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import ImageSlider from './components/ImageSlider';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function RoomsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { Rooms, getAllRooms } = useRoom();
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("");
 
+  // Initialize filters from URL params
   const defaultFilters = {
     priceRange: [0, 10000],
-    type: "",
-    capacity: "",
-    amenities: [],
-    startDate: null,
-    endDate: null
+    type: searchParams.get('roomType') || "",
+    guests: searchParams.get('guests') || "",
+    rooms: searchParams.get('rooms') || "1",
+    startDate: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')) : null,
+    endDate: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')) : null,
+    searchQuery: searchParams.get('search') || ""
   };
 
   const [filters, setFilters] = useState(defaultFilters);
 
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.type) params.set('roomType', filters.type);
+    if (filters.guests) params.set('guests', filters.guests);
+    if (filters.rooms) params.set('rooms', filters.rooms);
+    if (filters.startDate) params.set('checkIn', filters.startDate.toISOString());
+    if (filters.endDate) params.set('checkOut', filters.endDate.toISOString());
+    if (filters.searchQuery) params.set('search', filters.searchQuery);
+    setSearchParams(params);
+  }, [filters, setSearchParams]);
+
   const resetFilters = () => {
-    setFilters(defaultFilters);
-    setSearchQuery("");
-    setSortBy("");
+    setFilters({
+      priceRange: [0, 10000],
+      type: "",
+      guests: "",
+      rooms: "1",
+      startDate: null,
+      endDate: null,
+      searchQuery: ""
+    });
+    setSearchParams({});
   };
 
   const isAnyFilterActive = () => {
     return (
-      searchQuery !== "" ||
-      sortBy !== "" ||
+      filters.searchQuery !== "" ||
       filters.type !== "" ||
-      filters.amenities.length > 0 ||
+      filters.guests !== "" ||
       filters.startDate !== null ||
       filters.endDate !== null ||
       filters.priceRange[0] !== defaultFilters.priceRange[0] ||
       filters.priceRange[1] !== defaultFilters.priceRange[1]
     );
   };
-
-  const availableAmenities = useMemo(() => {
-    const uniqueAmenities = new Set();
-    Rooms.forEach(room => {
-      room.amenities?.forEach(amenity => uniqueAmenities.add(amenity));
-    });
-    return Array.from(uniqueAmenities);
-  }, [Rooms]);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -100,53 +109,41 @@ export default function RoomsPage() {
     fetchRooms();
   }, []);
 
-  const filteredAndSortedRooms = useMemo(() => {
+  const filteredRooms = useMemo(() => {
     if (!Rooms?.length) return [];
 
-    let filtered = Rooms.filter(room => {
+    return Rooms.filter(room => {
       const priceMatch = room.pricePerNight >= filters.priceRange[0] &&
         room.pricePerNight <= filters.priceRange[1];
       const typeMatch = !filters.type || room.name === filters.type;
-      const capacityMatch = !filters.capacity ||
-        room.maxOccupancy >= parseInt(filters.capacity || "0");
-      const amenitiesMatch = filters.amenities.length === 0 ||
-        filters.amenities.every(amenity => room.amenities?.includes(amenity));
+      const guestsMatch = !filters.guests ||
+        room.maxOccupancy >= parseInt(filters.guests || "0");
       const availabilityMatch = room.isAvailable;
-      const searchMatch = !searchQuery ||
-        room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const searchMatch = !filters.searchQuery ||
+        room.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        room.description?.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
         room.amenities?.some(amenity =>
-          amenity.toLowerCase().includes(searchQuery.toLowerCase())
+          amenity.toLowerCase().includes(filters.searchQuery.toLowerCase())
         );
 
-      return priceMatch && typeMatch && capacityMatch &&
-        amenitiesMatch && availabilityMatch && searchMatch;
+      return priceMatch && typeMatch && guestsMatch && availabilityMatch && searchMatch;
     });
+  }, [Rooms, filters]);
 
-    // Sort rooms based on selected criteria
-    if (sortBy === "price-asc") {
-      filtered.sort((a, b) => a.pricePerNight - b.pricePerNight);
-    } else if (sortBy === "price-desc") {
-      filtered.sort((a, b) => b.pricePerNight - a.pricePerNight);
-    } else if (sortBy === "rating-desc") {
-      filtered.sort((a, b) => {
-        const aRating = a.ratings?.length
-          ? a.ratings.reduce((acc, curr) => acc + curr.rating, 0) / a.ratings.length
-          : 0;
-        const bRating = b.ratings?.length
-          ? b.ratings.reduce((acc, curr) => acc + curr.rating, 0) / b.ratings.length
-          : 0;
-        return bRating - aRating;
-      });
+  // Rest of your existing functions (calculateDynamicPrice, calculateNights, etc.)
+
+  const calculateDynamicPrice = (basePrice, nights, roomCount = 1) => {
+    // First multiply by number of rooms and nights
+    let totalPrice = basePrice * nights * roomCount;
+
+    // Then apply any length-of-stay discounts
+    if (nights >= 5) {
+      return Math.round(totalPrice * 0.9); // 10% discount for 5+ nights
     }
-
-    return filtered;
-  }, [Rooms, filters, searchQuery, sortBy]);
-
-  const calculateDynamicPrice = (basePrice, nights) => {
-    if (nights >= 5) return Math.round(basePrice * nights * 0.9);
-    if (nights > 1) return Math.round(basePrice * nights * 0.95);
-    return basePrice * nights;
+    if (nights > 1) {
+      return Math.round(totalPrice * 0.95); // 5% discount for 2-4 nights
+    }
+    return totalPrice;
   };
 
   const calculateNights = (startDate, endDate) => {
@@ -154,6 +151,7 @@ export default function RoomsPage() {
     const diffTime = Math.abs(endDate - startDate);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
+
 
   const RoomSkeleton = () => (
     <Card className="h-[500px]">
@@ -190,7 +188,7 @@ export default function RoomsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid md:grid-cols-5 gap-4">
+          <div className="grid md:grid-cols-6 gap-4">
             {/* Date Picker */}
             <Popover>
               <PopoverTrigger asChild>
@@ -246,91 +244,59 @@ export default function RoomsPage() {
               </SelectContent>
             </Select>
 
-            {/* Sort Select */}
+            {/* Number of Rooms Select */}
             <Select
-              value={sortBy}
-              onValueChange={setSortBy}
+              value={filters.rooms}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, rooms: value }))}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Sort by" />
+              <SelectTrigger className="flex items-center">
+                <Home className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Rooms" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="rating-desc">Highest Rated</SelectItem>
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num} {num === 1 ? 'Room' : 'Rooms'}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            {/* Amenities Select */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-between",
-                    filters.amenities.length > 0 && "text-primary font-medium"
-                  )}
-                >
-                  {filters.amenities.length > 0
-                    ? `${filters.amenities.length} selected`
-                    : "Amenities"}
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    {/* Show message if no amenities are available */}
-                    {availableAmenities.length === 0 ? (
-                      <div className="text-center text-gray-500 py-2">
-                        No amenities available
-                      </div>
-                    ) : (
-                      <>
-                        {/* Add "Select All" option */}
-                        <div className="flex items-center space-x-2 border-b pb-2">
-                          <Checkbox
-                            checked={filters.amenities.length === availableAmenities.length}
-                            onCheckedChange={(checked) => {
-                              setFilters(prev => ({
-                                ...prev,
-                                amenities: checked ? [...availableAmenities] : []
-                              }));
-                            }}
-                          />
-                          <Label className="font-medium">Select All</Label>
-                        </div>
-
-                        {/* List all available amenities */}
-                        {availableAmenities.map((amenity) => (
-                          <div key={amenity} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={filters.amenities.includes(amenity)}
-                              onCheckedChange={(checked) => {
-                                setFilters(prev => ({
-                                  ...prev,
-                                  amenities: checked
-                                    ? [...prev.amenities, amenity]
-                                    : prev.amenities.filter(a => a !== amenity)
-                                }));
-                              }}
-                            />
-                            <Label className="uppercase">{amenity}</Label>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <div className="flex items-center justify-center border border-gray-300 rounded-md">
+              <label className="mr-2">Guests</label>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    guests: Math.max(1, parseInt(prev.guests || "1") - 1),
+                  }))
+                }
+                className="p-2"
+              >
+                -
+              </Button>
+              <div className="mx-4 text-center w-8">{filters.guests || "1"}</div>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    guests: parseInt(prev.guests || "1") + 1,
+                  }))
+                }
+                className="p-2"
+              >
+                +
+              </Button>
+            </div>
 
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative col-span-2">
               <Input
-                placeholder="Search rooms"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search rooms or amenities"
+                value={filters.searchQuery}
+                onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
                 className="pr-10"
               />
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -376,8 +342,8 @@ export default function RoomsPage() {
           Array(6).fill(null).map((_, index) => (
             <RoomSkeleton key={index} />
           ))
-        ) : filteredAndSortedRooms.length > 0 ? (
-          filteredAndSortedRooms.map((room) => (
+        ) : filteredRooms.length > 0 ? (
+          filteredRooms.map((room) => (
             <Card key={room._id} className="hover:shadow-lg transition-shadow">
               <ImageSlider images={room.images} />
               <CardContent className="p-4 space-y-3">
@@ -419,11 +385,19 @@ export default function RoomsPage() {
                   <div className="text-xl font-bold">
                     ₹{calculateDynamicPrice(
                       room.pricePerNight,
-                      calculateNights(filters.startDate, filters.endDate)
-                    )} <span className="text-sm font-normal">/night</span>
+                      calculateNights(filters.startDate, filters.endDate),
+                      parseInt(filters.rooms) // Pass the room count to the price calculation
+                    )} <span className="text-sm font-normal">{parseInt(filters.rooms) > 1 ? `/night for ${filters.rooms} rooms` : '/night'}</span>
                   </div>
                   <Button
-                    onClick={() => navigate(`/rooms/${room._id}`)}
+                    onClick={() => navigate(`/rooms/${room._id}`, {
+                      state: {
+                        startDate: filters.startDate,
+                        endDate: filters.endDate,
+                        guests: filters.guests,
+                        rooms: filters.rooms
+                      }
+                    })}
                     className="bg-orange-600"
                     disabled={!room.isAvailable}
                   >
@@ -440,15 +414,14 @@ export default function RoomsPage() {
               Try adjusting your search or filters
             </p>
             <div className='flex justify-center'>
-
-            <Button
-              variant="outline"
-              onClick={resetFilters}
-              className="flex items-center gap-2 mt-4 bg-orange-700 hover:bg-orange-600 text-white" 
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset Filters
-            </Button>
+              <Button
+                variant="outline"
+                onClick={resetFilters}
+                className="flex items-center gap-2 mt-4 bg-orange-700 hover:bg-orange-600 text-white"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset Filters
+              </Button>
             </div>
           </div>
         )}

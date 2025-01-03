@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const UserProfile = () => {
     const { user, updateProfile, uploadProfilePicture } = useAuth();
-    const { toast } = useToast();
+    // const { toast } = useToast();
     
     const [isEditing, setIsEditing] = useState(false);
 
