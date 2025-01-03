@@ -40,6 +40,7 @@ import { AdminProvider } from './context/AdminContext';
 import { Toaster } from './components/ui/toaster';
 import { SettingsProvider } from './context/SettingsContext';
 import UserContent from './pages/AdminDashboard/pages/UserContent';
+import UserBookings from './pages/UserProfile/components/UserBookings';
 
 
 const router = createBrowserRouter([
@@ -95,6 +96,12 @@ const router = createBrowserRouter([
           <UserProdfileLayout />
         ),
       },
+      // {
+      //   path: "/profile/bookings",
+      //   element: (
+      //     <UserBookings />
+      //   ),
+      // },
     ]
   },
   {
