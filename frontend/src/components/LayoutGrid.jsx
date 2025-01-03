@@ -7,7 +7,7 @@ export default function LayoutGrid() {
   return (
     <div className="min-h-screen py-20 w-full flex flex-col items-center justify-center max-w-screen-xl mx-auto px-4">
       <h1 className="font-serif font-bold text-4xl bg-gradient-to-r from-[#FF9933] to-[#FFD700] text-transparent bg-clip-text flex items-center justify-center mb-8">
-        Gallery
+        Our Gallery
       </h1>
       <GalleryGrid cards={cards} />
       <Link to="/gallery" className="mt-8">

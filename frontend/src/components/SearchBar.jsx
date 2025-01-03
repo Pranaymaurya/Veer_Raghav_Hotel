@@ -1,240 +1,348 @@
-import React, { useState } from 'react';
-import { Calendar, Users, Bed, Search, Star, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { format } from "date-fns";
+import { CalendarIcon, BedIcon, UsersIcon, ArrowRight } from 'lucide-react';
+import { useRoom } from '@/context/RoomContext';
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import ImageSlider from '@/pages/rooms/components/ImageSlider';
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5 }
+  }
+};
 
 const HotelBookingSystem = () => {
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const navigate = useNavigate();
+  const { Rooms, getAllRooms, loading } = useRoom();
+  const [checkIn, setCheckIn] = useState(null);
+  const [checkOut, setCheckOut] = useState(null);
+  const [roomCount, setRoomCount] = useState("1");
+  const [roomType, setRoomType] = useState("");
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
-  const [roomType, setRoomType] = useState('standard');
 
-  const roomTypes = [
-    { value: 'Premium', label: 'Premium' },
-    { value: 'Deluxe Room', label: 'Deluxe Room' },
-    { value: 'Deluxe', label: 'Super Deluxe' },
-  ];
+  useEffect(() => {
+    getAllRooms();
+  }, []);
 
-  const hotels = [
-    {
-      id: 1,
-      name: "Luxury Ocean Resort",
-      rating: 4.8,
-      pricePerNight: "500",
-      description: "Beachfront luxury resort with spectacular ocean views",
-      image: "/uploads/1734712902927-backiee-275105.jpg"
-    },
-    {
-      id: 2,
-      name: "City Center Hotel",
-      rating: 4.5,
-      pricePerNight: "$199",
-      description: "Modern hotel in the heart of downtown",
-      image: "/api/placeholder/400/250"
-    },
-    {
-      id: 3,
-      name: "Mountain View Lodge",
-      rating: 4.7,
-      pricePerNight: "$249",
-      description: "Scenic mountain retreat with premium amenities",
-      image: "/api/placeholder/400/250"
-    }
-  ];
+  const roomTypes = Rooms.map(room => ({
+    value: room.name,
+    label: room.name
+  }));
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const searchParams = new URLSearchParams();
+    if (checkIn) searchParams.set('checkIn', checkIn.toISOString());
+    if (checkOut) searchParams.set('checkOut', checkOut.toISOString());
+    searchParams.set('rooms', roomCount);
+    searchParams.set('roomType', roomType);
+    searchParams.set('adults', adults.toString());
+    searchParams.set('children', children.toString());
+    navigate(`/rooms?${searchParams.toString()}`);
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 }
-    }
+  const handleClearFilters = () => {
+    setCheckIn(null);
+    setCheckOut(null);
+    setRoomCount("1");
+    setRoomType("");
+    setAdults(1);
+    setChildren(0);
   };
+
+  const isAnyFilterActive = () => {
+    return checkIn !== null ||
+      checkOut !== null ||
+      roomCount !== "1" ||
+      roomType !== "" ||
+      adults !== 1 ||
+      children !== 0;
+  };
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-6">
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-        className="max-w-8xl mx-auto space-y-12"
-      >
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="min-h-screen bg-gradient-to-b from-orange-50 to-orange-200 p-6"
+    >
+      <motion.div className="space-y-12">
         {/* Search Form */}
-        <Card className="backdrop-blur-sm bg-white/90 shadow-xl rounded-2xl overflow-hidden border-t border-white/60">
+        <Card className="backdrop-blur-sm bg-white/90 shadow-xl rounded-2xl overflow-hidden border-t border-white/60 mx-auto max-w-7xl">
           <CardContent className="p-6">
-            <motion.h2 
+            <motion.h2
               className="text-2xl font-semibold text-orange-400 mb-6 text-center"
               variants={itemVariants}
             >
               Find Your Perfect Stay
             </motion.h2>
-            
-            <form className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <motion.form onSubmit={handleSearch} className="space-y-6" variants={containerVariants}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Check-in Date */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Check-in</label>
-                  <div className="relative group">
-                    <motion.input
-                      whileFocus={{ scale: 1.02 }}
-                      type="date"
-                      value={checkIn}
-                      onChange={(e) => setCheckIn(e.target.value)}
-                      className="w-full p-3 border border-gray-200 rounded-lg pl-10 bg-white/50 backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none group-hover:border-orange-300"
-                      required
-                    />
-                    <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-orange-500" />
-                  </div>
-                </div>
+                <motion.div className="space-y-2" variants={itemVariants}>
+                  <Label htmlFor="check-in">Check-in Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="check-in"
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !checkIn && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 text-orange-600" />
+                        {checkIn ? format(checkIn, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={checkIn}
+                        onSelect={setCheckIn}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </motion.div>
 
                 {/* Check-out Date */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Check-out</label>
-                  <div className="relative group">
-                    <motion.input
-                      whileFocus={{ scale: 1.02 }}
-                      type="date"
-                      value={checkOut}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="w-full p-3 border border-gray-200 rounded-lg pl-10 bg-white/50 backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none group-hover:border-orange-300"
-                      required
-                    />
-                    <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-orange-500" />
-                  </div>
-                </div>
+                <motion.div className="space-y-2" variants={itemVariants}>
+                  <Label htmlFor="check-out">Check-out Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="check-out"
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !checkOut && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 text-orange-600" />
+                        {checkOut ? format(checkOut, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={checkOut}
+                        onSelect={setCheckOut}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </motion.div>
+
+                {/* Room Count */}
+                <motion.div className="space-y-2" variants={itemVariants}>
+                  <Label htmlFor="room-count">Number of Rooms</Label>
+                  <Select value={roomCount} onValueChange={setRoomCount}>
+                    <SelectTrigger id="room-count">
+                      <SelectValue placeholder="Select rooms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num} {num === 1 ? 'Room' : 'Rooms'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </motion.div>
 
                 {/* Room Type */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Room Type</label>
-                  <div className="relative group">
-                    <motion.select
-                      whileFocus={{ scale: 1.02 }}
-                      value={roomType}
-                      onChange={(e) => setRoomType(e.target.value)}
-                      className="w-full p-3 border border-gray-200 rounded-lg pl-10 bg-white/50 backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none appearance-none group-hover:border-orange-300"
-                    >
+                <motion.div className="space-y-2" variants={itemVariants}>
+                  <Label htmlFor="room-type">Room Type</Label>
+                  <Select value={roomType} onValueChange={setRoomType}>
+                    <SelectTrigger id="room-type" className="w-full">
+                      <SelectValue placeholder="Select room type" />
+                    </SelectTrigger>
+                    <SelectContent>
                       {roomTypes.map((type) => (
-                        <option key={type.value} value={type.value}>
+                        <SelectItem key={type.value} value={type.value}>
                           {type.label}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </motion.select>
-                    <Bed className="absolute left-3 top-3.5 h-4 w-4 text-orange-500" />
-                  </div>
-                </div>
+                    </SelectContent>
+                  </Select>
+                </motion.div>
 
                 {/* Guests */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Guests</label>
+                <motion.div className="space-y-2" variants={itemVariants}>
+                  <Label>Guests</Label>
                   <div className="flex space-x-2">
-                    <div className="relative flex-1 group">
-                      <motion.select
-                        whileFocus={{ scale: 1.02 }}
-                        value={adults}
-                        onChange={(e) => setAdults(Number(e.target.value))}
-                        className="w-full p-3 border border-gray-200 rounded-lg pl-10 bg-white/50 backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none group-hover:border-orange-300"
-                      >
-                        {[1, 2, 3, 4].map((num) => (
-                          <option key={num} value={num}>
-                            {num} Adult{num !== 1 ? 's' : ''}
-                          </option>
-                        ))}
-                      </motion.select>
-                      <Users className="absolute left-3 top-3.5 h-4 w-4 text-orange-500" />
+                    <div className="flex-1">
+                      <Select value={adults.toString()} onValueChange={(value) => setAdults(Number(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Adults" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4].map((num) => (
+                            <SelectItem key={num} value={num.toString()}>
+                              {num} Adult{num !== 1 ? 's' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="relative flex-1 group">
-                      <motion.select
-                        whileFocus={{ scale: 1.02 }}
-                        value={children}
-                        onChange={(e) => setChildren(Number(e.target.value))}
-                        className="w-full p-3 border border-gray-200 rounded-lg pl-10 bg-white/50 backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none group-hover:border-orange-300"
-                      >
-                        {[0, 1, 2, 3].map((num) => (
-                          <option key={num} value={num}>
-                            {num} Child{num !== 1 ? 'ren' : ''}
-                          </option>
-                        ))}
-                      </motion.select>
-                      <Users className="absolute left-3 top-3.5 h-4 w-4 text-orange-500" />
+                    <div className="flex-1">
+                      <Select value={children.toString()} onValueChange={(value) => setChildren(Number(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Children" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[0, 1, 2, 3].map((num) => (
+                            <SelectItem key={num} value={num.toString()}>
+                              {num} Child{num !== 1 ? 'ren' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
-              <div className="flex justify-center mt-8">
-                <motion.button
+              <motion.div className="flex justify-center gap-4" variants={itemVariants}>
+                {isAnyFilterActive() && (
+                  <Button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-medium"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Clear All Filters
+                  </Button>
+                )}
+                <Button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-medium shadow-lg"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-3 rounded-lg font-medium shadow-lg"
-                  type="submit"
                 >
-                  <Search className="h-4 w-4" />
-                  <span>Search Rooms</span>
-                </motion.button>
-              </div>
-            </form>
+                  Search Rooms
+                </Button>
+              </motion.div>
+            </motion.form>
           </CardContent>
         </Card>
 
-        {/* Hotel Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {hotels.map((hotel) => (
-            <motion.div
-              key={hotel.id}
-              variants={itemVariants}
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-xl overflow-hidden shadow-lg"
-            >
-              <img src={hotel.image} alt={hotel.name} className="w-full h-48 object-cover" />
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-xl font-semibold text-gray-800">{hotel.name}</h3>
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 text-orange-500 mr-1" />
-                    <span className="text-gray-600">{hotel.rating}</span>
-                  </div>
-                </div>
-                <p className="text-gray-600 mb-4">{hotel.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-2xl font-bold text-orange-600">{hotel.pricePerNight}</span>
-                  <span className="text-sm text-gray-500">per night</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* View More Button */}
-        <motion.div 
-          variants={itemVariants}
-          className="flex justify-center"
-        >
-          <motion.a
-            href="/rooms"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center space-x-2 bg-white text-orange-600 px-8 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
+        {/* Featured Rooms */}
+        <motion.div className="space-y-6 max-w-6xl mx-auto" variants={containerVariants}>
+          <motion.h2 
+            className="text-2xl font-semibold text-center text-gray-800"
+            variants={itemVariants}
           >
-            <span>View More Rooms</span>
-            <ArrowRight className="h-4 w-4" />
-          </motion.a>
+            Featured Rooms
+          </motion.h2>
+          <AnimatePresence>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {loading ? (
+                <motion.div
+                  className="col-span-full flex justify-center items-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-orange-500"></div>
+                </motion.div>
+              ) : Rooms.length === 0 ? (
+                <motion.p
+                  className="col-span-full text-center text-gray-600"
+                  variants={itemVariants}
+                >
+                  No rooms available.
+                </motion.p>
+              ) : (
+                Rooms.slice(0, 3).map((room) => (
+                  <motion.div
+                    key={room._id}
+                    variants={itemVariants}
+                    whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                    className="bg-white rounded-xl overflow-hidden shadow-lg"
+                  >
+                    <ImageSlider images={room.images} />
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xl font-semibold text-gray-800">{room.name}</h3>
+                        <div className="flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          <span className="text-gray-600">{room.ratings && room.ratings.length > 0
+                            ? (room.ratings.reduce((acc, curr) => acc + curr.rating, 0) / room.ratings.length).toFixed(1)
+                            : "New"}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 mb-4">{room.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-2xl font-bold text-orange-600">₹{room.pricePerNight}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </AnimatePresence>
         </motion.div>
       </motion.div>
-    </div>
+
+      <motion.div
+        variants={itemVariants}
+        className="flex justify-center mt-10"
+      >
+        <motion.a
+          href="/rooms"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center space-x-2 bg-white text-orange-600 px-8 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
+        >
+          <span>View More Rooms</span>
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </motion.a>
+      </motion.div>
+    </motion.div>
   );
 };
 
 export default HotelBookingSystem;
+
