@@ -216,7 +216,7 @@ export const UpdateForAdmin = async (req, res) => {
 // Get all bookings
 export const GetAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find().populate("user").populate("room");
+    const bookings = await Booking.find().populate({ path: "user", select: "-password" }).populate("room");
     res.status(200).json(bookings);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
@@ -226,7 +226,7 @@ export const GetAllBookings = async (req, res) => {
 // Get a booking by ID
 export const GetBookingById = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id).populate("user").populate("room");
+    const booking = await Booking.findById(req.params.id).populate({ path: "user", select: "-password" }).populate("room");
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     res.status(200).json(booking);
@@ -237,15 +237,31 @@ export const GetBookingById = async (req, res) => {
 export const GetUserBookingsById = async (req, res) => {
   try {
     const userId = req.params.id; // Extract userId from the request parameters
-    const bookings = await Booking.find({ user: userId }).populate("user").populate("room");
 
-    if (bookings.length === 0) {
-      return res.status(404).json({ message: "No bookings found for this user" });
+    // Fetch bookings for the user, populate related fields, and exclude sensitive data
+    const bookings = await Booking.find({ user: userId })
+      .populate({ path: "user", select: "-password" }) // Exclude password when populating user
+      .populate("room"); // Populate room details
+
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No bookings found for this user.",
+      });
     }
 
-    res.status(200).json(bookings); // Return all bookings for the user
+    return res.status(200).json({
+      success: true,
+      message: "User bookings fetched successfully.",
+      bookings,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch bookings. Please try again later.",
+      error: error.message,
+    });
   }
 };
 
@@ -364,7 +380,7 @@ export const GetUserBookings = async (req, res) => {
   try {
     // Find all bookings for the current user
     const bookings = await Booking.find({ user: userId })
-      .populate("user")
+      .populate({ path: "user", select: "-password" })
       .populate("room");
 
     if (bookings.length === 0) {
@@ -387,3 +403,36 @@ export const GetUserBookings = async (req, res) => {
     });
   }
 };
+
+export const All=async(req,res)=>{
+  try {
+    // Total Bookings
+    const totalBookings = await Booking.countDocuments();
+
+    // Total Guests
+    const totalGuests = await User.countDocuments({ IsBooking: true });
+
+    // Total Users
+    const totalUsers = await User.countDocuments({ IsBooking: false });
+
+    const revenue = await Booking.aggregate([
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+    ]);
+
+    // Recent Bookings (sorted by booking date, limited to 5)
+    const recentBookings = await Booking.find()
+      .sort({ bookingDate: -1 }) // Sort by booking date descending
+      .limit(5);
+
+    res.json({
+      totalBookings,
+      totalGuests,
+      totalUsers,
+      revenue: revenue[0]?.totalRevenue || 0,
+      recentBookings
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+  }
+}
