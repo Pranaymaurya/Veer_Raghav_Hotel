@@ -13,7 +13,7 @@ import { BookingProvider } from './context/BookingContext';
 import { RoomProvider } from './context/RoomContext';
 
 // pages
-import Home from './pages/gallery/home/home';
+import Home from './pages/home/home';
 import Gallery from './pages/gallery/Gallery';
 import RoomsPage from './pages/rooms/RoomPage';
 import ViewRoomDetails from './pages/rooms/ViewRoomDetails';
@@ -43,6 +43,8 @@ import UserContent from './pages/AdminDashboard/pages/UserContent';
 import UserBookings from './pages/UserProfile/components/UserBookings';
 import UserProfile from './pages/UserProfile/components/UserProfile';
 import UserSettings from './pages/UserProfile/components/UserSettings';
+import ProtectedUserProfile from './pages/UserProfile/components/ProtectedUserProfile';
+import { useAuth } from './hooks/useAuth';
 
 
 const router = createBrowserRouter([
@@ -93,9 +95,9 @@ const router = createBrowserRouter([
       {
         path: "/profile",
         element: (
-          // <ProtectedRoute>
+          // <ProtectedUserProfile>
             <UserProdfileLayout />
-          // </ProtectedRoute>
+          // </ProtectedUserProfile>
         ),
         children: [
           {

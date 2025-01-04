@@ -22,7 +22,8 @@ import {
   Search,
   RotateCcw,
   Bed,
-  Home
+  Home,
+  Filter
 } from 'lucide-react';
 import {
   Popover,
@@ -38,6 +39,7 @@ import { useRoom } from '@/context/RoomContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ImageSlider from './components/ImageSlider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 export default function RoomsPage() {
   const navigate = useNavigate();
@@ -179,268 +181,307 @@ export default function RoomsPage() {
     </Card>
   );
 
+  const FilterControls = ({ filters, setFilters, resetFilters, isAnyFilterActive }) => (
+    <div className="space-y-6 textblack">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        {/* Date Picker */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn(
+              "w-full justify-start text-left font-normal",
+              !filters.startDate && "text-muted-foreground"
+            )}>
+              {filters.startDate ? (
+                filters.endDate ? (
+                  <>
+                    {format(filters.startDate, "MMM d, y")} -
+                    {format(filters.endDate, "MMM d, y")}
+                  </>
+                ) : format(filters.startDate, "MMM d, y")
+              ) : (
+                <span>Select dates</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={filters.startDate}
+              selected={{
+                from: filters.startDate,
+                to: filters.endDate
+              }}
+              onSelect={(range) => {
+                setFilters(prev => ({
+                  ...prev,
+                  startDate: range?.from,
+                  endDate: range?.to
+                }));
+              }}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
+  
+        {/* Room Type Select */}
+        <Select
+          value={filters.type}
+          onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Room Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Premium">Premium</SelectItem>
+            <SelectItem value="Super Deluxe">Super Deluxe</SelectItem>
+            <SelectItem value="Deluxe">Deluxe</SelectItem>
+          </SelectContent>
+        </Select>
+  
+        {/* Number of Rooms Select */}
+        <Select
+          value={filters.rooms}
+          onValueChange={(value) => setFilters(prev => ({ ...prev, rooms: value }))}
+        >
+          <SelectTrigger className="flex items-center">
+            <Home className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Rooms" />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4, 5].map((num) => (
+              <SelectItem key={num} value={num.toString()}>
+                {num} {num === 1 ? 'Room' : 'Rooms'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+  
+        <div className="flex items-center justify-center border border-gray-300 rounded-md">
+          <label className="mr-2">Guests</label>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              setFilters((prev) => ({
+                ...prev,
+                guests: Math.max(1, parseInt(prev.guests || "1") - 1),
+              }))
+            }
+            className="p-2"
+          >
+            -
+          </Button>
+          <div className="mx-4 text-center w-8">{filters.guests || "1"}</div>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              setFilters((prev) => ({
+                ...prev,
+                guests: parseInt(prev.guests || "1") + 1,
+              }))
+            }
+            className="p-2"
+          >
+            +
+          </Button>
+        </div>
+  
+        {/* Search Input */}
+        <div className="relative col-span-1 sm:col-span-2">
+          <Input
+            placeholder="Search rooms or amenities"
+            value={filters.searchQuery}
+            onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+            className="pr-10"
+          />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        </div>
+      </div>
+  
+      {/* Price Range Slider */}
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Label>Price Range:</Label>
+          <span className="text-sm text-gray-500">
+            ₹{filters.priceRange[0]} - ₹{filters.priceRange[1]}
+          </span>
+        </div>
+        <Slider
+          defaultValue={[0, 10000]}
+          value={filters.priceRange}
+          onValueChange={(value) => setFilters(prev => ({ ...prev, priceRange: value }))}
+          min={0}
+          max={10000}
+          step={100}
+          className="py-4"
+        />
+      </div>
+  
+      {isAnyFilterActive() && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            onClick={resetFilters}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset Filters
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-primary">
-            Find Your Perfect Room
-          </CardTitle>
-          <CardDescription>
-            Discover comfortable and stylish accommodations
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid md:grid-cols-6 gap-4">
-            {/* Date Picker */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !filters.startDate && "text-muted-foreground"
-                )}>
-                  {filters.startDate ? (
-                    filters.endDate ? (
-                      <>
-                        {format(filters.startDate, "MMM d, y")} -
-                        {format(filters.endDate, "MMM d, y")}
-                      </>
-                    ) : format(filters.startDate, "MMM d, y")
-                  ) : (
-                    <span>Select dates</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={filters.startDate}
-                  selected={{
-                    from: filters.startDate,
-                    to: filters.endDate
-                  }}
-                  onSelect={(range) => {
-                    setFilters(prev => ({
-                      ...prev,
-                      startDate: range?.from,
-                      endDate: range?.to
-                    }));
-                  }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-
-            {/* Room Type Select */}
-            <Select
-              value={filters.type}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Room Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Premium">Premium</SelectItem>
-                <SelectItem value="Super Deluxe">Super Deluxe</SelectItem>
-                <SelectItem value="Deluxe">Deluxe</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Number of Rooms Select */}
-            <Select
-              value={filters.rooms}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, rooms: value }))}
-            >
-              <SelectTrigger className="flex items-center">
-                <Home className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Rooms" />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} {num === 1 ? 'Room' : 'Rooms'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center justify-center border border-gray-300 rounded-md">
-              <label className="mr-2">Guests</label>
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    guests: Math.max(1, parseInt(prev.guests || "1") - 1),
-                  }))
-                }
-                className="p-2"
-              >
-                -
-              </Button>
-              <div className="mx-4 text-center w-8">{filters.guests || "1"}</div>
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    guests: parseInt(prev.guests || "1") + 1,
-                  }))
-                }
-                className="p-2"
-              >
-                +
-              </Button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative col-span-2">
-              <Input
-                placeholder="Search rooms or amenities"
-                value={filters.searchQuery}
-                onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-                className="pr-10"
-              />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            </div>
-          </div>
-
-          {/* Price Range Slider */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label>Price Range:</Label>
-              <span className="text-sm text-gray-500">
-                ₹{filters.priceRange[0]} - ₹{filters.priceRange[1]}
-              </span>
-            </div>
-            <Slider
-              defaultValue={[0, 10000]}
-              value={filters.priceRange}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, priceRange: value }))}
-              min={0}
-              max={10000}
-              step={100}
-              className="py-4"
+    <div className="container mx-auto px-4 py-4 sm:py-8 space-y-6 sm:space-y-8">
+    {/* Mobile Filter Button */}
+    <div className="lg:hidden mb-4">
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline" className="w-full textblack">
+            <Filter className="mr-2 h-4 w-4 " /> Filters
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-full sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle>Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <FilterControls
+              filters={filters}
+              setFilters={setFilters}
+              resetFilters={resetFilters}
+              isAnyFilterActive={isAnyFilterActive}
             />
           </div>
-
-          {isAnyFilterActive() && (
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={resetFilters}
-                className="flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset Filters
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {isLoading ? (
-          Array(6).fill(null).map((_, index) => (
-            <RoomSkeleton key={index} />
-          ))
-        ) : filteredRooms.length > 0 ? (
-          filteredRooms.map((room) => (
-            <Card key={room._id} className="hover:shadow-lg transition-shadow">
-              <ImageSlider images={room.images} />
-              <CardContent className="p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold">{room.name}</h3>
-                  <div className="flex items-center text-yellow-500">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="ml-1">
-                      {room.ratings?.length > 0
-                        ? (room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
-                          room.ratings.length).toFixed(1)
-                        : "New"}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-gray-600 text-sm">
-                  {room.description?.length > 100
-                    ? `${room.description.slice(0, 100)}...`
-                    : room.description}
-                </p>
-
-                <div className="flex items-center justify-between text-gray-500">
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-2" />
-                    <span>{room.maxOccupancy} Guests</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Bed className="w-4 h-4 mr-2" />
-                    <span>{room.name}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {room.amenities?.slice(0, 5).map((amenity) => (
-                    <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
-                      {amenity}
-                    </span>
-                  ))}
-                  {room.amenities?.length > 5 && (
-                    <Button
-                      variant="outline"
-                      className="text-primary"
-                    >
-                      +{room.amenities.length - 5} more
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div className="text-xl font-bold">
-                    ₹{calculateDynamicPrice(
-                      room.pricePerNight,
-                      calculateNights(filters.startDate, filters.endDate),
-                      parseInt(filters.rooms) // Pass the room count to the price calculation
-                    )} <span className="text-sm font-normal">{parseInt(filters.rooms) > 1 ? `/night for ${filters.rooms} rooms` : '/night'}</span>
-                  </div>
-                  <Button
-                    onClick={() => navigate(`/rooms/${room._id}`, {
-                      state: {
-                        startDate: filters.startDate,
-                        endDate: filters.endDate,
-                        guests: filters.guests,
-                        rooms: filters.rooms
-                      }
-                    })}
-                    className="bg-orange-600"
-                    disabled={!room.isAvailable}
-                  >
-                    {room.isAvailable ? 'Book Now' : 'Not Available'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <div className="col-span-3 text-center py-12 bg-gray-100 rounded-lg">
-            <h4 className="text-2xl mb-4">No Rooms Found</h4>
-            <p className="text-gray-600">
-              Try adjusting your search or filters
-            </p>
-            <div className='flex justify-center'>
-              <Button
-                variant="outline"
-                onClick={resetFilters}
-                className="flex items-center gap-2 mt-4 bg-orange-700 hover:bg-orange-600 text-white"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset Filters
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+        </SheetContent>
+      </Sheet>
     </div>
+
+    {/* Desktop Filters */}
+    <Card className="hidden lg:block">
+      <CardHeader>
+        <CardTitle className="text-2xl sm:text-3xl font-bold text-primary">
+          Find Your Perfect Room
+        </CardTitle>
+        <CardDescription>
+          Discover comfortable and stylish accommodations
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FilterControls
+          filters={filters}
+          setFilters={setFilters}
+          resetFilters={resetFilters}
+          isAnyFilterActive={isAnyFilterActive}
+        />
+      </CardContent>
+    </Card>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {isLoading ? (
+        Array(6).fill(null).map((_, index) => (
+          <RoomSkeleton key={index} />
+        ))
+      ) : filteredRooms.length > 0 ? (
+        filteredRooms.map((room) => (
+          <Card key={room._id} className="hover:shadow-lg transition-shadow">
+            <ImageSlider images={room.images} />
+            <CardContent className="p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg sm:text-xl font-bold">{room.name}</h3>
+                <div className="flex items-center text-yellow-500">
+                  <Star className="w-4 h-4 fill-current" />
+                  <span className="ml-1">
+                    {room.ratings?.length > 0
+                      ? (room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+                        room.ratings.length).toFixed(1)
+                      : "New"}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-gray-600 text-sm">
+                {room.description?.length > 100
+                  ? `${room.description.slice(0, 100)}...`
+                  : room.description}
+              </p>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-500 gap-2">
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-2" />
+                  <span>{room.maxOccupancy} Guests</span>
+                </div>
+                <div className="flex items-center">
+                  <Bed className="w-4 h-4 mr-2" />
+                  <span>{room.name}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {room.amenities?.slice(0, 3).map((amenity) => (
+                  <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs sm:text-sm">
+                    {amenity}
+                  </span>
+                ))}
+                {room.amenities?.length > 3 && (
+                  <Button
+                    variant="outline"
+                    className="text-primary text-xs sm:text-sm"
+                  >
+                    +{room.amenities.length - 3} more
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                  ₹{calculateDynamicPrice(
+                    room.pricePerNight,
+                    calculateNights(filters.startDate, filters.endDate),
+                    parseInt(filters.rooms)
+                  )} 
+                  <span className="text-xs sm:text-sm font-normal block sm:inline">
+                    {parseInt(filters.rooms) > 1 ? `/night for ${filters.rooms} rooms` : '/night'}
+                  </span>
+                </div>
+                <Button
+                  onClick={() => navigate(`/rooms/${room._id}`, {
+                    state: {
+                      startDate: filters.startDate,
+                      endDate: filters.endDate,
+                      guests: filters.guests,
+                      rooms: filters.rooms
+                    }
+                  })}
+                  className="bg-orange-600 w-full sm:w-auto"
+                  disabled={!room.isAvailable}
+                >
+                  {room.isAvailable ? 'Book Now' : 'Not Available'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      ) : (
+        <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-8 sm:py-12 bg-gray-100 rounded-lg">
+          <h4 className="text-xl sm:text-2xl mb-4">No Rooms Found</h4>
+          <p className="text-gray-600">
+            Try adjusting your search or filters
+          </p>
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={resetFilters}
+              className="flex items-center gap-2 mt-4 bg-orange-700 hover:bg-orange-600 text-white"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset Filters
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
   );
 }

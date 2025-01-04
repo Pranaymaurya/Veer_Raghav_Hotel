@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from '@/components/ui/label';
+import { Link } from 'react-router-dom';
 
 const UserBookings = () => {
   const { user } = useAuth();
@@ -28,14 +29,11 @@ const UserBookings = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(2);
 
-  console.log(user);
-  
-
   React.useEffect(() => {
     getBookingsByUserId(user);
   }, [user]);
 
-  
+
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -115,17 +113,19 @@ const UserBookings = () => {
 
   // Filter controls component
   const FilterControls = () => (
-    <div className="mb-6 flex flex-col sm:flex-row gap-4 items-end">
-      <div className="flex-1 space-y-2">
+    <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-2">
         <label className="text-sm font-medium">Filter by Date Range</label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                {filterStartDate ? formatDate(filterStartDate) : "Start Date"}
+              <Button variant="outline" className="w-full text-left font-normal">
+                <span className="truncate">
+                  {filterStartDate ? formatDate(filterStartDate) : "Start Date"}
+                </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={filterStartDate}
@@ -136,11 +136,13 @@ const UserBookings = () => {
           </Popover>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                {filterEndDate ? formatDate(filterEndDate) : "End Date"}
+              <Button variant="outline" className="w-full text-left font-normal">
+                <span className="truncate">
+                  {filterEndDate ? formatDate(filterEndDate) : "End Date"}
+                </span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={filterEndDate}
@@ -152,10 +154,10 @@ const UserBookings = () => {
         </div>
       </div>
 
-      <div className="w-full sm:w-[200px] space-y-2">
-        <label className="text-sm font-medium">Sort By</label>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Sort By</Label>
         <Select value={sortOrder} onValueChange={setSortOrder}>
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Sort bookings" />
           </SelectTrigger>
           <SelectContent>
@@ -166,10 +168,11 @@ const UserBookings = () => {
           </SelectContent>
         </Select>
       </div>
-      <div className="w-full sm:w-[200px] space-y-2">
+
+      <div className="space-y-2">
         <Label htmlFor="itemsPerPage" className="text-sm font-medium">Items per page</Label>
         <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-          <SelectTrigger id="itemsPerPage">
+          <SelectTrigger id="itemsPerPage" className="w-full">
             <SelectValue placeholder="Items per page" />
           </SelectTrigger>
           <SelectContent>
@@ -177,78 +180,83 @@ const UserBookings = () => {
             <SelectItem value="5">5</SelectItem>
             <SelectItem value="10">10</SelectItem>
             <SelectItem value="20">20</SelectItem>
-            <SelectItem value="50">50</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {(filterStartDate || filterEndDate) && (
-        <Button
-          variant="outline"
-          onClick={() => {
-            setFilterStartDate(null);
-            setFilterEndDate(null);
-          }}
-        >
-          Clear Dates
-        </Button>
+        <div className="flex items-end">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setFilterStartDate(null);
+              setFilterEndDate(null);
+            }}
+            className="w-full"
+          >
+            Clear Dates
+          </Button>
+        </div>
       )}
     </div>
   );
 
   const BookingCard = ({ booking, isDetailed = false }) => (
     <div className={`space-y-4 ${isDetailed ? 'p-4' : ''} textblack`}>
-      {/* Booking Dates */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-gray-600">
-          <CalendarDays className="h-4 w-4" />
-          <span className="font-medium">Check-in:</span>
-          {formatDate(booking.checkInDate)}
-        </div>
-        <div className="flex items-center gap-2 text-gray-600">
-          <CalendarDays className="h-4 w-4" />
-          <span className="font-medium">Check-out:</span>
-          {formatDate(booking.checkOutDate)}
-        </div>
-      </div>
-
-      {/* Room Details */}
-      <div className="space-y-2 pt-2 border-t">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-gray-600" />
-          <span>Max Occupancy: {booking.room.maxOccupancy}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Amenities:</span>
-          <div className="flex gap-2">
-            {booking.room.amenities.includes('wifi') &&
-              <Wifi className="h-4 w-4 text-gray-600" />}
-            {booking.room.amenities.includes('tv') &&
-              <Tv className="h-4 w-4 text-gray-600" />}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Booking Dates */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-gray-600">
+            <CalendarDays className="h-4 w-4 flex-shrink-0" />
+            <div className="flex flex-col sm:flex-row sm:gap-2">
+              <span className="font-medium">Check-in:</span>
+              <span className="truncate">{formatDate(booking.checkInDate)}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <CalendarDays className="h-4 w-4 flex-shrink-0" />
+            <div className="flex flex-col sm:flex-row sm:gap-2">
+              <span className="font-medium">Check-out:</span>
+              <span className="truncate">{formatDate(booking.checkOutDate)}</span>
+            </div>
           </div>
         </div>
-        
 
-        {isDetailed && (
-          <p className="text-gray-600">{booking.room.description}</p>
-        )}
-        {isDetailed && (
-          <div className="flex items-center text-yellow-500">
-          <Star className="w-4 h-4 fill-current" />
-          <span className="ml-1">
-            {booking.room.ratings?.length > 0
-              ? (room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
-                room.ratings.length).toFixed(1)
-              : "New"}
-          </span>
+        {/* Room Details */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-gray-600 flex-shrink-0" />
+            <span>Max Occupancy: {booking.room.maxOccupancy}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">Amenities:</span>
+            <div className="flex gap-2">
+              {booking.room.amenities.includes('wifi') && <Wifi className="h-4 w-4 text-gray-600" />}
+              {booking.room.amenities.includes('tv') && <Tv className="h-4 w-4 text-gray-600" />}
+            </div>
+          </div>
         </div>
-        )}
       </div>
+
+      {isDetailed && (
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">{booking.room.description}</p>
+          <div className="flex items-center text-yellow-500">
+            <Star className="w-4 h-4 fill-current" />
+            <span className="ml-1">
+              {booking.room.ratings?.length > 0
+                ? (booking.room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+                  booking.room.ratings.length).toFixed(1)
+                : "New"}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Price Information */}
       <div className="pt-2 border-t">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="font-medium">Total Paid:</span>
           <div className="flex items-center gap-1">
             <IndianRupee className="h-4 w-4" />
@@ -261,27 +269,27 @@ const UserBookings = () => {
 
       {/* User Information */}
       <div className="pt-2 border-t space-y-1 text-sm text-gray-600">
-        <p>Booked by: {booking.user.name}</p>
-        <p>Contact: {booking.user.phoneno}</p>
-        <p>Email: {booking.user.email}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <p>Booked by: {booking.user.name}</p>
+          <p>Contact: {booking.user.phoneno}</p>
+          <p className="sm:col-span-2">Email: {booking.user.email}</p>
+        </div>
       </div>
 
       {isDetailed && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Download Receipt</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Download your booking receipt to present during check-in. This receipt contains all the necessary booking details.
-            </p>
-            <DownloadReceipt booking={booking} />
-          </CardContent>
-        </Card>
-      )}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Download Receipt</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Download your booking receipt to present during check-in.
+              </p>
+              <DownloadReceipt booking={booking} />
+            </CardContent>
+          </Card>
 
-      {isDetailed && (
-        <div className="pt-4">
           <Button
             variant="destructive"
             className="w-full"
@@ -325,66 +333,75 @@ const UserBookings = () => {
 
 
   return (
-    <div className="p-6 space-y-6 textblack">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-bold underline">Your Bookings</h1>
+    <div className="container mx-auto px-4 sm:px-6 py-6 space-y-6 textblack">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-4xl font-bold">Your Bookings</h1>
         <Badge variant="outline" className="text-sm">
-          {getFilteredAndSortedBookings().length} Bookings
+          {user?.IsBooking ? `You have ${getFilteredAndSortedBookings().length}` : `You have 0`} Bookings
         </Badge>
       </div>
 
       <FilterControls />
 
       <div className="space-y-6">
-        {getFilteredAndSortedBookings().length > 0 ? (
-          <>
-            {getFilteredAndSortedBookings().map((booking) => (
-              <Card
-                key={booking._id}
-                className="w-full cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => {
-                  setSelectedBooking(booking);
-                  setIsDialogOpen(true);
-                }}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-xl font-bold">{booking.room.name}</CardTitle>
-                    <Badge
-                      variant={booking.status === 'Pending' ? 'warning' : 'success'}
-                      className="ml-2"
+        {user?.IsBooking ? (
+          <div>
+            {getFilteredAndSortedBookings().length > 0 ? (
+              <>
+                <div className="grid gap-6">
+                  {getFilteredAndSortedBookings().map((booking) => (
+                    <Card
+                      key={booking._id}
+                      className="w-full cursor-pointer hover:shadow-lg transition-shadow "
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setIsDialogOpen(true);
+                      }}
                     >
-                      {booking.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-
-                <CardContent>
-                  <BookingCard booking={booking} />
-                  <div className="space-y-4 border-t pt-4">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Download your booking receipt to present during check-in.
-                    </p>
-                    <DownloadReceipt booking={booking} />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={getTotalPages()}
-              onPageChange={setCurrentPage}
-            />
-          </>
+                      <CardHeader className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                        <CardTitle className="text-lg sm:text-xl font-bold">{booking.room.name}</CardTitle>
+                        <Badge
+                          variant={booking.status === 'Pending' ? 'warning' : 'success'}
+                        >
+                          {booking.status}
+                        </Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <BookingCard booking={booking} />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={getTotalPages()}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <div className="rounded-full bg-gray-100 p-3 w-12 h-12 mx-auto mb-4 flex items-center justify-center">
+                  <X className="h-6 w-6 text-gray-400" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-900">No bookings found</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Try adjusting your filter criteria
+                </p>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="col-span-2 text-center py-12">
+          <div className="text-center py-12">
             <div className="rounded-full bg-gray-100 p-3 w-12 h-12 mx-auto mb-4 flex items-center justify-center">
               <X className="h-6 w-6 text-gray-400" />
             </div>
             <h3 className="text-sm font-medium text-gray-900">No bookings found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Try adjusting your filter criteria
+              You haven't made any bookings yet
             </p>
+            <Button className="mt-4" asChild>
+              <Link to="/rooms">Book a room</Link>
+            </Button>
           </div>
         )}
       </div>
