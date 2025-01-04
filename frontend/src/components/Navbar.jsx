@@ -105,7 +105,7 @@ const Navbar = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/profile#mybookings" className="flex items-center">
+                <Link to="/profile/bookings" className="flex items-center">
                   <BookOpen className="mr-2 h-4 w-4" /> My Bookings
                 </Link>
               </DropdownMenuItem>
@@ -138,6 +138,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
+    window.location.reload();
     toast({
       title: "Logout successful",
       description: "You have successfully logged out.",
@@ -264,7 +265,7 @@ const Navbar = () => {
                       <div className="text-sm font-semibold text-gray-500 px-4 mb-2">My Controls</div>
                       {[
                         { name: "My Profile", path: "/profile", icon: CircleUserRound },
-                        { name: "My Bookings", path: "/bookings", icon: BookOpen },
+                        { name: "My Bookings", path: "/profile/bookings", icon: BookOpen },
                       ].map((item) => (
                         <Link
                           key={item.name}

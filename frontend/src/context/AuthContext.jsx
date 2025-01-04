@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useState } from "react";
-import Cookies from 'js-cookie';
+import { useNavigate } from "react-router-dom";
 import api from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -248,7 +248,8 @@ export const AuthProvider = ({ children }) => {
             logout,
             updateProfile,
             uploadProfilePicture,
-            deleteAccount
+            deleteAccount,
+            fetchUserProfile
         }}>
             {children}
         </AuthContext.Provider>
