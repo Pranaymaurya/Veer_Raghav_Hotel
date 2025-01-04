@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 const BookingContext = createContext();
 
 export const BookingProvider = ({ children }) => {
-  const {user} = useAuth();
   const [userBookings , setUserBookings] = useState([]);
   const { toast } = useToast();
 
@@ -71,17 +70,12 @@ export const BookingProvider = ({ children }) => {
     }
   };
 
-  const getBookingsByUserId = async (userId) => {
+  const getBookingsByUserId = async (user) => {
     try {
-      const response = await api.get(`/booking/user/${userId}`);
-      // console.log('Bookings by user:', response.data);
-      setUserBookings(response.data);
+      const response = await api.get(`/booking/user/${user._id}`);
+      const bookingsArray = response.data.bookings || response.data || [];
+      setUserBookings(Array.isArray(bookingsArray) ? bookingsArray : []);
       if (response.data.success) {
-        toast({
-          title: 'Success',
-          description: response.data.message,
-          variant: 'success',
-        })
         return response.data;
       }
     } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useBooking } from '@/context/BookingContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 const UserBookings = () => {
   const { user } = useAuth();
   const { getBookingsByUserId, userBookings, cancelBooking } = useBooking();
-  // const { toast } = useToast();
+  const { toast } = useToast();
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -28,13 +28,14 @@ const UserBookings = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(2);
 
+  console.log(user);
+  
 
-
-  useEffect(() => {
-    if (user) {
-      getBookingsByUserId(user?._id);
-    }
+  React.useEffect(() => {
+    getBookingsByUserId(user);
   }, [user]);
+
+  
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -104,8 +105,11 @@ const UserBookings = () => {
       setShowCancelConfirm(false);
       setIsDialogOpen(false);
     } catch (error) {
-      console.log(error);
-      
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -447,4 +451,3 @@ const UserBookings = () => {
 };
 
 export default UserBookings;
-
