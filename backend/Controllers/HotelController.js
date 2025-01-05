@@ -2,43 +2,81 @@ import Hotel from "../Models/HotelModel.js";
 
 export const AddHotel = async (req, res) => {
   try {
-    const { name, address, contactNumbers, checkInTime, checkOutTime, logo } = req.body;
-    if (!name || !address || !contactNumbers || !checkInTime || !checkOutTime || !logo) {
-      return res.status(400).json({ message: "All fields are required." });
+    const {
+      name,
+      address,
+      contactNumbers,
+      checkInTime,
+      checkOutTime,
+      logo,
+      foodAndDining,
+      hostDetails,
+      caretakerDetails,
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !address || !contactNumbers || !checkInTime || !checkOutTime) {
+      return res.status(400).json({ message: "Required fields are missing." });
     }
+
+    // Ensure contactNumbers is an array
     if (!Array.isArray(contactNumbers)) {
       return res.status(400).json({ message: "Contact numbers must be an array." });
     }
+
+    // Create a new hotel
     const newHotel = new Hotel({
       name,
       address,
       contactNumbers,
       checkInTime,
       checkOutTime,
-      logo
+      logo,
+      foodAndDining,
+      hostDetails,
+      caretakerDetails,
     });
-    await newHotel.save();
+
+    // Save the hotel to the database
+    const savedHotel = await newHotel.save();
+
     return res.status(201).json({
       message: "Hotel added successfully.",
-      hotel: newHotel,
+      hotel: savedHotel,
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+
 export const updateHotel = async (req, res) => {
   try {
     const { id } = req.params; // Get the hotel ID from the URL
-    const { name, address, contactNumbers, checkInTime, checkOutTime } = req.body;
+    const {
+      name,
+      address,
+      contactNumbers,
+      checkInTime,
+      checkOutTime,
+      logo,
+      foodAndDining,
+      hostDetails,
+      caretakerDetails,
+    } = req.body;
 
     // Check if any fields are provided for update
     const updateData = {};
+
     if (name) updateData.name = name;
     if (address) updateData.address = address;
     if (contactNumbers) updateData.contactNumbers = contactNumbers;
     if (checkInTime) updateData.checkInTime = checkInTime;
     if (checkOutTime) updateData.checkOutTime = checkOutTime;
+    if (logo) updateData.logo = logo;
+    if (foodAndDining) updateData.foodAndDining = foodAndDining;
+    if (hostDetails) updateData.hostDetails = hostDetails;
+    if (caretakerDetails) updateData.caretakerDetails = caretakerDetails;
 
     // If no fields to update, send a message
     if (Object.keys(updateData).length === 0) {
@@ -64,6 +102,7 @@ export const updateHotel = async (req, res) => {
     return res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+
 export const UploadHotelLogo = async (req, res) => {
   const { id } = req.params; // Get hotel ID from the request parameters
 
@@ -107,5 +146,29 @@ export const GetHotelById = async (req, res) => {
     res.status(200).json(room);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch room", error: error.message });
+  }
+};
+
+export const deleteHotel = async (req, res) => {
+  try {
+    const { id } = req.params; // Get the hotel ID from the URL
+
+    // Find the hotel by ID and delete it
+    const deletedHotel = await Hotel.findByIdAndDelete(id);
+
+    // If the hotel is not found, send an error message
+    if (!deletedHotel) {
+      return res.status(404).json({ message: "Hotel not found." });
+    }
+
+    // Return success message
+    return res.status(200).json({
+      message: "Hotel deleted successfully.",
+      hotel: deletedHotel, // Optionally include the deleted hotel's details
+    });
+  } catch (error) {
+    // Handle any errors
+    console.error(error);
+    return res.status(500).json({ message: "Server error.", error: error.message });
   }
 };

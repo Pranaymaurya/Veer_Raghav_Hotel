@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { type } from "os";
 
 const bookingSchema = new mongoose.Schema({
 
@@ -29,7 +30,21 @@ const bookingSchema = new mongoose.Schema({
     enum: ['Pending', 'Confirmed', 'Cancelled'],
     default: 'Pending',
   },
-}, {
+  noofguests: {
+    type: Number,
+    required: true,
+    min: 1, // Minimum one guest required
+  },
+  noofchildrens: {
+    type: Number,
+    default: 0, // Default to 0 if not provided
+    min: 0, // No negative values
+  },
+  noOfRooms:{
+    type:Number,
+    },
+}, 
+{
   timestamps: true, // Automatically adds createdAt and updatedAt fields
 });
 

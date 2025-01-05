@@ -2,182 +2,351 @@ import Booking from "../Models/Booking.js";
 import Room from "../Models/Room.js";
 import User from "../Models/userModel.js";
 
+
 export const CreateBooking = async (req, res) => {
-  const { userId, roomId, checkInDate, checkOutDate } = req.body;
+  const {
+    userId,
+    roomId,
+    checkInDate,
+    checkOutDate,
+    noofguests,
+    noofchildrens = 0,
+    noOfRooms = 1,
+  } = req.body;
 
   try {
+    // Validate number of guests and children
+    if (!Number.isInteger(noofguests) || noofguests <= 0) {
+      return res.status(400).json({ message: "Number of guests must be a positive integer." });
+    }
+    if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
+      return res.status(400).json({ message: "Number of children must be a non-negative integer." });
+    }
+
+    // Validate check-in and check-out dates
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+
+    if (isNaN(checkIn) || isNaN(checkOut)) {
+      return res.status(400).json({ message: "Invalid check-in or check-out date." });
+    }
+
+    if (checkOut <= checkIn) {
+      return res.status(400).json({ message: "Check-out date must be after the check-in date." });
+    }
+
+    // Find the room by ID and check availability
     const room = await Room.findById(roomId);
-    if (!room) return res.status(404).json({ message: "Room not found" });
+if (!room) {
+  console.error(`Room with ID ${roomId} not found.`);
+  return res.status(404).json({ message: "Room not found." });
+}
+console.log(room.maxOccupancy)
+if (room.isAvailable === undefined) {
+  console.error(`Room status undefined for ID: ${roomId}`);
+  return res.status(500).json({ message: "Room status not initialized properly." });
+}
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+if (!room.isAvailable) {
+  return res.status(400).json({ message: "This room is not available for booking." });
+}
 
-    const numberOfNights = (new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24);
-    if (numberOfNights <= 0) return res.status(400).json({ message: "Invalid booking dates" });
-    const totalPrice = room.pricePerNight * numberOfNights;
+    // Calculate total price based on nights
+    const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
+    if (numberOfNights <= 0) {
+      return res.status(400).json({ message: "Invalid booking dates." });
+    }
 
+    const pricePerRoom = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+    const basePrice = pricePerRoom * numberOfNights * noOfRooms;
+
+    // Calculate taxes
+    const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
+    const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
+    const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+    const totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
+
+    // Create the booking object
     const booking = new Booking({
       user: userId,
       room: roomId,
-      checkInDate,
-      checkOutDate,
+      checkInDate: checkIn,
+      checkOutDate: checkOut,
       totalPrice,
+      noofguests,
+      noofchildrens,
+      noOfRooms,
+      taxes: {
+        vat: vatAmount,
+        serviceTax: serviceTaxAmount,
+        other: otherTaxAmount,
+      },
     });
 
+    // Save the booking
     const savedBooking = await booking.save();
 
-    // Update user to set isBooking to true
-    user.IsBooking = true;
-    await user.save();
+    // Update room availability
+    await Room.updateOne(
+      { _id: roomId },
+      { $set: { isAvailable: false } }
+    );
 
+    // Update user's booking status
+    await User.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          IsBooking: true,
+          currentBooking: savedBooking._id,
+        },
+      }
+    );
+
+    // Respond with success
     res.status(201).json({
-      message: "Booking created successfully",
+      message: "Booking created successfully.",
       bookingId: savedBooking._id,
       booking: savedBooking,
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to create booking", error: error.message });
+    console.error("Error creating booking:", error);
+    res.status(500).json({
+      message: "Failed to create booking.",
+      error: error.message,
+    });
   }
 };
 
 
+
+
+
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
-  const { checkInDate, checkOutDate, roomId } = req.body;
+  const { checkInDate, checkOutDate, roomId, noofguests, noofchildrens } = req.body;
 
   try {
-    // Fetch the booking by ID
+    // Validate and find existing booking
     const booking = await Booking.findById(id);
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
-
-    //console.log("Booking:", booking);
-
-    let room;
-    try {
-      room = await Room.findById(booking.room);
-      if (!room) {
-        //console.log(`Room with ID ${booking.room} not found`);
-        return res.status(404).json({ message: "Room not found" });
-      }
-    } catch (err) {
-      //console.error("Error fetching room:", err);
-      return res.status(500).json({ message: "Error fetching room", error: err.message });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
     }
 
-    //console.log("Current room details:", room);
-    // If roomId is provided and differs from the current room
-    if (roomId && roomId !== booking.room.toString()) {
-      const newRoom = await Room.findById(roomId);
-      if (!newRoom) return res.status(404).json({ message: "New room not found" });
-      if (!newRoom.isAvailable) return res.status(400).json({ message: "New room is not available for booking" });
+    // Find current room
+    let room = await Room.findById(booking.room);
+    if (!room) {
+      return res.status(404).json({ message: "Current room not found" });
+    }
 
-      // Update room references
-      room.isAvailable = true; // Mark old room as available
-      await room.save();
-      console.log(room.isAvailable)
-      newRoom.isAvailable = false; // Mark new room as unavailable
-      await newRoom.save();
+    // Handle room change if requested
+    if (roomId && roomId !== booking.room.toString()) {
+      // Validate and find new room
+      const newRoom = await Room.findById(roomId);
+      if (!newRoom) {
+        return res.status(404).json({ message: "New room not found" });
+      }
+      if (!newRoom.isAvailable) {
+        return res.status(400).json({ message: "New room is not available" });
+      }
+
+      // Update room availabilities
+      await Room.updateOne(
+        { _id: booking.room },
+        { $set: { isAvailable: true } }
+      );
+      await Room.updateOne(
+        { _id: roomId },
+        { $set: { isAvailable: false } }
+      );
 
       room = newRoom;
       booking.room = roomId;
     }
 
-    // Validate and update booking dates
-    if (checkInDate && checkOutDate) {
-      const startDate = new Date(checkInDate);
-      const endDate = new Date(checkOutDate);
+    // Handle date changes if requested
+    if (checkInDate || checkOutDate) {
+      const startDate = new Date(checkInDate || booking.checkInDate);
+      const endDate = new Date(checkOutDate || booking.checkOutDate);
 
-      if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
-        return res.status(400).json({ message: "Invalid booking dates" });
+      // Validate dates
+      if (isNaN(startDate) || isNaN(endDate)) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      if (startDate >= endDate) {
+        return res.status(400).json({ message: "Check-out date must be after check-in date" });
       }
 
-      const numberOfNights = (endDate - startDate) / (1000 * 60 * 60 * 24);
-      if (room.pricePerNight && numberOfNights > 0) {
-        booking.totalPrice = room.pricePerNight * numberOfNights;
-      } else {
-        return res.status(400).json({ message: "Failed to calculate total price. Invalid room price or dates." });
-      }
+      // Calculate new price
+      const numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      const pricePerNight = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+      const basePrice = pricePerNight * numberOfNights;
 
-      booking.checkInDate = checkInDate;
-      booking.checkOutDate = checkOutDate;
+      // Calculate taxes
+      const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
+      const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
+      const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+      
+      // Update booking dates and price
+      booking.checkInDate = startDate;
+      booking.checkOutDate = endDate;
+      booking.totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
+      booking.taxes = {
+        vat: vatAmount,
+        serviceTax: serviceTaxAmount,
+        other: otherTaxAmount,
+      };
     }
 
-    // Save the updated booking
+    // Update guest numbers if requested
+    if (noofguests !== undefined) {
+      if (!Number.isInteger(noofguests) || noofguests <= 0) {
+        return res.status(400).json({ message: "Number of guests must be a positive integer" });
+      }
+      booking.noofguests = noofguests;
+    }
+
+    if (noofchildrens !== undefined) {
+      if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
+        return res.status(400).json({ message: "Number of children must be a non-negative integer" });
+      }
+      booking.noofchildrens = noofchildrens;
+    }
+
+    // Save updated booking
     const updatedBooking = await booking.save();
-    res.status(200).json({ message: "Booking updated successfully", booking: updatedBooking });
+
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updatedBooking
+    });
+
   } catch (error) {
+    console.error("Error updating booking:", error);
     res.status(500).json({ message: "Failed to update booking", error: error.message });
   }
 };
 
+
 export const UpdateBookingForAdmin = async (req, res) => {
   const { id } = req.params;
-  const { checkInDate, checkOutDate, status, roomId } = req.body;
+  const { checkInDate, checkOutDate, status, roomId, noofguests, noofchildrens } = req.body;
 
   try {
-    // Fetch the booking by ID
+    // Validate and find existing booking
     const booking = await Booking.findById(id);
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
 
     // Check if the user is an admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: "You do not have permission to update the booking" });
     }
 
-    // If status is provided, validate and update the status
+    // Handle status update if provided
     if (status) {
-      const validStatuses = ['Confirmed', 'Cancelled', 'Pending']; // Add other statuses as needed
+      const validStatuses = ['Confirmed', 'Cancelled', 'Pending'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: "Invalid booking status" });
       }
-      booking.status = status; // Update the status
+      booking.status = status;
     }
 
-    // If a new roomId is provided, update the room (check availability)
+    // Find current room
+    let room = await Room.findById(booking.room);
+    if (!room) {
+      return res.status(404).json({ message: "Current room not found" });
+    }
+
+    // Handle room change if requested
     if (roomId && roomId !== booking.room.toString()) {
+      // Validate and find new room
       const newRoom = await Room.findById(roomId);
-      if (!newRoom) return res.status(404).json({ message: "New room not found" });
-      if (!newRoom.isAvailable) return res.status(400).json({ message: "New room is not available for booking" });
-
-      // Mark the old room as available and the new room as unavailable
-      const oldRoom = await Room.findById(booking.room);
-      oldRoom.isAvailable = true;
-      await oldRoom.save();
-
-      newRoom.isAvailable = false;
-      await newRoom.save();
-
-      booking.room = roomId; // Update the booking to reference the new room
-    }
-
-    // Validate and update booking dates if provided
-    if (checkInDate && checkOutDate) {
-      const startDate = new Date(checkInDate);
-      const endDate = new Date(checkOutDate);
-
-      if (isNaN(startDate) || isNaN(endDate) || startDate >= endDate) {
-        return res.status(400).json({ message: "Invalid booking dates" });
+      if (!newRoom) {
+        return res.status(404).json({ message: "New room not found" });
+      }
+      if (!newRoom.isAvailable) {
+        return res.status(400).json({ message: "New room is not available" });
       }
 
-      const numberOfNights = (endDate - startDate) / (1000 * 60 * 60 * 24);
-      if (numberOfNights <= 0) {
-        return res.status(400).json({ message: "Invalid number of nights" });
-      }
+      // Update room availabilities
+      await Room.updateOne(
+        { _id: booking.room },
+        { $set: { isAvailable: true } }
+      );
+      await Room.updateOne(
+        { _id: roomId },
+        { $set: { isAvailable: false } }
+      );
 
-      const room = await Room.findById(booking.room);
-      booking.totalPrice = room.pricePerNight * numberOfNights;
-
-      booking.checkInDate = checkInDate;
-      booking.checkOutDate = checkOutDate;
+      room = newRoom;
+      booking.room = roomId;
     }
 
-    // Save the updated booking
+    // Handle date changes if requested
+    if (checkInDate || checkOutDate) {
+      const startDate = new Date(checkInDate || booking.checkInDate);
+      const endDate = new Date(checkOutDate || booking.checkOutDate);
+
+      // Validate dates
+      if (isNaN(startDate) || isNaN(endDate)) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      if (startDate >= endDate) {
+        return res.status(400).json({ message: "Check-out date must be after check-in date" });
+      }
+
+      // Calculate new price
+      const numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      const pricePerNight = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+      const basePrice = pricePerNight * numberOfNights;
+
+      // Calculate taxes
+      const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
+      const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
+      const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+      
+      // Update booking dates and price
+      booking.checkInDate = startDate;
+      booking.checkOutDate = endDate;
+      booking.totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
+      booking.taxes = {
+        vat: vatAmount,
+        serviceTax: serviceTaxAmount,
+        other: otherTaxAmount,
+      };
+    }
+
+    // Update guest numbers if requested
+    if (noofguests !== undefined) {
+      if (!Number.isInteger(noofguests) || noofguests <= 0) {
+        return res.status(400).json({ message: "Number of guests must be a positive integer" });
+      }
+      booking.noofguests = noofguests;
+    }
+
+    if (noofchildrens !== undefined) {
+      if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
+        return res.status(400).json({ message: "Number of children must be a non-negative integer" });
+      }
+      booking.noofchildrens = noofchildrens;
+    }
+
+    // Save updated booking
     const updatedBooking = await booking.save();
-    res.status(200).json({ message: "Booking updated successfully", booking: updatedBooking });
+
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updatedBooking
+    });
+
   } catch (error) {
+    console.error("Error updating booking:", error);
     res.status(500).json({ message: "Failed to update booking", error: error.message });
   }
 };
+
 
 export const UpdateForAdmin = async (req, res) => {
   const { id } = req.params;
