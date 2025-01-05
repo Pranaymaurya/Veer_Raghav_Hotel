@@ -13,7 +13,7 @@ import { BookingProvider } from './context/BookingContext';
 import { RoomProvider } from './context/RoomContext';
 
 // pages
-import Home from './pages/gallery/home/home';
+import Home from './pages/home/home';
 import Gallery from './pages/gallery/Gallery';
 import RoomsPage from './pages/rooms/RoomPage';
 import ViewRoomDetails from './pages/rooms/ViewRoomDetails';
@@ -40,6 +40,11 @@ import { AdminProvider } from './context/AdminContext';
 import { Toaster } from './components/ui/toaster';
 import { SettingsProvider } from './context/SettingsContext';
 import UserContent from './pages/AdminDashboard/pages/UserContent';
+import UserBookings from './pages/UserProfile/components/UserBookings';
+import UserProfile from './pages/UserProfile/components/UserProfile';
+import UserSettings from './pages/UserProfile/components/UserSettings';
+import ProtectedUserProfile from './pages/UserProfile/components/ProtectedUserProfile';
+import { useAuth } from './hooks/useAuth';
 
 
 const router = createBrowserRouter([
@@ -87,13 +92,34 @@ const router = createBrowserRouter([
           <ContactPage />
         )
       },
-
-      // User profile section
       {
         path: "/profile",
         element: (
-          <UserProdfileLayout />
+          // <ProtectedUserProfile>
+            <UserProdfileLayout />
+          // </ProtectedUserProfile>
         ),
+        children: [
+          {
+            path: "",
+            element: (
+              <div className="grid lg:grid-cols-3 gap-8 max-w-7xl">
+                <div className="lg:col-span-2">
+                  <UserProfile />
+                </div>
+                <div className='lg:col-span-1'>
+                  <UserSettings />
+                </div>
+              </div>
+            )
+          },
+          {
+            path: "bookings",
+            element: (
+              <UserBookings />
+            )
+          }
+        ]
       },
     ]
   },
@@ -121,6 +147,14 @@ const router = createBrowserRouter([
       }
     ]
   },
+
+  // User profile section
+  // {
+  //   path: "/profile/bookings",
+  //   element: (
+  //     <UserBookings />
+  //   ),
+  // },
 
   {
     path: "/dashboard",

@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import { Link, Outlet, ScrollRestoration } from 'react-router-dom'
 import Footer from './components/Footer'
 import AnimationPage from './components/animation'
+import FloatingWhatsApp from './components/FloatingWhatsApp'
 
 const App = () => {
   const [loading, setLoading] = useState(true);
@@ -39,8 +40,9 @@ const App = () => {
           <Footer />
         </>
       )}
-
       </div>
+
+      <FloatingWhatsApp />
     </>
   )
 }

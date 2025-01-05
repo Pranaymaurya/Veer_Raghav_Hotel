@@ -68,6 +68,7 @@ const UserProfile = () => {
                     className: "bg-green-200 border-green-400 text-black text-lg",
                 });
             }
+            window.location.reload();
         } catch (error) {
             toast({
                 title: "Update Failed",
@@ -107,7 +108,7 @@ const UserProfile = () => {
                             <AvatarImage src={avatar} alt={user?.name} />
                             <AvatarFallback>{user?.name}</AvatarFallback>
                         </Avatar>
-                        <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 p-1 bg-primary text-primary-foreground rounded-full cursor-pointer">
+                        {/* <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 p-1 bg-primary text-primary-foreground rounded-full cursor-pointer">
                             <Upload className="w-4 h-4" />
                             <input
                                 id="avatar-upload"
@@ -116,7 +117,7 @@ const UserProfile = () => {
                                 className="hidden"
                                 onChange={handleAvatarChange}
                             />
-                        </label>
+                        </label> */}
                     </div>
                 </div>
                 <div className="flex justify-between items-center mb-4">

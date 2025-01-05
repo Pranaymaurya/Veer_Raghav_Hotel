@@ -149,7 +149,7 @@ function HeroSection() {
         </div>
       </div>
 
-      {/* WhatsApp Button */}
+      {/* WhatsApp Button
       <div className="fixed bottom-4 right-4 " style={{ zIndex: 9999 }}>
         <button>
           <img
@@ -158,7 +158,7 @@ function HeroSection() {
             className="pulse-animation w-16 h-16"
           />
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }

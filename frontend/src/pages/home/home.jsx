@@ -1,7 +1,5 @@
 import React from 'react'
-
 import HeroSection from '@/components/HeroSection'
-import LayoutGrid from '@/components/LayoutGrid'
 import Hmap from '@/components/Hmap'
 // import { LayoutGrid } from '@/components/LayoutGrid'
 import Rooms from '@/components/Rooms'
