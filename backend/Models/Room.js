@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
   name: {
@@ -10,10 +10,41 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  amenities: {
-    type: [String],
-    default: [],
+  DiscountedPrice: {
+    type: Number,
+    required: false, // Make it optional
+    default: 0, // Optional fallback to 0
   },
+  amenities: [{
+    category: {
+      type: String,
+      required: true,
+      enum: [
+        'No of Bed',
+        'No of Washroom',
+        'Popular Amenities',
+        'Basic Facilities',
+        'Transfers',
+        'Safety and Security',
+        'Health and Wellness',
+        'Common Area'
+      ],
+    },
+    items: [{
+      name: {
+        type: String,
+        required: true, // Name of the amenity (e.g., "King Size Bed", "Free Wi-Fi")
+      },
+      quantity: {
+        type: Number,
+        default: 1, // The quantity of the amenity (e.g., 1 for a King Size Bed)
+      },
+    }],
+    description: {
+      type: String,
+      default: '', // Any additional description for the category
+    },
+  }],
   description: {
     type: String,
     default: 'No description available',
@@ -21,10 +52,6 @@ const roomSchema = new mongoose.Schema({
   maxOccupancy: {
     type: Number,
     required: true,
-  },
-  isAvailable: {
-    type: Boolean,
-    default: true,
   },
   images: {
     type: [String], // Array to store image paths
@@ -48,7 +75,25 @@ const roomSchema = new mongoose.Schema({
       },
     },
   ],
+  taxes: {
+    vat: {
+      type: Number, // VAT percentage
+      default: 0,
+    },
+    serviceTax: {
+      type: Number, // Service tax percentage
+      default: 0,
+    },
+    other: {
+      type: Number, // Any other tax
+      default: 0,
+    },
+  },
+  isAvailable: {
+    type: Boolean,
+    default: true, // Default value is true, indicating the room is available
+  },
 });
 
-const Room = mongoose.model("Room", roomSchema);
+const Room = mongoose.model('Room', roomSchema);
 export default Room;

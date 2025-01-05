@@ -1,35 +1,142 @@
 import { uploadMultiple } from "../Middleware/Multer.js";
 import Room from "../Models/Room.js";
 
-// Add a new room
-// Add a new room with images
+// Add a new room  // Adjust path according to your file structure
+
 export const AddRoom = async (req, res) => {
-  const { name, pricePerNight, amenities, description, maxOccupancy, isAvailable } = req.body;
+  const { name, pricePerNight, DiscountedPrice, amenities, description, maxOccupancy, isAvailable } = req.body;
 
   try {
+    // Validate required fields
+    if (!name || !pricePerNight || !DiscountedPrice || !maxOccupancy) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate amenities structure
+    if (!Array.isArray(amenities) || amenities.length === 0) {
+      return res.status(400).json({ message: "Amenities must be a non-empty array" });
+    }
+    
+    amenities.forEach(amenity => {
+      if (!amenity.category || !Array.isArray(amenity.items) || amenity.items.length === 0) {
+        throw new Error("Each amenity must have a category and a non-empty 'items' array");
+      }
+
+      amenity.items.forEach(item => {
+        if (!item.name || typeof item.quantity !== 'number') {
+          throw new Error("Each item in amenities must have a name and quantity");
+        }
+      });
+    });
+
+    // Collect images if any are uploaded
     const images = req.files ? req.files.map(file => file.path) : [];
-    
-    const sanitizedAmenities = Array.isArray(amenities) 
-      ? amenities.filter(amenity => amenity.trim() !== '')
-      : [];
-    
-    // Create a new room
+
+    // Create the room document
     const room = new Room({
       name,
       pricePerNight,
-      amenities: sanitizedAmenities,
+      DiscountedPrice,
+      amenities,
       description,
       maxOccupancy,
       isAvailable,
       images,
     });
 
+    // Save the room to the database
     const savedRoom = await room.save();
-    res.status(201).json({ message: "Room added successfully", room: savedRoom });
+    
+    return res.status(201).json({
+      message: "Room added successfully",
+      room: savedRoom
+    });
   } catch (error) {
-    res.status(400).json({ message: "Failed to add room", error: error.message });
+    console.error(error);
+    return res.status(500).json({ message: "Failed to add room", error: error.message });
   }
 };
+
+
+// Update room amenities
+export const updateRoomAmenities = async (req, res) => {
+  const { roomId } = req.params;
+  const { amenities } = req.body; // New amenities array
+
+  try {
+    // Find the room by ID
+    const room = await Room.findById(roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    // Validate the structure of the amenities array
+    if (!Array.isArray(amenities) || amenities.length === 0) {
+      return res.status(400).json({ message: 'Amenities must be a non-empty array' });
+    }
+
+    // Ensure that each amenity has the necessary fields
+    amenities.forEach(amenity => {
+      if (!amenity.category || !Array.isArray(amenity.items)) {
+        throw new Error('Each amenity must have a category and a non-empty "items" array');
+      }
+      amenity.items.forEach(item => {
+        if (!item.name || typeof item.quantity !== 'number') {
+          throw new Error('Each item in amenities must have a name and quantity');
+        }
+      });
+    });
+
+    // Add new amenities to the room's existing amenities array without duplicating
+    room.amenities = [
+      ...room.amenities,
+      ...amenities.filter(newAmenity =>
+        !room.amenities.some(existingAmenity =>
+          existingAmenity.category === newAmenity.category &&
+          existingAmenity.items.every((item, idx) =>
+            item.name === newAmenity.items[idx]?.name &&
+            item.quantity === newAmenity.items[idx]?.quantity
+          )
+        )
+      ),
+    ];
+
+    // Save the updated room
+    const updatedRoom = await room.save();
+
+    return res.status(200).json({
+      message: 'Room amenities updated successfully',
+      room: updatedRoom,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error updating room amenities', error: error.message });
+  }
+};
+
+// Get a room with all its amenities
+export const getRoomWithAmenities = async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    // Find room by ID with populated amenities array
+    const room = await Room.findById(roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Room fetched successfully',
+      room,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error fetching room', error: error.message });
+  }
+};
+
 export const AddImagesById = async (req, res) => {
   const { id } = req.params; // Get room ID from the request parameters
 
