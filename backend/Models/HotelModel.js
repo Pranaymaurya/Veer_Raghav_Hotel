@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import validator from "validator";
 
 const hotelSchema = new mongoose.Schema({
   name: {
@@ -71,6 +72,18 @@ const hotelSchema = new mongoose.Schema({
       type: String,
       default:
         "Ankur is an affable person and loves hosting guests from various corners of the world. Besides hosting, Ankur likes travelling, listening to music, reading, and playing sports.",
+    },
+  },
+  Email: {
+    type: String,
+    required: true,
+    match: [
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 
+      'Please enter a valid email address'
+    ],
+    validate: {
+      validator: validator.isEmail,
+      message: 'Please enter a valid email address'
     },
   },
   caretakerDetails: {

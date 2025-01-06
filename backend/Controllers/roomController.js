@@ -1,14 +1,22 @@
 import { uploadMultiple } from "../Middleware/Multer.js";
 import Room from "../Models/Room.js";
 
-// Add a new room  // Adjust path according to your file structure
 
 export const AddRoom = async (req, res) => {
-  const { name, pricePerNight, DiscountedPrice, amenities, description, maxOccupancy, isAvailable } = req.body;
+  const {
+    name,
+    pricePerNight,
+    DiscountedPrice,
+    amenities,
+    description,
+    maxOccupancy,
+    isAvailable,
+    totalSlots, // Added totalSlots as part of the request body
+  } = req.body;
 
   try {
     // Validate required fields
-    if (!name || !pricePerNight || !DiscountedPrice || !maxOccupancy) {
+    if (!name || !pricePerNight || !DiscountedPrice || !maxOccupancy || !totalSlots) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -16,7 +24,7 @@ export const AddRoom = async (req, res) => {
     if (!Array.isArray(amenities) || amenities.length === 0) {
       return res.status(400).json({ message: "Amenities must be a non-empty array" });
     }
-    
+
     amenities.forEach(amenity => {
       if (!amenity.category || !Array.isArray(amenity.items) || amenity.items.length === 0) {
         throw new Error("Each amenity must have a category and a non-empty 'items' array");
@@ -32,6 +40,10 @@ export const AddRoom = async (req, res) => {
     // Collect images if any are uploaded
     const images = req.files ? req.files.map(file => file.path) : [];
 
+    // Calculate availableSlots based on totalSlots and initially set bookedSlots to 0
+    const bookedSlots = 0;  // Initially, no rooms are booked
+    const availableSlots = totalSlots - bookedSlots;  // Available slots will be totalSlots - bookedSlots
+
     // Create the room document
     const room = new Room({
       name,
@@ -41,15 +53,18 @@ export const AddRoom = async (req, res) => {
       description,
       maxOccupancy,
       isAvailable,
+      totalSlots,        // Set the total slots
+      bookedSlots,       // Set the initially booked slots to 0
+      availableSlots,    // Calculate available slots
       images,
     });
 
     // Save the room to the database
     const savedRoom = await room.save();
-    
+
     return res.status(201).json({
       message: "Room added successfully",
-      room: savedRoom
+      room: savedRoom,
     });
   } catch (error) {
     console.error(error);

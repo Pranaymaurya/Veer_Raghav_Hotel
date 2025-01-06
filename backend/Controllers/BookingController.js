@@ -37,19 +37,19 @@ export const CreateBooking = async (req, res) => {
 
     // Find the room by ID and check availability
     const room = await Room.findById(roomId);
-if (!room) {
-  console.error(`Room with ID ${roomId} not found.`);
-  return res.status(404).json({ message: "Room not found." });
-}
-console.log(room.maxOccupancy)
-if (room.isAvailable === undefined) {
-  console.error(`Room status undefined for ID: ${roomId}`);
-  return res.status(500).json({ message: "Room status not initialized properly." });
-}
+    if (!room) {
+      console.error(`Room with ID ${roomId} not found.`);
+      return res.status(404).json({ message: "Room not found." });
+    }
 
-if (!room.isAvailable) {
-  return res.status(400).json({ message: "This room is not available for booking." });
-}
+    if (!room.isAvailable) {
+      return res.status(400).json({ message: "This room is not available for booking." });
+    }
+
+    // Check if there are enough available slots
+    if (room.availableSlots < noOfRooms) {
+      return res.status(400).json({ message: "Not enough available rooms for booking." });
+    }
 
     // Calculate total price based on nights
     const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
@@ -86,19 +86,30 @@ if (!room.isAvailable) {
     // Save the booking
     const savedBooking = await booking.save();
 
-    // Update room availability
+    // Update the room availability by reducing the available slots and increasing booked slots
     await Room.updateOne(
       { _id: roomId },
-      { $set: { isAvailable: false } }
+      {
+        $set: { 
+          availableSlots: room.availableSlots - noOfRooms, // Reduce available slots
+          isAvailable: room.availableSlots - noOfRooms > 0, // If no rooms are left, mark as unavailable
+        },
+        $inc: {
+          bookedSlots: noOfRooms, // Increment the booked slots by the number of rooms booked
+        },
+      }
     );
 
-    // Update user's booking status
+    // Update user's booking status and the number of rooms they've booked
     await User.updateOne(
       { _id: userId },
       {
         $set: {
           IsBooking: true,
           currentBooking: savedBooking._id,
+        },
+        $inc: {
+          bookedSlots: noOfRooms, // Increment the number of rooms booked by the user
         },
       }
     );
@@ -120,8 +131,6 @@ if (!room.isAvailable) {
 
 
 
-
-
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
   const { checkInDate, checkOutDate, roomId, noofguests, noofchildrens } = req.body;
@@ -133,7 +142,7 @@ export const UpdateBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Find current room
+    // Find the current room
     let room = await Room.findById(booking.room);
     if (!room) {
       return res.status(404).json({ message: "Current room not found" });
@@ -141,23 +150,30 @@ export const UpdateBooking = async (req, res) => {
 
     // Handle room change if requested
     if (roomId && roomId !== booking.room.toString()) {
-      // Validate and find new room
+      // Validate and find the new room
       const newRoom = await Room.findById(roomId);
       if (!newRoom) {
         return res.status(404).json({ message: "New room not found" });
       }
-      if (!newRoom.isAvailable) {
+      if (!newRoom.isAvailable || newRoom.availableSlots < 1) {
         return res.status(400).json({ message: "New room is not available" });
       }
 
-      // Update room availabilities
+      // Update the availability of rooms
       await Room.updateOne(
         { _id: booking.room },
-        { $set: { isAvailable: true } }
+        { 
+          $set: { isAvailable: true },
+          $inc: { availableSlots: 1, bookedSlots: -1 }
+        }
       );
+
       await Room.updateOne(
         { _id: roomId },
-        { $set: { isAvailable: false } }
+        { 
+          $set: { isAvailable: false },
+          $inc: { availableSlots: -1, bookedSlots: 1 }
+        }
       );
 
       room = newRoom;
@@ -177,6 +193,19 @@ export const UpdateBooking = async (req, res) => {
         return res.status(400).json({ message: "Check-out date must be after check-in date" });
       }
 
+      // Check for room availability on new dates
+      const overlappingBooking = await Booking.findOne({
+        room: roomId,
+        $or: [
+          { checkInDate: { $lte: endDate }, checkOutDate: { $gte: startDate } },
+          { checkInDate: { $gte: startDate }, checkOutDate: { $lte: endDate } }
+        ]
+      });
+
+      if (overlappingBooking) {
+        return res.status(400).json({ message: "The room is not available for the selected dates" });
+      }
+
       // Calculate new price
       const numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
       const pricePerNight = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
@@ -186,7 +215,7 @@ export const UpdateBooking = async (req, res) => {
       const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
       const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
       const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
-      
+
       // Update booking dates and price
       booking.checkInDate = startDate;
       booking.checkOutDate = endDate;
@@ -203,6 +232,12 @@ export const UpdateBooking = async (req, res) => {
       if (!Number.isInteger(noofguests) || noofguests <= 0) {
         return res.status(400).json({ message: "Number of guests must be a positive integer" });
       }
+
+      // Check if the number of guests exceeds the room's max occupancy
+      if (noofguests > room.maxOccupancy) {
+        return res.status(400).json({ message: "Number of guests exceeds room's max occupancy" });
+      }
+
       booking.noofguests = noofguests;
     }
 
@@ -210,6 +245,7 @@ export const UpdateBooking = async (req, res) => {
       if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
         return res.status(400).json({ message: "Number of children must be a non-negative integer" });
       }
+
       booking.noofchildrens = noofchildrens;
     }
 
@@ -253,7 +289,7 @@ export const UpdateBookingForAdmin = async (req, res) => {
       booking.status = status;
     }
 
-    // Find current room
+    // Find the current room
     let room = await Room.findById(booking.room);
     if (!room) {
       return res.status(404).json({ message: "Current room not found" });
@@ -266,18 +302,25 @@ export const UpdateBookingForAdmin = async (req, res) => {
       if (!newRoom) {
         return res.status(404).json({ message: "New room not found" });
       }
-      if (!newRoom.isAvailable) {
+      if (!newRoom.isAvailable || newRoom.availableSlots < 1) {
         return res.status(400).json({ message: "New room is not available" });
       }
 
-      // Update room availabilities
+      // Update the availability of rooms
       await Room.updateOne(
         { _id: booking.room },
-        { $set: { isAvailable: true } }
+        { 
+          $set: { isAvailable: true },
+          $inc: { availableSlots: 1, bookedSlots: -1 }
+        }
       );
+
       await Room.updateOne(
         { _id: roomId },
-        { $set: { isAvailable: false } }
+        { 
+          $set: { isAvailable: false },
+          $inc: { availableSlots: -1, bookedSlots: 1 }
+        }
       );
 
       room = newRoom;
@@ -297,6 +340,19 @@ export const UpdateBookingForAdmin = async (req, res) => {
         return res.status(400).json({ message: "Check-out date must be after check-in date" });
       }
 
+      // Check for room availability on new dates
+      const overlappingBooking = await Booking.findOne({
+        room: roomId,
+        $or: [
+          { checkInDate: { $lte: endDate }, checkOutDate: { $gte: startDate } },
+          { checkInDate: { $gte: startDate }, checkOutDate: { $lte: endDate } }
+        ]
+      });
+
+      if (overlappingBooking) {
+        return res.status(400).json({ message: "The room is not available for the selected dates" });
+      }
+
       // Calculate new price
       const numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
       const pricePerNight = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
@@ -306,7 +362,7 @@ export const UpdateBookingForAdmin = async (req, res) => {
       const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
       const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
       const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
-      
+
       // Update booking dates and price
       booking.checkInDate = startDate;
       booking.checkOutDate = endDate;
@@ -323,6 +379,12 @@ export const UpdateBookingForAdmin = async (req, res) => {
       if (!Number.isInteger(noofguests) || noofguests <= 0) {
         return res.status(400).json({ message: "Number of guests must be a positive integer" });
       }
+
+      // Check if the number of guests exceeds the room's max occupancy
+      if (noofguests > room.maxOccupancy) {
+        return res.status(400).json({ message: "Number of guests exceeds room's max occupancy" });
+      }
+
       booking.noofguests = noofguests;
     }
 
@@ -330,6 +392,7 @@ export const UpdateBookingForAdmin = async (req, res) => {
       if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
         return res.status(400).json({ message: "Number of children must be a non-negative integer" });
       }
+
       booking.noofchildrens = noofchildrens;
     }
 
@@ -346,6 +409,7 @@ export const UpdateBookingForAdmin = async (req, res) => {
     res.status(500).json({ message: "Failed to update booking", error: error.message });
   }
 };
+
 
 
 export const UpdateForAdmin = async (req, res) => {
