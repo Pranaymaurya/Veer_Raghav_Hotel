@@ -385,51 +385,51 @@ export default function RoomsPage() {
         ))
       ) : filteredRooms.length > 0 ? (
         filteredRooms.map((room) => (
-          <Card key={room._id} className="hover:shadow-lg transition-shadow">
-            <ImageSlider images={room.images} />
+          <Card key={room?._id} className="hover:shadow-lg transition-shadow">
+            <ImageSlider images={room?.images} />
             <CardContent className="p-4 space-y-3">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg sm:text-xl font-bold">{room.name}</h3>
+                <h3 className="text-lg sm:text-xl font-bold">{room?.name}</h3>
                 <div className="flex items-center text-yellow-500">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="ml-1">
-                    {room.ratings?.length > 0
-                      ? (room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
-                        room.ratings.length).toFixed(1)
+                    {room?.ratings?.length > 0
+                      ? (room?.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+                        room?.ratings.length).toFixed(1)
                       : "New"}
                   </span>
                 </div>
               </div>
 
               <p className="text-gray-600 text-sm">
-                {room.description?.length > 100
-                  ? `${room.description.slice(0, 100)}...`
-                  : room.description}
+                {room?.description?.length > 100
+                  ? `${room?.description.slice(0, 100)}...`
+                  : room?.description}
               </p>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-500 gap-2">
                 <div className="flex items-center">
                   <Users className="w-4 h-4 mr-2" />
-                  <span>{room.maxOccupancy} Guests</span>
+                  <span>{room?.maxOccupancy} Guests</span>
                 </div>
                 <div className="flex items-center">
                   <Bed className="w-4 h-4 mr-2" />
-                  <span>{room.name}</span>
+                  <span>{room?.name}</span>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {room.amenities?.slice(0, 3).map((amenity) => (
+                {room?.amenities?.slice(0, 3).map((amenity) => (
                   <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs sm:text-sm">
                     {amenity}
                   </span>
                 ))}
-                {room.amenities?.length > 3 && (
+                {room?.amenities?.length > 3 && (
                   <Button
                     variant="outline"
                     className="text-primary text-xs sm:text-sm"
                   >
-                    +{room.amenities.length - 3} more
+                    +{room?.amenities.length - 3} more
                   </Button>
                 )}
               </div>
@@ -437,7 +437,7 @@ export default function RoomsPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="text-lg sm:text-xl font-bold flex items-center gap-2">
                   ₹{calculateDynamicPrice(
-                    room.pricePerNight,
+                    room?.pricePerNight,
                     calculateNights(filters.startDate, filters.endDate),
                     parseInt(filters.rooms)
                   )} 
@@ -446,7 +446,7 @@ export default function RoomsPage() {
                   </span>
                 </div>
                 <Button
-                  onClick={() => navigate(`/rooms/${room._id}`, {
+                  onClick={() => navigate(`/rooms/${room?._id}`, {
                     state: {
                       startDate: filters.startDate,
                       endDate: filters.endDate,
@@ -455,9 +455,9 @@ export default function RoomsPage() {
                     }
                   })}
                   className="bg-orange-600 w-full sm:w-auto"
-                  disabled={!room.isAvailable}
+                  disabled={!room?.isAvailable}
                 >
-                  {room.isAvailable ? 'Book Now' : 'Not Available'}
+                  {room?.isAvailable ? 'Book Now' : 'Not Available'}
                 </Button>
               </div>
             </CardContent>
