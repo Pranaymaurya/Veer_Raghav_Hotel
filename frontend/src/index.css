@@ -73,6 +73,24 @@
 } */
 
 
+::-webkit-scrollbar {
+  width: 8px;
+  @apply hidden
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; /* This creates a fully transparent look */
+}
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #c28411;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #61450a;
+}
+
 
 .textblack{
   color: black;

@@ -11,6 +11,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { BookingProvider } from './context/BookingContext';
 import { RoomProvider } from './context/RoomContext';
+import { AdminProvider } from './context/AdminContext';
+import { Toaster } from './components/ui/toaster';
+import { SettingsProvider } from './context/SettingsContext';
 
 // pages
 import Home from './pages/home/home';
@@ -23,7 +26,8 @@ import ContactPage from './pages/contact/ContactPage';
 import AuthLayout from './pages/auth/AuthLayout';
 import BookingPage from './pages/bookingpage/BookingPage';
 import BookingSuccessPage from './pages/bookingpage/BookingSuccessPage';
-import PaymentPage from './pages/bookingpage/PaymentPage';
+import ResetPasswordRequest from './pages/auth/components/ResetPasswordRequest';
+import ResetPassword from './pages/auth/components/ResetPassword';
 
 // dashboard
 import DashboardLayout from './pages/AdminDashboard/DashboardLayout';
@@ -35,16 +39,16 @@ import ReportsContent from './pages/AdminDashboard/pages/ReportsContent';
 import SettingsContent from './pages/AdminDashboard/pages/SettingsContent';
 import CustomizeRooms from './pages/AdminDashboard/pages/CustomizeRooms';
 import RoomsForm from './pages/AdminDashboard/pages/RoomsForm';
-import UserProdfileLayout from './pages/UserProfile/UserProdfileLayout';
-import { AdminProvider } from './context/AdminContext';
-import { Toaster } from './components/ui/toaster';
-import { SettingsProvider } from './context/SettingsContext';
 import UserContent from './pages/AdminDashboard/pages/UserContent';
+
+
+//user profile
+import UserProdfileLayout from './pages/UserProfile/UserProdfileLayout';
 import UserBookings from './pages/UserProfile/components/UserBookings';
 import UserProfile from './pages/UserProfile/components/UserProfile';
 import UserSettings from './pages/UserProfile/components/UserSettings';
-import ProtectedUserProfile from './pages/UserProfile/components/ProtectedUserProfile';
-import { useAuth } from './hooks/useAuth';
+import PaymentPage from './pages/bookingpage/PaymentPage';
+
 
 
 const router = createBrowserRouter([
@@ -146,6 +150,20 @@ const router = createBrowserRouter([
         )
       }
     ]
+  },
+
+  {
+    path: "/forgot-password",
+    element: (
+      <ResetPasswordRequest />
+    )
+  },
+
+  {
+    path: "/reset-password/:token",
+    element: (
+      <ResetPassword />
+    )
   },
 
   // User profile section

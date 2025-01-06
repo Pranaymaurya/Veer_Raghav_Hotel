@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import validator from "validator";
+import bcrypt from "bcryptjs";
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -20,9 +22,9 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 18,
     },
-    IsBooking:{
-      type:Boolean,
-      default:false
+    IsBooking: {
+      type: Boolean,
+      default: false
     },
     gender: {
       type: String,
@@ -49,11 +51,21 @@ const userSchema = new mongoose.Schema(
       required: false, // Optional, as some users might not provide an address
       trim: true, // Automatically trims spaces before/after the string
     },
+    //testtttt
+    resetToken: String,
+    resetTokenExpiry: Date,
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields
   }
 );
+
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+  next();
+});
 
 const User = mongoose.model('User', userSchema);
 export default User;

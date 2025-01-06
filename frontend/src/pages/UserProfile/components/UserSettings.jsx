@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertCircle, Lock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const UserSettings = () => {
     const { deleteAccount } = useAuth();
@@ -19,15 +20,10 @@ const UserSettings = () => {
     const [pushNotifications, setPushNotifications] = useState(true);
     const [privacySettings, setPrivacySettings] = useState('friends');
     const [language, setLanguage] = useState('en');
+    const navigate = useNavigate();
 
     const handleChangePassword = (e) => {
-        e.preventDefault();
-        // Static implementation
-        alert('Password changed successfully!');
-        setPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setShowChangePasswordModal(false);
+        navigate('/forgot-password', { state: { from: '/profile' } });
     };
 
     const handleDeleteAccount = () => {
@@ -44,54 +40,7 @@ const UserSettings = () => {
             {/* Change Password */}
             <section className="space-y-4">
                 <h2 className="text-xl font-semibold">Change Password</h2>
-                <Dialog open={showChangePasswordModal} onOpenChange={setShowChangePasswordModal}>
-                    <DialogTrigger asChild>
-                        <Button>Change Password</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Change Your Password</DialogTitle>
-                            <DialogDescription>
-                                Enter your current password and a new password to update your account security.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleChangePassword} className="space-y-4">
-                            <div>
-                                <Label htmlFor="current-password">Current Password</Label>
-                                <Input
-                                    id="current-password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="new-password">New Password</Label>
-                                <Input
-                                    id="new-password"
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                <Input
-                                    id="confirm-password"
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit">Change Password</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                <Button onClick={handleChangePassword}>Change Password</Button>
             </section>
 
             {/* Notification Preferences */}

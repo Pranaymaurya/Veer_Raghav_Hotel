@@ -1,7 +1,8 @@
 import express from 'express'
 import { changePassword, deleteUser, GetAllUsers, getUserDetails, profile, updateUser } from '../Controllers/userController.js';
 import { authMiddleware, authorizeRoles } from '../Middleware/AuthMiddleware.js';
-const router2=express.Router();
+import { requestPasswordReset, resetPassword } from '../Controllers/auth.js';
+const router2 = express.Router();
 // router2.get("/profile", authMiddleware, profile);
 router2.put(
   "/user/:id",
@@ -23,10 +24,14 @@ router2.get(
   getUserDetails
 );
 router2.put(
-    "/changepassword",
-    authMiddleware,
-    authorizeRoles("admin", "user"),
-    changePassword
-  );
+  "/changepassword",
+  authMiddleware,
+  authorizeRoles("admin", "user"),
+  changePassword
+);
+
+//testtt
+router2.post('/request-reset', requestPasswordReset);
+router2.post('/reset-password/:token', resetPassword);
 
 export default router2;

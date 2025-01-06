@@ -75,9 +75,6 @@ const SettingsContent = () => {
     }
   }, []);
 
-  console.log(hotel[0].logo);
-  
-
 
   const validateLogoFile = (file) => {
     setFileError('');
