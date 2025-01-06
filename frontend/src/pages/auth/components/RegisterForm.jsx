@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-// import { registerUser } from './api'; // Adjust the path to your API file
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function RegisterForm() {
   const [name, setName] = useState('');
@@ -17,30 +22,32 @@ export default function RegisterForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const { register } = useAuth();
   const { toast } = useToast();
-
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters long');
+      setIsLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      setIsLoading(false);
       return;
     }
 
     try {
       const userData = { name, email, password, phoneno, gender, age };
       const data = await register(userData);
-      // Simulate login and navigate to the home page
-      // console.log('User registered:', data);
       if (data.success) {
         toast({
           title: 'Registration successful',
@@ -48,185 +55,182 @@ export default function RegisterForm() {
           variant: 'success',
           className: 'bg-green-200 border-green-400 text-black',
           duration: 3000,
-        })
+        });
         navigate('/auth/login');
       } else {
         setError(data.message);
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const inputVariants = {
-    focus: { scale: 1.02, transition: { type: 'spring', stiffness: 300 } },
+  const formVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    }
   };
 
-  const buttonVariants = {
-    hover: { scale: 1.05 },
-    tap: { scale: 0.95 },
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
   };
 
   return (
-    <motion.form
-      onSubmit={handleSubmit}
-      className="space-y-6 bg-white"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-          Full Name
-        </label>
-        <motion.input
-          id="name"
-          type="text"
-          required
-          className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          variants={inputVariants}
-          whileFocus="focus"
-        />
-      </div>
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email Address
-        </label>
-        <motion.input
-          id="email"
-          type="email"
-          required
-          className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          variants={inputVariants}
-          whileFocus="focus"
-        />
-      </div>
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Password
-        </label>
-        <div className="relative">
-          <motion.input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            required
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            variants={inputVariants}
-            whileFocus="focus"
-          />
-          <button
-            type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? <FiEyeOff className="h-5 w-5 text-gray-400" /> : <FiEye className="h-5 w-5 text-gray-400" />}
-          </button>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-          Confirm Password
-        </label>
-        <div className="relative">
-          <motion.input
-            id="confirmPassword"
-            type={showConfirmPassword ? 'text' : 'password'}
-            required
-            className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            variants={inputVariants}
-            whileFocus="focus"
-          />
-          <button
-            type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-          >
-            {showConfirmPassword ? <FiEyeOff className="h-5 w-5 text-gray-400" /> : <FiEye className="h-5 w-5 text-gray-400" />}
-          </button>
-        </div>
-      </div>
-      <div>
-        <label htmlFor="phoneno" className="block text-sm font-medium text-gray-700 mb-1">
-          Phone Number
-        </label>
-        <motion.input
-          id="phoneno"
-          type="tel"
-          required
-          className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-          value={phoneno}
-          onChange={(e) => setPhoneno(e.target.value)}
-          variants={inputVariants}
-          whileFocus="focus"
-        />
-      </div>
-      <div>
-        <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
-          Gender
-        </label>
-        <motion.select
-          id="gender"
-          required
-          className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-          value={gender}
-          onChange={(e) => setGender(e.target.value)}
-          variants={inputVariants}
-          whileFocus="focus"
-        >
-          <option value="">Select Gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-          <option value="Other">Other</option>
-        </motion.select>
-      </div>
-      <div>
-        <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
-          Age
-        </label>
-        <motion.input
-          id="age"
-          type="number"
-          required
-          className="block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
-          variants={inputVariants}
-          whileFocus="focus"
-        />
-      </div>
-      {error && (
-        <motion.p
-          className="text-red-500 text-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          {error}
-        </motion.p>
-      )}
-      <motion.button
-        type="submit"
-        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-        variants={buttonVariants}
-        whileHover="hover"
-        whileTap="tap"
+    <Card className="w-full max-w-md mx-auto border-none shadow-none">
+      <motion.div
+        variants={formVariants}
+        initial="hidden"
+        animate="visible"
       >
-        Create Account
-      </motion.button>
-      <p className="text-center text-sm text-gray-600 mt-4">
-        Already have an account?{' '}
-        <a href="/auth/login" className="font-medium text-orange-600 hover:text-orange-500">
-          Log in
-        </a>
-      </p>
-    </motion.form>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">Create an Account</CardTitle>
+          <CardDescription className="text-center">Sign up to get started</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                </button>
+              </div>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                </button>
+              </div>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="phoneno">Phone Number</Label>
+              <Input
+                id="phoneno"
+                type="tel"
+                required
+                value={phoneno}
+                onChange={(e) => setPhoneno(e.target.value)}
+              />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="gender">Gender</Label>
+              <Select value={gender} onValueChange={setGender}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="age">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                required
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+              />
+            </motion.div>
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <motion.div variants={itemVariants}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </motion.div>
+          </form>
+        </CardContent>
+        <CardFooter>
+          <motion.p variants={itemVariants} className="text-sm text-center w-full">
+            Already have an account?{' '}
+            <Link to="/auth/login" className="font-medium text-orange-600 hover:text-orange-500">
+              Log in
+            </Link>
+          </motion.p>
+        </CardFooter>
+      </motion.div>
+    </Card>
   );
 }
+

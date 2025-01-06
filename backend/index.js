@@ -8,6 +8,8 @@ import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 import cookieParser from 'cookie-parser';
 import router2 from "./Routes/UserRoutes.js";
+
+
 // Get __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +18,7 @@ dotenv.config();
 const app = express();
 app.use(cors(
   {
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   }
 ));
@@ -32,7 +34,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
  
 // Connect to the database
 connectDB();
- 
  
  
 // Middleware to parse cookies
