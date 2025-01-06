@@ -1,4 +1,5 @@
 import Hotel from "../Models/HotelModel.js";
+import validator from "validator"; // Import the validator library
 
 export const AddHotel = async (req, res) => {
   try {
@@ -12,6 +13,7 @@ export const AddHotel = async (req, res) => {
       foodAndDining,
       hostDetails,
       caretakerDetails,
+      Email,
     } = req.body;
 
     // Validate required fields
@@ -22,6 +24,11 @@ export const AddHotel = async (req, res) => {
     // Ensure contactNumbers is an array
     if (!Array.isArray(contactNumbers)) {
       return res.status(400).json({ message: "Contact numbers must be an array." });
+    }
+
+    // Validate email if provided
+    if (Email && !validator.isEmail(Email)) {
+      return res.status(400).json({ message: "Invalid email address." });
     }
 
     // Create a new hotel
@@ -35,6 +42,7 @@ export const AddHotel = async (req, res) => {
       foodAndDining,
       hostDetails,
       caretakerDetails,
+      Email,
     });
 
     // Save the hotel to the database
@@ -63,6 +71,7 @@ export const updateHotel = async (req, res) => {
       foodAndDining,
       hostDetails,
       caretakerDetails,
+      Email,
     } = req.body;
 
     // Check if any fields are provided for update
@@ -77,6 +86,14 @@ export const updateHotel = async (req, res) => {
     if (foodAndDining) updateData.foodAndDining = foodAndDining;
     if (hostDetails) updateData.hostDetails = hostDetails;
     if (caretakerDetails) updateData.caretakerDetails = caretakerDetails;
+
+    // Validate and update email
+    if (Email) {
+      if (!validator.isEmail(Email)) {
+        return res.status(400).json({ message: "Invalid email address." });
+      }
+      updateData.Email = Email;
+    }
 
     // If no fields to update, send a message
     if (Object.keys(updateData).length === 0) {
@@ -102,6 +119,7 @@ export const updateHotel = async (req, res) => {
     return res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+
 
 export const UploadHotelLogo = async (req, res) => {
   const { id } = req.params; // Get hotel ID from the request parameters

@@ -93,6 +93,21 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: true, // Default value is true, indicating the room is available
   },
+  totalSlots: {
+    type: Number,
+    required: true,
+    default: 10, // Default number of total slots available for booking (can be any number)
+  },
+  bookedSlots: {
+    type: Number,
+    required: true,
+    default: 0, // Default to 0 booked slots, as no bookings are made initially
+  },
+  availableSlots: {
+    type: Number,
+    required: true,
+    default: 10, // This is initially set to the same as totalSlots
+  },
 });
 
 const Room = mongoose.model('Room', roomSchema);
