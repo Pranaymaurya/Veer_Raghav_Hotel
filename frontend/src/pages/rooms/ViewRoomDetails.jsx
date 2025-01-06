@@ -68,12 +68,12 @@ export default function ViewRoomDetails() {
   const [showHostInfo, setShowHostInfo] = useState(false);
 
   // Find the current room from Rooms array
-  const room = Rooms?.find(room => room._id === id);
+  const room = Rooms?.find(room => room?._id === id);
 
   // Initialize states (same as before)
   const [roomCount, setRoomCount] = useState(() => {
     try {
-      const roomsParam = searchParams.get('rooms');
+      const roomsParam = searchParams?.get('rooms');
       if (roomsParam) {
         const parsedRooms = parseInt(roomsParam);
         return parsedRooms > 0 ? parsedRooms : 1;
@@ -94,7 +94,7 @@ export default function ViewRoomDetails() {
 
   const [guests, setGuests] = useState(() => {
     try {
-      const guestsParam = searchParams.get('guests');
+      const guestsParam = searchParams?.get('guests');
       if (guestsParam) {
         const parsedGuests = parseInt(guestsParam);
         return parsedGuests > 0 ? parsedGuests : 1;
@@ -158,7 +158,7 @@ export default function ViewRoomDetails() {
     const validateRoomAssignment = () => {
       const currentGuests = guests;
       const currentRooms = roomCount;
-      const maxGuestsPerRoom = room.maxOccupancy;
+      const maxGuestsPerRoom = room?.maxOccupancy;
       const minimumRequiredRooms = Math.ceil(currentGuests / maxGuestsPerRoom);
 
       if (currentRooms * maxGuestsPerRoom < currentGuests) {
@@ -174,7 +174,7 @@ export default function ViewRoomDetails() {
     if (!room) return;
 
     const params = new URLSearchParams(searchParams);
-    params.set('guests', guests.toString());
+    params.set('guests', guests?.toString());
     params.set('rooms', roomCount.toString());
     if (date.from) params.set('checkIn', date.from.toISOString());
     if (date.to) params.set('checkOut', date.to.toISOString());
@@ -388,7 +388,7 @@ export default function ViewRoomDetails() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">{room.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-800">{room?.name}</h1>
           <Button
             variant="link"
             onClick={() => navigate('/rooms')}
@@ -400,10 +400,10 @@ export default function ViewRoomDetails() {
         <div className="flex items-center">
           <Star className="text-yellow-500 mr-2" />
           <span className="font-semibold">
-            {room.rating?.toFixed(1) || "New"}
+            {room?.rating?.toFixed(1) || "New"}
           </span>
           <span className="text-gray-500 ml-2">
-            ({getRoomQuality(room.rating)})
+            ({getRoomQuality(room?.rating)})
           </span>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function ViewRoomDetails() {
         <div className="md:col-span-2 space-y-6">
           {/* Image Slider */}
           <div className="relative">
-            <ImageSlider images={room.images || []} />
+            <ImageSlider images={room?.images || []} />
           </div>
 
           {/* Room Info */}
@@ -422,13 +422,13 @@ export default function ViewRoomDetails() {
               <h3 className="font-semibold text-gray-700 flex items-center">
                 <Bed className="mr-2 text-primary" /> Room Type
               </h3>
-              <p className="text-gray-600">{room.name}</p>
+              <p className="text-gray-600">{room?.name}</p>
             </div>
             <div>
               <h3 className="font-semibold text-gray-700 flex items-center">
                 <Users className="mr-2 text-primary" /> Capacity
               </h3>
-              <p className="text-gray-600">Fits {room.maxOccupancy} Guests</p>
+              <p className="text-gray-600">Fits {room?.maxOccupancy} Guests</p>
             </div>
           </div>
 
@@ -436,10 +436,10 @@ export default function ViewRoomDetails() {
           <div className="space-y-2">
             <h3 className="font-semibold text-lg">Description</h3>
             <p className="text-gray-600">
-              {room.description?.length > 150
-                ? `${room.description.slice(0, 150)}...`
-                : room.description}
-              {room.description?.length > 150 && (
+              {room?.description?.length > 150
+                ? `${room?.description.slice(0, 150)}...`
+                : room?.description}
+              {room?.description?.length > 150 && (
                 <Button
                   variant="link"
                   onClick={() => setShowFullDescription(true)}
@@ -455,18 +455,18 @@ export default function ViewRoomDetails() {
           <div className="space-y-2">
             <h3 className="font-semibold text-lg">Amenities</h3>
             <div className="flex flex-wrap gap-2">
-              {room.amenities?.slice(0, 5).map((amenity) => (
+              {room?.amenities?.slice(0, 5).map((amenity) => (
                 <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
                   {amenity}
                 </span>
               ))}
-              {room.amenities?.length > 5 && (
+              {room?.amenities?.length > 5 && (
                 <Button
                   variant="outline"
                   onClick={() => setShowAllAmenities(true)}
                   className="text-primary"
                 >
-                  +{room.amenities.length - 5} more
+                  +{room?.amenities.length - 5} more
                 </Button>
               )}
             </div>
@@ -580,10 +580,10 @@ export default function ViewRoomDetails() {
                       <Calendar
                         initialFocus
                         mode="range"
-                        defaultMonth={date.from || new Date()}
+                        defaultMonth={date?.from || new Date()}
                         selected={{
-                          from: date.from,
-                          to: date.to
+                          from: date?.from,
+                          to: date?.to
                         }}
                         onSelect={handleDateSelect}
                         numberOfMonths={2}
@@ -620,7 +620,7 @@ export default function ViewRoomDetails() {
                         variant="outline"
                         size="icon"
                         onClick={() => handleGuestChange(1)}
-                        disabled={guests >= room.maxOccupancy * roomCount}
+                        disabled={guests >= room?.maxOccupancy * roomCount}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -646,7 +646,7 @@ export default function ViewRoomDetails() {
                         ₹{calculatePrice()}
                       </div>
                       <div className="text-sm text-gray-500">
-                        + ₹{room.taxesAndFees || 0} taxes & fees
+                        + ₹{room?.taxesAndFees || 0} taxes & fees
                       </div>
                     </div>
                   </div>
@@ -668,7 +668,7 @@ export default function ViewRoomDetails() {
                   </Button>
                 ) : (
                   <Button
-                    disabled={!!dateError || !date.from || !date.to}
+                    disabled={!!dateError || !date?.from || !date?.to}
                     onClick={handleBookNow}
                     className="w-full bg-orange-600 text-white hover:bg-orange-700"
                   >
@@ -688,7 +688,7 @@ export default function ViewRoomDetails() {
             <DialogTitle>Room Description</DialogTitle>
           </DialogHeader>
           <Separator />
-          <p className="text-gray-600">{room.description}</p>
+          <p className="text-gray-600">{room?.description}</p>
         </DialogContent>
       </Dialog>
 
@@ -699,7 +699,7 @@ export default function ViewRoomDetails() {
           </DialogHeader>
           <Separator />
           <div className="grid grid-cols-2 gap-4">
-            {room.amenities?.map((amenity) => (
+            {room?.amenities?.map((amenity) => (
               <div key={amenity} className="flex items-center gap-2">
                 <Check className="text-primary h-4 w-4" />
                 <span>{amenity}</span>
