@@ -36,6 +36,7 @@ import {
 } from "../Controllers/userController.js";
 import {
   AddHotel,
+  deleteHotel,
   GetHotel,
   updateHotel,
   UploadHotelLogo,
@@ -173,6 +174,7 @@ router.put("/room/:id", authMiddleware, authorizeRoles("admin"), UpdateRoom); //
 
 router.post("/hotel", authMiddleware, authorizeRoles("admin"), AddHotel);
 router.put("/hotel/:id", authMiddleware, authorizeRoles("admin"), updateHotel);
+router.delete("/hotel/:id", authMiddleware, authorizeRoles("admin"), deleteHotel);
 router.put(
   "/hotel/image/:id",
   authMiddleware,
