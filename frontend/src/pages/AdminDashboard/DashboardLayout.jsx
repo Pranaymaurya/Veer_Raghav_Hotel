@@ -50,7 +50,7 @@ const DashboardLayout = () => {
     }, []);
 
     return (
-       
+        <>
             <div className="flex h-screen overflow-hidden">
                 {/* Sidebar for Mobile and Desktop */}
                 <aside
@@ -96,6 +96,7 @@ const DashboardLayout = () => {
                     ></div>
                 )}
             </div>
+        </>
 
     )
 }

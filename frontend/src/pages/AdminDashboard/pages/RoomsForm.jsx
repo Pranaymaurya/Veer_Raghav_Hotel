@@ -31,7 +31,17 @@ import {
 import { useRoom } from '@/context/RoomContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-// import { toast } from '@/components/ui/use-toast';
+
+const AMENITY_CATEGORIES = [
+  'No of Bed',
+  'No of Washroom',
+  'Popular Amenities',
+  'Basic Facilities',
+  'Transfers',
+  'Safety and Security',
+  'Health and Wellness',
+  'Common Area'
+];
 
 const RoomsForm = () => {
   const { id } = useParams();
@@ -46,12 +56,24 @@ const RoomsForm = () => {
     name: '',
     description: '',
     pricePerNight: '',
+    discountedPrice: '0',
     maxOccupancy: '',
     images: [],
     existingImages: [],
-    amenities: [''],
+    amenities: [{
+      category: 'Popular Amenities',
+      items: [{ name: '', quantity: 1 }],
+      description: ''
+    }],
+    taxes: {
+      vat: 0,
+      serviceTax: 0,
+      other: 0
+    },
     isAvailable: true
   });
+
+  // window.location.reload();
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -94,44 +116,38 @@ const RoomsForm = () => {
       const roomData = {
         ...formData,
         pricePerNight: parseFloat(formData.pricePerNight),
+        discountedPrice: parseFloat(formData.discountedPrice) || 0,
         maxOccupancy: parseInt(formData.maxOccupancy),
-        amenities: formData.amenities.filter(amenity => amenity.trim() !== ''),
+        amenities: formData.amenities.filter(category =>
+          category.items.some(item => item.name.trim() !== '')
+        ),
         images: formData.existingImages
       };
 
       if (isNewRoom) {
-        // For new rooms, send everything including new images to addRoom
         const newRoom = await addRoom({ ...roomData, images: [...roomData.images, ...formData.images] });
         toast({
           title: "Success",
           description: "Room created successfully",
         });
-
         navigate(`/dashboard/rooms/`);
       } else {
-        // For existing rooms, first update the room data
         await updateRoom(id, roomData);
-
-        // Then handle any new images separately
         if (formData.images.length > 0) {
           await addImagesToRoom(id, formData.images);
         }
-
         navigate('/dashboard/rooms');
         toast({
           title: "Success",
           description: "Room updated successfully",
         });
       }
-      console.log('Room updated successfully');
-
     } catch (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to save room details.",
         variant: "destructive",
       });
-
       if (error.message === 'Authentication required. Please log in again.') {
         navigate('/login', { state: { from: location.pathname } });
       }
@@ -148,34 +164,87 @@ const RoomsForm = () => {
     }));
   };
 
-  const removeImage = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
 
-  const addAmenity = () => {
+  const addAmenityItem = (categoryIndex) => {
     setFormData(prev => ({
       ...prev,
-      amenities: [...prev.amenities, '']
-    }));
-  };
-
-  const updateAmenity = (index, value) => {
-    setFormData(prev => ({
-      ...prev,
-      amenities: prev.amenities.map((amenity, i) =>
-        i === index ? value : amenity
+      amenities: prev.amenities.map((category, idx) =>
+        idx === categoryIndex
+          ? { ...category, items: [...category.items, { name: '', quantity: 1 }] }
+          : category
       )
     }));
   };
 
-  const removeAmenity = (index) => {
+
+  const addAmenityCategory = () => {
     setFormData(prev => ({
       ...prev,
-      amenities: prev.amenities.filter((_, i) => i !== index)
+      amenities: [...prev.amenities, {
+        category: '',
+        items: [{ name: '', quantity: 1 }],
+        description: ''
+      }]
     }));
+  };
+  const updateAmenityCategory = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities.map((category, idx) =>
+        idx === index ? { ...category, [field]: value } : category
+      )
+    }));
+  };
+
+  const updateAmenityItem = (categoryIndex, itemIndex, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities.map((category, idx) =>
+        idx === categoryIndex
+          ? {
+            ...category,
+            items: category.items.map((item, iIdx) =>
+              iIdx === itemIndex ? { ...item, [field]: value } : item
+            )
+          }
+          : category
+      )
+    }));
+  };
+
+  const removeAmenityCategory = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities.filter((_, idx) => idx !== index)
+    }));
+    toast({
+      title: "Success",
+      description: "Amenity item removed successfully",
+      variant: "success",
+      className: "bg-green-200 border-green-400 text-black text-lg",
+      duration: 2000
+    })
+  };
+
+  const removeAmenityItem = (categoryIndex, itemIndex) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities.map((category, idx) =>
+        idx === categoryIndex
+          ? {
+            ...category,
+            items: category.items.filter((_, iIdx) => iIdx !== itemIndex)
+          }
+          : category
+      )
+    }));
+    toast({
+      title: "Success",
+      description: "Amenity item removed successfully",
+      variant: "success",
+      className: "bg-green-200 border-green-400 text-black text-lg",
+      duration: 2000
+    })
   };
 
   const handleDeleteRoom = async () => {
@@ -284,9 +353,9 @@ const RoomsForm = () => {
             </div>
 
             {/* Room Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="pricePerNight">Price per Night ($) *</Label>
+                <Label htmlFor="pricePerNight">Price per Night (₹) *</Label>
                 <Input
                   id="pricePerNight"
                   type="number"
@@ -299,6 +368,22 @@ const RoomsForm = () => {
                     pricePerNight: e.target.value
                   }))}
                   required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="discountedPrice">Discounted Price (₹)</Label>
+                <Input
+                  id="discountedPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter the discounted price"
+                  value={formData.discountedPrice}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    discountedPrice: e.target.value
+                  }))}
                 />
               </div>
 
@@ -316,6 +401,54 @@ const RoomsForm = () => {
                     maxOccupancy: e.target.value
                   }))}
                   required
+                />
+              </div>
+            </div>
+
+            {/* Taxes */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="vat">VAT (%)</Label>
+                <Input
+                  id="vat"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.taxes.vat}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    taxes: { ...prev.taxes, vat: parseFloat(e.target.value) || 0 }
+                  }))}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="serviceTax">Service Tax (%)</Label>
+                <Input
+                  id="serviceTax"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.taxes.serviceTax}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    taxes: { ...prev.taxes, serviceTax: parseFloat(e.target.value) || 0 }
+                  }))}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="otherTax">Other Tax (%)</Label>
+                <Input
+                  id="otherTax"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.taxes.other}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    taxes: { ...prev.taxes, other: parseFloat(e.target.value) || 0 }
+                  }))}
                 />
               </div>
             </div>
@@ -359,7 +492,12 @@ const RoomsForm = () => {
                       variant="destructive"
                       size="icon"
                       className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImage(index)}
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          images: prev.images.filter((_, i) => i !== index)
+                        }));
+                      }}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -384,34 +522,104 @@ const RoomsForm = () => {
 
             {/* Amenities */}
             <div className="grid gap-4">
-              <Label>Amenities</Label>
-              <div className="space-y-2">
-                {formData.amenities.map((amenity, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={amenity}
-                      onChange={(e) => updateAmenity(index, e.target.value)}
-                      placeholder="Enter amenity (e.g., WiFi, TV, Mini Bar)"
-                    />
+              <div className="flex items-center justify-between">
+                <Label>Amenities</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addAmenityCategory}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Category
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {formData.amenities.map((category, categoryIndex) => (
+                  <Card key={categoryIndex} className="relative">
                     <Button
                       type="button"
                       variant="destructive"
                       size="icon"
-                      onClick={() => removeAmenity(index)}
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => removeAmenityCategory(categoryIndex)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                  </div>
+                    <CardContent className="pt-6">
+                      <div className="grid gap-4">
+                        <div className="grid gap-2">
+                          <Label>Category</Label>
+                          <Select
+                            value={category.category}
+                            onValueChange={(value) => updateAmenityCategory(categoryIndex, 'category', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AMENITY_CATEGORIES.map((cat) => (
+                                <SelectItem key={cat} value={cat}>
+                                  {cat}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label>Description</Label>
+                          <Input
+                            value={category.description}
+                            onChange={(e) => updateAmenityCategory(categoryIndex, 'description', e.target.value)}
+                            placeholder="Category description (optional)"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Items</Label>
+                          {category.items.map((item, itemIndex) => (
+                            <div key={itemIndex} className="flex gap-2">
+                              <Input
+                                value={item.name}
+                                onChange={(e) => updateAmenityItem(categoryIndex, itemIndex, 'name', e.target.value)}
+                                placeholder="Amenity name"
+                                className="flex-grow"
+                              />
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateAmenityItem(categoryIndex, itemIndex, 'quantity', parseInt(e.target.value) || 1)}
+                                min="1"
+                                className="w-24"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => removeAmenityItem(categoryIndex, itemIndex)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addAmenityItem(categoryIndex)}
+                            className="w-full flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Item
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full flex items-center gap-2"
-                  onClick={addAmenity}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Amenity
-                </Button>
               </div>
             </div>
           </CardContent>
@@ -466,4 +674,3 @@ const RoomsForm = () => {
 };
 
 export default RoomsForm;
-

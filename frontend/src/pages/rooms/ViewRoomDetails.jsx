@@ -18,6 +18,7 @@ import { useRoom } from '@/context/RoomContext';
 import ImageSlider from './components/ImageSlider';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
+import PriceDetails from './components/PriceDetails';
 
 // Loading skeleton component (same as before)
 const RoomDetailsSkeleton = () => (
@@ -66,10 +67,10 @@ export default function ViewRoomDetails() {
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   // const [showAllFoodDining, setShowAllFoodDining] = useState(false);
   const [showHostInfo, setShowHostInfo] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Popular Amenities');
 
-  // Find the current room from Rooms array
+
   const room = Rooms?.find(room => room?._id === id);
-
   // Initialize states (same as before)
   const [roomCount, setRoomCount] = useState(() => {
     try {
@@ -270,41 +271,84 @@ export default function ViewRoomDetails() {
     });
   };
 
+  // const totalTaxPercentage = (room.taxes.vat || 0) + (room.taxes.serviceTax || 0) + (room.taxes.other || 0);
+
+  const calculateTotalTaxes = (basePrice, nights, rooms) => {
+    if (!room?.taxes) return 0;
+    const totalBasePrice = basePrice * nights * rooms;
+    const totalTaxPercentage = (room?.taxes?.vat || 0) + (room?.taxes?.serviceTax || 0) + (room?.taxes?.other || 0);
+    return (totalBasePrice * totalTaxPercentage) / 100;
+  };
+
+
+  const calculateRating = (ratings) => {
+    if (!ratings?.length) return null;
+    const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
+    return sum / ratings.length;
+  };
+
+  const formatPrice = (originalPrice, discountedPrice) => {
+    if (!discountedPrice) return originalPrice;
+    return {
+      original: originalPrice,
+      discounted: discountedPrice,
+      savings: originalPrice - discountedPrice
+    };
+  };
+
+  const calculateFinalPrice = () => {
+    if (!room || !date.from || !date.to) return 0;
+
+    const nights = differenceInDays(date.to, date.from);
+    const basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+    const totalBasePrice = basePrice * nights * roomCount;
+
+    // Calculate taxes on the total base price
+    const totalTaxes = calculateTotalTaxes(basePrice, nights, roomCount);
+
+    return totalBasePrice + totalTaxes;
+  };
+
+
   const handleBookNow = () => {
     if (!date?.from || !date?.to || !room) return;
 
+    // Calculate nights
     const nights = differenceInDays(date.to, date.from);
-    const price = calculatePrice();
 
+    // Determine the base price (discounted price or original price)
+    const basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+
+    // Calculate total taxes based on the base price
+    const totalTaxes = ((room.taxes?.vat || 0) + (room.taxes?.serviceTax || 0) + (room.taxes?.other || 0)) * basePrice / 100;
+
+    // Final total price for the stay
+    const finalPrice = (basePrice + totalTaxes) * nights * roomCount;
+
+    // Prepare booking object
     const booking = {
       roomId: room._id,
       roomName: room.name,
-      roomType: room.type,
-      roomCapacity: room.maxOccupancy,
-      roomPrice: room.pricePerNight,
+      pricePerNight: basePrice,
       startDate: date.from,
       endDate: date.to,
       guests,
       nights,
-      price,
       roomCount,
+      totalPrice: finalPrice.toFixed(2), // Rounded to 2 decimal places
+      taxes: totalTaxes.toFixed(2), // Total taxes for the stay, rounded
+      amenities: room.amenities,
+      taxBreakdown: {
+        vat: `${room.taxes?.vat || 0}%`,
+        serviceTax: `${room.taxes?.serviceTax || 0}%`,
+        other: `${room.taxes?.other || 0}%`,
+      },
     };
 
+    // Navigate to booking page with the booking state
     navigate(`/booking/${room._id}`, { state: { booking } });
-  };
 
-  // Utility functions (same as before)
-  const calculatePrice = () => {
-    if (!room || !isValidDateRange(date)) return 0;
-
-    const nights = calculateNights(date);
-    if (nights === 0) return 0;
-
-    const basePrice = room.pricePerNight * nights * roomCount;
-
-    if (nights >= 5) return Math.round(basePrice * 0.9);
-    if (nights > 1) return Math.round(basePrice * 0.95);
-    return basePrice;
+    console.log("Booking details:", booking);
   };
 
   const isValidDateRange = (dateRange) => {
@@ -360,6 +404,8 @@ export default function ViewRoomDetails() {
   if (roomsLoading) {
     return <RoomDetailsSkeleton />;
   }
+
+  const finalPrice = calculateFinalPrice();
 
   if (!room) {
     return (
@@ -428,7 +474,10 @@ export default function ViewRoomDetails() {
               <h3 className="font-semibold text-gray-700 flex items-center">
                 <Users className="mr-2 text-primary" /> Capacity
               </h3>
-              <p className="text-gray-600">Fits {room?.maxOccupancy} Guests</p>
+              <p className="text-gray-600">
+                {room?.amenities?.find(cat => cat.category === 'No of Bed')?.items[0]?.quantity || 1} Bed(s) •
+                Fits {room?.maxOccupancy} Guests
+              </p>
             </div>
           </div>
 
@@ -452,27 +501,34 @@ export default function ViewRoomDetails() {
           </div>
 
           {/* Amenities */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="font-semibold text-lg">Amenities</h3>
-            <div className="flex flex-wrap gap-2">
-              {room?.amenities?.slice(0, 5).map((amenity) => (
-                <span key={amenity} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
-                  {amenity}
-                </span>
-              ))}
-              {room?.amenities?.length > 5 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {room?.amenities?.map((category, index) => (
                 <Button
-                  variant="outline"
-                  onClick={() => setShowAllAmenities(true)}
-                  className="text-primary"
+
+                  key={index}
+                  variant={selectedCategory === category.category ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category.category)}
+                  className="whitespace-nowrap"
                 >
-                  +{room?.amenities.length - 5} more
+                  {category.category}
                 </Button>
-              )}
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {room?.amenities
+                ?.find(cat => cat.category === selectedCategory)
+                ?.items.map(item => (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <Check className="text-primary h-4 w-4" />
+                    <span>{item.name} {item.quantity > 1 ? `(${item.quantity})` : ''}</span>
+                  </div>
+                ))}
             </div>
           </div>
 
-            <Separator />  
+          <Separator />
           {/* Food & Dining */}
           <div className="space-y-2">
             <h3 className="font-semibold text-lg">Food & Dining</h3>
@@ -495,7 +551,7 @@ export default function ViewRoomDetails() {
               </div>
             </div>
           </div>
-          <Separator />  
+          <Separator />
           {/* Host Information Card */}
           <Card>
             <CardContent className="p-6 space-y-4">
@@ -598,6 +654,11 @@ export default function ViewRoomDetails() {
                       {dateError}
                     </div>
                   )}
+                  {calculateNights(date) > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      You have selected {calculateNights(date)} nights
+                    </p>
+                  )}
                 </div>
 
                 {/* Guests and Rooms */}
@@ -638,25 +699,20 @@ export default function ViewRoomDetails() {
                 </div>
 
                 {/* Price Display */}
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg">Total Price</span>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
-                        ₹{calculatePrice()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        + ₹{room?.taxesAndFees || 0} taxes & fees
-                      </div>
-                    </div>
-                  </div>
-                  {priceIncreased && (
-                    <p className="text-sm text-yellow-600 flex items-center">
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Price adjusted for multiple rooms
-                    </p>
+                <PriceDetails
+                  pricePerNight={room?.pricePerNight}
+                  discountedPrice={room?.DiscountedPrice}
+                  taxes={room?.taxes}
+                  roomCount={roomCount}
+                  date={date}
+                  finalPrice={calculateFinalPrice()}
+                  totalTaxes={calculateTotalTaxes(
+                    room?.DiscountedPrice > 0 ? room?.DiscountedPrice : room?.pricePerNight,
+                    date.from && date.to ? differenceInDays(date.to, date.from) : 0,
+                    roomCount
                   )}
-                </div>
+                />
+
 
                 {/* Book Now Button */}
                 {!user ? (
@@ -683,7 +739,7 @@ export default function ViewRoomDetails() {
 
       {/* Modals */}
       <Dialog open={showFullDescription} onOpenChange={setShowFullDescription}>
-        <DialogContent  className='textblack'>
+        <DialogContent className='textblack'>
           <DialogHeader>
             <DialogTitle>Room Description</DialogTitle>
           </DialogHeader>
@@ -693,16 +749,26 @@ export default function ViewRoomDetails() {
       </Dialog>
 
       <Dialog open={showAllAmenities} onOpenChange={setShowAllAmenities}>
-        <DialogContent className='textblack'>
+        <DialogContent className="textblack">
           <DialogHeader>
             <DialogTitle>All Amenities</DialogTitle>
           </DialogHeader>
           <Separator />
-          <div className="grid grid-cols-2 gap-4">
-            {room?.amenities?.map((amenity) => (
-              <div key={amenity} className="flex items-center gap-2">
-                <Check className="text-primary h-4 w-4" />
-                <span>{amenity}</span>
+          <div className="space-y-6">
+            {room?.amenities?.map(category => (
+              <div key={category.category} className="space-y-2">
+                <h4 className="font-semibold">{category.category}</h4>
+                {category.description && (
+                  <p className="text-sm text-gray-600">{category.description}</p>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  {category.items.map(item => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <Check className="text-primary h-4 w-4" />
+                      <span>{item.name} {item.quantity > 1 ? `(${item.quantity})` : ''}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -710,7 +776,7 @@ export default function ViewRoomDetails() {
       </Dialog>
 
       <Dialog open={showHostInfo} onOpenChange={setShowHostInfo}>
-        <DialogContent  className='textblack'>
+        <DialogContent className='textblack'>
           <DialogHeader>
             <DialogTitle>About Your Host</DialogTitle>
           </DialogHeader>

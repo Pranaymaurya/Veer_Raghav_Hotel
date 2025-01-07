@@ -23,6 +23,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import ImageSlider from '@/pages/rooms/components/ImageSlider';
+import RoomCard from '@/pages/rooms/components/RoomCard';
 
 // Define room types constant to match schema
 const ROOM_TYPES = ['Premium', 'Super Deluxe', 'Deluxe'];
@@ -320,9 +321,11 @@ const HotelBookingSystem = () => {
                           : room.description}
 
                       </p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-2xl font-bold text-orange-600">₹{room.pricePerNight}</span>
-                      </div>
+                      <RoomCard
+                        room={room}
+                        filters={{ startDate: checkIn, endDate: checkOut, rooms: roomCount }}
+                        onBookNow={(roomId) => navigate(`/rooms/${roomId}`)}
+                      />
                     </div>
                   </motion.div>
                 ))

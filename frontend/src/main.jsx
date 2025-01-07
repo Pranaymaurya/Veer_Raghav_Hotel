@@ -48,6 +48,7 @@ import UserBookings from './pages/UserProfile/components/UserBookings';
 import UserProfile from './pages/UserProfile/components/UserProfile';
 import UserSettings from './pages/UserProfile/components/UserSettings';
 import PaymentPage from './pages/bookingpage/PaymentPage';
+import ScrollRestoration from './components/ScrollRestoration';
 
 
 
@@ -58,51 +59,35 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: (
-          <Home />
-        ),
+        element: <Home />,
       },
       {
         path: "/gallery",
-        element: (
-          <Gallery />
-        ),
+        element: <Gallery />,
       },
       {
         path: "/rooms",
-        element: (
-          <RoomsPage />
-        ),
+        element: <RoomsPage />,
       },
       {
         path: "/rooms/:id",
-        element: (
-          <ViewRoomDetails />
-        )
+        element: <ViewRoomDetails />,
       },
       {
         path: "/booking/:roomId",
-        element: (
-          <BookingPage />
-        )
+        element: <BookingPage />,
       },
       {
         path: 'booking/success',
-        element: <BookingSuccessPage />
+        element: <BookingSuccessPage />,
       },
       {
         path: "/contact",
-        element: (
-          <ContactPage />
-        )
+        element: <ContactPage />,
       },
       {
         path: "/profile",
-        element: (
-          // <ProtectedUserProfile>
-            <UserProdfileLayout />
-          // </ProtectedUserProfile>
-        ),
+        element: <UserProdfileLayout />,
         children: [
           {
             path: "",
@@ -111,142 +96,65 @@ const router = createBrowserRouter([
                 <div className="lg:col-span-2">
                   <UserProfile />
                 </div>
-                <div className='lg:col-span-1'>
+                <div className="lg:col-span-1">
                   <UserSettings />
                 </div>
               </div>
-            )
+            ),
           },
           {
             path: "bookings",
-            element: (
-              <UserBookings />
-            )
-          }
-        ]
+            element: <UserBookings />,
+          },
+        ],
       },
-    ]
+    ],
   },
   {
     path: 'payment',
-    element: <PaymentPage />
+    element: <PaymentPage />,
   },
   {
     path: "/auth",
-    element: (
-      <AuthLayout />
-    ),
+    element: <AuthLayout />,
     children: [
       {
         path: "login",
-        element: (
-          <h1>Login</h1>
-        ),
+        element: <h1>Login</h1>,
       },
       {
         path: "register",
-        element: (
-          <h1>Register</h1>
-        )
-      }
-    ]
+        element: <h1>Register</h1>,
+      },
+    ],
   },
-
   {
     path: "/forgot-password",
-    element: (
-      <ResetPasswordRequest />
-    )
+    element: <ResetPasswordRequest />,
   },
-
   {
     path: "/reset-password/:token",
-    element: (
-      <ResetPassword />
-    )
+    element: <ResetPassword />,
   },
-
-  // User profile section
-  // {
-  //   path: "/profile/bookings",
-  //   element: (
-  //     <UserBookings />
-  //   ),
-  // },
-
   {
     path: "/dashboard",
-    element: (
-      <DashboardLayout />
-    ),
+    element: <DashboardLayout />,
     children: [
-      {
-        path: "",
-        element: (
-          <DashboardContent />
-        )
-      },
-      {
-        path: "bookings",
-        element: (
-          <BookingsContent />
-        )
-      },
-      {
-        path: "guests",
-        element: (
-          <GuestsContent />
-        )
-      },
-      {
-        path: "users",
-        element: (
-          <UserContent />
-        )
-      },
-      {
-        path: "rooms",
-        element: (
-          <CustomizeRooms />
-        )
-      },
-      {
-        path: "rooms/new",
-        element: (
-          <RoomsForm />
-        )
-      },
-      {
-        path: "rooms/:id",
-        element: (
-          <RoomsForm />
-        )
-      },
-      {
-        path: "payments",
-        element: (
-          <PaymentsContent />
-        )
-      },
-      {
-        path: "reports",
-        element: (
-          <ReportsContent />
-        )
-      },
-      {
-        path: "settings",
-        element: (
-          <SettingsContent />
-        )
-      },
-    ]
+      { path: "", element: <DashboardContent /> },
+      { path: "bookings", element: <BookingsContent /> },
+      { path: "guests", element: <GuestsContent /> },
+      { path: "users", element: <UserContent /> },
+      { path: "rooms", element: <CustomizeRooms /> },
+      { path: "rooms/new", element: <RoomsForm /> },
+      { path: "rooms/:id", element: <RoomsForm /> },
+      { path: "payments", element: <PaymentsContent /> },
+      { path: "reports", element: <ReportsContent /> },
+      { path: "settings", element: <SettingsContent /> },
+    ],
   },
   {
     path: "*",
-    element: (
-      <NotFound />
-    ),
+    element: <NotFound />,
   },
 ]);
 
@@ -257,7 +165,9 @@ createRoot(document.getElementById('root')).render(
         <RoomProvider>
           <AdminProvider>
             <SettingsProvider>
-              <RouterProvider router={router} />
+              <RouterProvider router={router}>
+                <ScrollRestoration /> {/* Add ScrollRestoration here */}
+              </RouterProvider>
               <Toaster />
             </SettingsProvider>
           </AdminProvider>
@@ -265,4 +175,4 @@ createRoot(document.getElementById('root')).render(
       </BookingProvider>
     </AuthProvider>
   </StrictMode>,
-)
+);

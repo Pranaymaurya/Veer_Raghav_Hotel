@@ -1,17 +1,7 @@
-import React, { useEffect } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import {
-  CheckCircle2,
-  CalendarCheck,
-  Clock,
-  User,
-  Building,
-  Phone,
-  Mail,
-  ArrowLeft,
-  CreditCard
-} from 'lucide-react';
+import { CheckCircle2, CalendarCheck, Clock, User, Building, ArrowLeft, CreditCard, Mail } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,48 +9,28 @@ import { Separator } from "@/components/ui/separator";
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import { useToast } from '@/hooks/use-toast';
 import DownloadReceipt from '@/components/DownloadReceipt';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function BookingSuccessPage() {
-  const { user } = useAuth();
-
   const location = useLocation();
   const navigate = useNavigate();
-  const bookingData = location.state;
   const { toast } = useToast();
-
-  if (!user) {
-    return <Navigate to="/" />;
-  }
-
-  useEffect(() => {
-    if (!bookingData) {
-      toast({
-        title: "Error",
-        description: "Room ID is missing. Please try booking again.",
-        variant: "destructive",
-      })
-      navigate('/rooms');
-    }
-  }, [bookingData, navigate, toast]);
+  const bookingData = location.state;
 
   if (!bookingData) {
     toast({
       title: "Error",
-      description: "Room ID is missing. Please try booking again.",
+      description: "Booking data is missing. Please try booking again.",
       variant: "destructive",
-    })
+    });
     return null;
   }
 
-  // Calculate the number of nights
-  const startDate = new Date(bookingData.checkInDate);
-  const endDate = new Date(bookingData.checkOutDate);
-  const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+  console.log(bookingData);
+  
 
-  // Since we're getting totalPrice directly now, we'll estimate taxes as 18% of base price
-  const basePrice = bookingData.totalPrice / 1.18;
-  const taxesAndFees = bookingData.totalPrice - basePrice;
+  const startDate = new Date(bookingData?.checkInDate);
+  const endDate = new Date(bookingData?.checkOutDate);
+  const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -77,7 +47,7 @@ export default function BookingSuccessPage() {
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
           <h1 className="text-3xl font-bold">Booking Confirmed!</h1>
           <p className="text-muted-foreground">
-            Booking ID: {bookingData.booking._id}
+            Booking ID: {bookingData?.booking?.bookingId}
           </p>
         </div>
 
@@ -95,8 +65,8 @@ export default function BookingSuccessPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              Room Name:
-              <h3 className="font-semibold text-lg"> {bookingData.roomName}</h3>
+              <h3 className="font-semibold text-lg">{bookingData?.roomName}</h3>
+              <p className="text-muted-foreground">{bookingData?.roomType}</p>
             </div>
 
             <Separator />
@@ -108,7 +78,7 @@ export default function BookingSuccessPage() {
                   <span>Check-in</span>
                 </div>
                 <span className="font-medium">
-                  {format(new Date(bookingData.checkInDate), 'PPP')}
+                  {format(startDate, 'PPP')}
                 </span>
               </div>
 
@@ -118,19 +88,25 @@ export default function BookingSuccessPage() {
                   <span>Check-out</span>
                 </div>
                 <span className="font-medium">
-                  {format(new Date(bookingData.checkOutDate), 'PPP')}
+                  {format(endDate, 'PPP')}
                 </span>
               </div>
 
-              {bookingData.guestCount && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>Guests</span>
-                  </div>
-                  <span className="font-medium">{bookingData.guestCount}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>Guests</span>
                 </div>
-              )}
+                <span className="font-medium">{bookingData?.guests}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  <span>Rooms</span>
+                </div>
+                <span className="font-medium">{bookingData?.roomCount}</span>
+              </div>
             </div>
 
             <Separator />
@@ -138,16 +114,16 @@ export default function BookingSuccessPage() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Room Rate ({nights} nights)</span>
-                <span>₹{basePrice.toFixed(2)}</span>
+                <span>₹{bookingData?.basePrice?.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Taxes & Fees</span>
-                <span>₹{taxesAndFees.toFixed(2)}</span>
+                <span>₹{(bookingData?.totalPrice - bookingData?.basePrice)?.toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-lg font-semibold">
                 <span>Total Amount Paid</span>
-                <span>₹{bookingData.totalPrice.toFixed(2)}</span>
+                <span>₹{bookingData?.totalPrice?.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -164,12 +140,21 @@ export default function BookingSuccessPage() {
             <DownloadReceipt bookingData={bookingData} />
           </CardContent>
         </Card>
+
         <Separator />
+
         <div className='flex justify-center'>
-          <Button variant="outline" className="w-1/2 bg-orange-800 hover:bg-orange-500 text-white" onClick={() => navigate('/profile#mybookings')}>Back to My Bookings</Button>
+          <Button 
+            variant="outline" 
+            className="w-1/2 bg-orange-800 hover:bg-orange-500 text-white" 
+            onClick={() => navigate('/profile/bookings')}
+          >
+            Back to My Bookings
+          </Button>
         </div>
 
         <Separator />
+
         <Card>
           <CardHeader>
             <CardTitle>Payment Details</CardTitle>
@@ -184,6 +169,7 @@ export default function BookingSuccessPage() {
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Communication Preferences</CardTitle>
@@ -209,3 +195,4 @@ export default function BookingSuccessPage() {
     </div>
   );
 }
+
