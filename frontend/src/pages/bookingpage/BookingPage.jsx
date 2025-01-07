@@ -4,16 +4,12 @@ import { format } from 'date-fns';
 import {
   Calendar,
   CreditCard,
-  UserCircle,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
+  Shield,
   User,
   CalendarCheck,
   Building,
   ArrowLeft,
-  Shield
+  Clock
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,33 +26,22 @@ export default function BookingPage() {
   const { user } = useAuth();
   const [bookingData, setBookingData] = useState(null);
   const [isManualBooking, setIsManualBooking] = useState(false);
+  const isAdmin = user?.role === 'admin';
 
-  if (!user) {
-    navigate('/auth/login');
-  }
-
-  const isAdmin = user.role === 'admin';
-
-  // Updated form state to use single name field
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
   });
 
-  const calculateTaxesAndFees = (basePrice) => {
-    const gst = basePrice * 0.18;
-    const serviceFee = basePrice * 0.05;
-    const municipalTax = basePrice * 0.02;
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth/login');
+    }
+  }, [user, navigate]);
 
-    return {
-      gst,
-      serviceFee,
-      municipalTax,
-      total: gst + serviceFee + municipalTax
-    };
-  };
-
+  // Initialize booking data and form
   useEffect(() => {
     if (location.state?.booking) {
       setBookingData(location.state.booking);
@@ -64,15 +49,42 @@ export default function BookingPage() {
       navigate('/rooms');
     }
 
-    // Pre-fill form data with single name field
     if (user && !isAdmin) {
       setFormData({
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phoneno || '',
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phoneno || '',
       });
     }
   }, [location, navigate, user, isAdmin]);
+
+  // Calculate taxes based on room-specific rates
+  const calculateTaxesAndFees = (basePrice, nights = 1) => {
+    if (!bookingData) return { gst: 0, serviceFee: 0, municipalTax: 0, total: 0 };
+  
+    // Calculate the total base price for the booking
+    const totalBasePrice = basePrice * nights * (bookingData?.roomCount || 1);
+  
+    // Extract the tax percentages from bookingData.taxBreakdown
+    const vatRate = parseFloat(bookingData?.taxBreakdown?.vat) || 18; // Default to 18% if not provided
+    const serviceFeeRate = parseFloat(bookingData?.taxBreakdown?.serviceTax) || 5; // Default to 5% if not provided
+    const municipalTaxRate = parseFloat(bookingData?.taxBreakdown?.other) || 0; // Default to 2% if not provided
+  
+    // Calculate the taxes based on the rates and total price
+    const gst = totalBasePrice * (vatRate / 100);
+    const serviceFee = totalBasePrice * (serviceFeeRate / 100);
+    const municipalTax = totalBasePrice * (municipalTaxRate / 100);
+  
+    // Calculate the total amount including taxes and fees
+    const total = gst + serviceFee + municipalTax;
+  
+    return {
+      gst,
+      serviceFee,
+      municipalTax,
+      total
+    };
+  };
 
   const handleInputChange = (e) => {
     setFormData({
@@ -83,18 +95,27 @@ export default function BookingPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const basePrice = bookingData?.pricePerNight;
+    const discountedPrice = bookingData?.DiscountedPrice || basePrice;
+    const nights = bookingData?.nights;
+    const taxesAndFees = calculateTaxesAndFees(discountedPrice, nights);
+
     const bookingDetails = {
-      roomId: bookingData.roomId,
-      roomName: bookingData.roomName,
-      roomType: bookingData.roomType,
-      roomCapacity: bookingData.roomCapacity,
-      startDate: bookingData.startDate,
-      endDate: bookingData.endDate,
-      nights: bookingData.nights,
-      guests: bookingData.guests,
-      price: bookingData.price,
+      roomId: bookingData?.roomId,
+      roomName: bookingData?.roomName,
+      roomType: bookingData?.name,
+      amenities: bookingData?.amenities,
+      startDate: bookingData?.startDate,
+      endDate: bookingData?.endDate,
+      nights: nights,
+      guests: bookingData?.guests,
+      roomCount: bookingData?.roomCount,
+      basePrice: basePrice,
+      discountedPrice: discountedPrice,
+      totalPrice: (discountedPrice * nights * bookingData?.roomCount) + taxesAndFees.total,
       customerInfo: formData,
-      taxesAndFees: calculateTaxesAndFees(bookingData.price)
+      taxesAndFees: taxesAndFees
     };
 
     navigate('/payment', { state: bookingDetails });
@@ -115,15 +136,18 @@ export default function BookingPage() {
     );
   }
 
-  const taxesAndFees = calculateTaxesAndFees(bookingData.price);
-  const totalAmount = bookingData.price + taxesAndFees.total;
+  const basePrice = bookingData?.pricePerNight;
+  const discountedPrice = bookingData?.DiscountedPrice || basePrice;
+  const nights = bookingData?.nights;
+  const taxesAndFees = calculateTaxesAndFees(discountedPrice, nights);
+  const totalAmount = (discountedPrice * nights * bookingData?.roomCount) + taxesAndFees.total;
 
   return (
     <div className="container mx-auto p-4 space-y-6">
       <Button
         variant="ghost"
         className="mb-4"
-        onClick={() => navigate(`/rooms/${bookingData.roomId}`)}
+        onClick={() => navigate(`/rooms/${bookingData?.roomId}`)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Room Details
       </Button>
@@ -195,7 +219,7 @@ export default function BookingPage() {
                   <Calendar className="h-4 w-4" />
                   <AlertTitle>Free Cancellation</AlertTitle>
                   <AlertDescription>
-                    Cancel before {format(new Date(bookingData.startDate), 'PP')} for a full refund
+                    Cancel before {format(new Date(bookingData?.startDate), 'PP')} for a full refund
                   </AlertDescription>
                 </Alert>
 
@@ -219,14 +243,15 @@ export default function BookingPage() {
               </div>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Booking Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">{bookingData.roomName}</h3>
-                <p className="text-muted-foreground">{bookingData.roomType}</p>
+                <h3 className="font-semibold text-lg">{bookingData?.roomName}</h3>
+                <p className="text-muted-foreground">{bookingData?.roomType || bookingData?.roomName}</p>
               </div>
 
               <Separator />
@@ -238,7 +263,7 @@ export default function BookingPage() {
                     <span>Check-in</span>
                   </div>
                   <span className="font-medium">
-                    {format(new Date(bookingData.startDate), 'PP')}
+                    {format(new Date(bookingData?.startDate), 'PP')}
                   </span>
                 </div>
 
@@ -248,7 +273,7 @@ export default function BookingPage() {
                     <span>Check-out</span>
                   </div>
                   <span className="font-medium">
-                    {format(new Date(bookingData.endDate), 'PP')}
+                    {format(new Date(bookingData?.endDate), 'PP')}
                   </span>
                 </div>
 
@@ -257,7 +282,7 @@ export default function BookingPage() {
                     <User className="h-4 w-4" />
                     <span>Guests</span>
                   </div>
-                  <span className="font-medium">{bookingData.guests}</span>
+                  <span className="font-medium">{bookingData?.guests}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -266,7 +291,7 @@ export default function BookingPage() {
                     <span>Rooms</span>
                   </div>
                   <span className="font-medium">
-                    {Math.ceil(bookingData.guests / bookingData.roomCapacity)}
+                    {Math.ceil((bookingData?.guests || 1) / (bookingData?.maxOccupancy || 1))}
                   </span>
                 </div>
               </div>
@@ -275,19 +300,19 @@ export default function BookingPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Room Rate ({bookingData.nights} nights)</span>
-                  <span>₹{bookingData.price}</span>
+                  <span>Room Rate ({bookingData?.nights} nights)</span>
+                  <span>₹{bookingData?.DiscountedPrice || bookingData?.pricePerNight}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>GST (18%)</span>
+                  <span>VAT ({bookingData?.taxes?.vat ?? 18}%)</span>
                   <span>₹{taxesAndFees.gst.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Service Fee (5%)</span>
+                  <span>Service Fee ({bookingData?.taxes?.serviceTax ?? 5}%)</span>
                   <span>₹{taxesAndFees.serviceFee.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Municipal Tax (2%)</span>
+                  <span>Other Taxes ({bookingData?.taxes?.otherTax ?? 0}%)</span>
                   <span>₹{taxesAndFees.municipalTax.toFixed(2)}</span>
                 </div>
                 <Separator />
@@ -301,18 +326,15 @@ export default function BookingPage() {
 
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  * Taxes and fees are calculated based on the room rate and number of nights.
+                  * All taxes and fees are calculated based on the room rate and local regulations.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  * Service fee is a flat rate of 5% of the total amount.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  * Municipal tax is a flat rate of 2% of the total amount.
-                </p>
+                {bookingData?.DiscountedPrice && (
+                  <p className="text-sm text-green-600">
+                    * Discounted price applied to your booking.
+                  </p>
+                )}
               </div>
             </CardContent>
-
-
           </Card>
 
           <Card>

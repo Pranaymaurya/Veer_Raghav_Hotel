@@ -74,16 +74,78 @@ export const requestPasswordReset = async (req, res) => {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Password Reset - Veer Raghav</title>
+                <style>
+                  body, html {
+                    margin: 0;
+                    padding: 0;
+                    font-family: 'Arial', sans-serif;
+                    background-color: #f4f4f4;
+                  }
+                  .container {
+                    max-width: 600px;
+                    margin: 20px auto;
+                    background-color: #ffffff;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                  }
+                  .header {
+                    background-color: #FF6B35;
+                    color: white;
+                    padding: 20px;
+                    text-align: center;
+                  }
+                  .content {
+                    padding: 30px;
+                    color: #333;
+                  }
+                  .button {
+                    background-color: #FF6B35;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    display: inline-block;
+                    font-weight: bold;
+                    margin-top: 20px;
+                    margin-bottom: 20px;
+                    transition: background-color 0.3s ease;
+                  }
+                  .button:hover {
+                    background-color: #E84F1D;
+                  }
+                  .footer {
+                    background-color: #f8f8f8;
+                    color: #666;
+                    text-align: center;
+                    padding: 15px;
+                    font-size: 0.8em;
+                  }
+                </style>
               </head>
               <body>
-                <p>Hello,</p>
-                <p>We received a request to reset your password. Click the link below to proceed:</p>
-                <a href="${resetUrl}">Reset Password</a>
-                <p>This link will expire in 1 hour.</p>
+                <div class="container">
+                  <div class="header">
+                    <h1>Veer Raghav</h1>
+                  </div>
+                  <div class="content">
+                    <h2>Password Reset Request</h2>
+                    <p>Hello,</p>
+                    <p>We received a request to reset your password for your Veer Raghav account. Don't worry, we've got you covered!</p>
+                    <p>Click the button below to set a new password:</p>
+                    <a href="${resetUrl}" class="button">Reset My Password</a>
+                    <p>This link will expire in 10 minutes for security reasons.</p>
+                    <p><strong>Important:</strong> If you didn't request this password reset, please ignore this email or contact our support team if you have any concerns.</p>
+                  </div>
+                  <div class="footer">
+                    <p>&copy; 2023 Veer Raghav. All rights reserved.</p>
+                    <p>This is an automated message, please do not reply directly to this email.</p>
+                  </div>
+                </div>
               </body>
               </html>
             `
-        };
+          };
 
         try {
             const transporter = createTransporter();

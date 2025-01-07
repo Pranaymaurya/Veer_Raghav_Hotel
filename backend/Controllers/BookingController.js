@@ -10,7 +10,7 @@ export const CreateBooking = async (req, res) => {
     checkInDate,
     checkOutDate,
     noofguests,
-    noofchildrens = 0,
+    // noofchildrens = 0,
     noOfRooms = 1,
   } = req.body;
 
@@ -19,9 +19,9 @@ export const CreateBooking = async (req, res) => {
     if (!Number.isInteger(noofguests) || noofguests <= 0) {
       return res.status(400).json({ message: "Number of guests must be a positive integer." });
     }
-    if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
-      return res.status(400).json({ message: "Number of children must be a non-negative integer." });
-    }
+    // if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
+    //   return res.status(400).json({ message: "Number of children must be a non-negative integer." });
+    // }
 
     // Validate check-in and check-out dates
     const checkIn = new Date(checkInDate);
@@ -41,15 +41,15 @@ export const CreateBooking = async (req, res) => {
       console.error(`Room with ID ${roomId} not found.`);
       return res.status(404).json({ message: "Room not found." });
     }
+    // console.log(room.maxOccupancy)
+    // if (room.isAvailable === undefined) {
+    //   console.error(`Room status undefined for ID: ${roomId}`);
+    //   return res.status(500).json({ message: "Room status not initialized properly." });
+    // }
 
-    if (!room.isAvailable) {
-      return res.status(400).json({ message: "This room is not available for booking." });
-    }
-
-    // Check if there are enough available slots
-    if (room.availableSlots < noOfRooms) {
-      return res.status(400).json({ message: "Not enough available rooms for booking." });
-    }
+    // if (!room.isAvailable) {
+    //   return res.status(400).json({ message: "This room is not available for booking." });
+    // }
 
     // Calculate total price based on nights
     const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
@@ -74,7 +74,7 @@ export const CreateBooking = async (req, res) => {
       checkOutDate: checkOut,
       totalPrice,
       noofguests,
-      noofchildrens,
+      // noofchildrens,
       noOfRooms,
       taxes: {
         vat: vatAmount,
@@ -133,7 +133,9 @@ export const CreateBooking = async (req, res) => {
 
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
-  const { checkInDate, checkOutDate, roomId, noofguests, noofchildrens } = req.body;
+  const { checkInDate, checkOutDate, roomId, noofguests,
+    // noofchildrens 
+  } = req.body;
 
   try {
     // Validate and find existing booking
@@ -216,6 +218,7 @@ export const UpdateBooking = async (req, res) => {
       const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
       const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
 
+
       // Update booking dates and price
       booking.checkInDate = startDate;
       booking.checkOutDate = endDate;
@@ -241,13 +244,12 @@ export const UpdateBooking = async (req, res) => {
       booking.noofguests = noofguests;
     }
 
-    if (noofchildrens !== undefined) {
-      if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
-        return res.status(400).json({ message: "Number of children must be a non-negative integer" });
-      }
-
-      booking.noofchildrens = noofchildrens;
-    }
+    // if (noofchildrens !== undefined) {
+    //   if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
+    //     return res.status(400).json({ message: "Number of children must be a non-negative integer" });
+    //   }
+    //   booking.noofchildrens = noofchildrens;
+    // }
 
     // Save updated booking
     const updatedBooking = await booking.save();
@@ -266,7 +268,9 @@ export const UpdateBooking = async (req, res) => {
 
 export const UpdateBookingForAdmin = async (req, res) => {
   const { id } = req.params;
-  const { checkInDate, checkOutDate, status, roomId, noofguests, noofchildrens } = req.body;
+  const { checkInDate, checkOutDate, status, roomId, noofguests,
+    // noofchildrens
+  } = req.body;
 
   try {
     // Validate and find existing booking
@@ -363,6 +367,7 @@ export const UpdateBookingForAdmin = async (req, res) => {
       const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
       const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
 
+
       // Update booking dates and price
       booking.checkInDate = startDate;
       booking.checkOutDate = endDate;
@@ -388,13 +393,12 @@ export const UpdateBookingForAdmin = async (req, res) => {
       booking.noofguests = noofguests;
     }
 
-    if (noofchildrens !== undefined) {
-      if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
-        return res.status(400).json({ message: "Number of children must be a non-negative integer" });
-      }
-
-      booking.noofchildrens = noofchildrens;
-    }
+    // if (noofchildrens !== undefined) {
+    //   if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
+    //     return res.status(400).json({ message: "Number of children must be a non-negative integer" });
+    //   }
+    //   booking.noofchildrens = noofchildrens;
+    // }
 
     // Save updated booking
     const updatedBooking = await booking.save();
@@ -538,47 +542,70 @@ export const Putrating = async (req, res) => {
   try {
     const { id } = req.params;  // Room being rated
     const { rating } = req.body;    // Rating value
-    const currentUserId = req.user._id; // Assuming the current user is authenticated and stored in req.user
+    const currentUserId = req.user._id;
 
-    // Find the room being rated
     console.log(id)
+    console.log(rating);
     console.log(currentUserId)
 
-    const roomToRate = await Room.findById(id);
-    if (!roomToRate) {
-      return res.status(404).json({ success: false, message: 'Room not found.' });
+    // Use findOneAndUpdate instead of find and save to avoid full validation
+    const updatedRoom = await Room.findOneAndUpdate(
+      { _id: id },
+      {
+        $push: {
+          ratings: {
+            userId: currentUserId,
+            rating: rating
+          }
+        }
+      },
+      { 
+        new: true,  // Return updated document
+        runValidators: false  // Don't run validators for the entire document
+      }
+    );
+
+    if (!updatedRoom) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Room not found.' 
+      });
     }
 
-    // Check if the rating is within the valid range (0-5)
+    // Check rating range
     if (rating < 0 || rating > 5) {
-      return res.status(400).json({ success: false, message: 'Rating must be between 0 and 5.' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Rating must be between 0 and 5.' 
+      });
     }
 
-    // Check if the current user has already rated this room
-    const existingRating = roomToRate.ratings.find(r => String(r.userId) === String(currentUserId));
-    if (existingRating) {
-      return res.status(400).json({ success: false, message: 'You have already rated this room.' });
-    }
+    // // Check for existing rating by this user
+    // const hasExistingRating = updatedRoom.ratings.some(
+    //   r => String(r.userId) === String(currentUserId)
+    // );
 
-    // Add the new rating
-    roomToRate.ratings.push({
-      userId: currentUserId,
-      rating,
-    });
-
-    // Save the updated room document
-    await roomToRate.save();
+    // if (hasExistingRating) {
+    //   return res.status(400).json({ 
+    //     success: false, 
+    //     message: 'You have already rated this room.' 
+    //   });
+    // }
 
     res.status(200).json({
       success: true,
       message: 'Rating added successfully.',
-      room: roomToRate,
+      room: updatedRoom,
     });
+
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Server error occurred while adding rating' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error occurred while adding rating' 
+    });
   }
-};
+}
 
 // Get the average rating of a room
 export const getavgrating = async (req, res) => {
@@ -609,7 +636,7 @@ export const getavgrating = async (req, res) => {
 export const GetUserBookings = async (req, res) => {
   const userId = req.user.userId;
   console.log(userId)
-    // Assuming user ID is available via JWT token in req.user
+  // Assuming user ID is available via JWT token in req.user
   try {
     // Find all bookings for the current user
     const bookings = await Booking.find({ user: userId })
@@ -637,7 +664,7 @@ export const GetUserBookings = async (req, res) => {
   }
 };
 
-export const All=async(req,res)=>{
+export const All = async (req, res) => {
   try {
     // Total Bookings
     const totalBookings = await Booking.countDocuments();

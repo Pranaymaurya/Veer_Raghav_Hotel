@@ -35,11 +35,11 @@ const bookingSchema = new mongoose.Schema({
     required: true,
     min: 1, // Minimum one guest required
   },
-  noofchildrens: {
-    type: Number,
-    default: 0, // Default to 0 if not provided
-    min: 0, // No negative values
-  },
+  // noofchildrens: {
+  //   type: Number,
+  //   default: 0, // Default to 0 if not provided
+  //   min: 0, // No negative values
+  // },
   noOfRooms:{
     type:Number,
     },

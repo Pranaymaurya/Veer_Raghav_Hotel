@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { CreditCard, Clock, Shield, CheckCircle2, ArrowLeft, Building, User, CalendarCheck, Lock } from 'lucide-react';
+import { CreditCard, Clock, Shield, CheckCircle2, ArrowLeft, Building, User, CalendarCheck, Lock, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { PaymentProcessingModal } from './PaymentProcessingModal';
 import { useBooking } from '@/context/BookingContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoom } from '@/context/RoomContext';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function PaymentPage() {
   const location = useLocation();
@@ -19,8 +21,12 @@ export default function PaymentPage() {
   const { toast } = useToast();
   const { createBooking } = useBooking();
   const { user } = useAuth();
-  // console.log(user._id);
-  
+  const { Rooms, getAllRooms } = useRoom();
+
+  useEffect(() => {
+    getAllRooms();
+  }, []);
+
   const [bookingData, setBookingData] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cardDetails, setCardDetails] = useState({
@@ -30,14 +36,17 @@ export default function PaymentPage() {
     cvv: ''
   });
   const [upiId, setUpiId] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (location.state && location.state.roomId) {
+    if (location.state?.roomId) {
       setBookingData(location.state);
     } else {
       navigate('/rooms');
     }
   }, [location, navigate]);
+
+  const room = Rooms.find(room => room?._id === bookingData?.roomId);
 
   const handleCardInputChange = (e) => {
     const { name, value } = e.target;
@@ -61,20 +70,23 @@ export default function PaymentPage() {
     }));
   };
 
+
   const handlePayment = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+
     if (!bookingData?.roomId) {
-      toast({
-        title: "Error",
-        description: "Room ID is missing. Please try booking again.",
-        variant: "destructive",
-      });
+      setErrorMessage("Room ID is missing. Please try booking again.");
       return;
     }
+
+    if (!Number.isInteger(bookingData?.guests) || bookingData?.guests <= 0) {
+      setErrorMessage("Number of guests must be a positive integer.");
+      return;
+    }
+
     setShowPaymentModal(true);
   };
-
-  // console.log('bookingData.roomId', bookingData.roomId, 'userId', user.userId);
   
 
   const handleBookingSuccess = async () => {
@@ -84,7 +96,9 @@ export default function PaymentPage() {
         roomId: bookingData?.roomId,
         checkInDate: bookingData?.startDate,
         checkOutDate: bookingData?.endDate,
-        totalPrice: bookingData?.price + bookingData?.taxesAndFees.total,
+        totalPrice: bookingData?.totalPrice,
+        noofguests: bookingData?.guests,
+        noOfRooms: bookingData?.roomCount,
       };
   
       const response = await createBooking(bookingPayload);
@@ -101,9 +115,15 @@ export default function PaymentPage() {
   
         navigate('/booking/success', {
           state: {
-            ...response.booking,
-            roomName: bookingData.roomName,
-            roomType: bookingData.roomType
+            bookingId: response.booking._id,
+            booking: response.booking,
+            roomName: bookingData?.roomName,
+            roomType: bookingData?.roomType,
+            checkInDate: bookingData?.startDate,
+            checkOutDate: bookingData?.endDate,
+            guestCount: bookingData?.guests,
+            totalPrice: bookingData?.totalPrice,
+            taxesAndFees: response.taxesAndFees
           }
         });
       } else {
@@ -134,6 +154,8 @@ export default function PaymentPage() {
     );
   }
 
+  const nights = Math.ceil((new Date(bookingData?.endDate) - new Date(bookingData?.startDate)) / (1000 * 60 * 60 * 24));
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <Button 
@@ -154,6 +176,13 @@ export default function PaymentPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {errorMessage && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              )}
               <Tabs defaultValue="card" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="card">Card Payment</TabsTrigger>
@@ -219,7 +248,7 @@ export default function PaymentPage() {
                       type="submit" 
                       className="w-full"
                     >
-                      Pay ₹{(bookingData.price + bookingData.taxesAndFees.total).toFixed(2)}
+                      Pay ₹{bookingData?.totalPrice?.toFixed(2)}
                     </Button>
                   </form>
                 </TabsContent>
@@ -241,7 +270,7 @@ export default function PaymentPage() {
                       type="submit" 
                       className="w-full"
                     >
-                      Pay ₹{(bookingData.price + bookingData.taxesAndFees.total).toFixed(2)}
+                      Pay ₹{bookingData?.totalPrice?.toFixed(2)}
                     </Button>
                   </form>
                 </TabsContent>
@@ -262,8 +291,8 @@ export default function PaymentPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">{bookingData.roomName}</h3>
-                <p className="text-muted-foreground">{bookingData.roomType}</p>
+                <h3 className="font-semibold text-lg">{bookingData?.roomName}</h3>
+                <p className="text-muted-foreground">{bookingData?.roomType}</p>
               </div>
 
               <Separator />
@@ -275,7 +304,7 @@ export default function PaymentPage() {
                     <span>Check-in</span>
                   </div>
                   <span className="font-medium">
-                    {format(new Date(bookingData.startDate), 'PP')}
+                    {bookingData?.startDate && format(new Date(bookingData.startDate), 'PP')}
                   </span>
                 </div>
 
@@ -285,7 +314,7 @@ export default function PaymentPage() {
                     <span>Check-out</span>
                   </div>
                   <span className="font-medium">
-                    {format(new Date(bookingData.endDate), 'PP')}
+                    {bookingData?.endDate && format(new Date(bookingData.endDate), 'PP')}
                   </span>
                 </div>
 
@@ -294,7 +323,9 @@ export default function PaymentPage() {
                     <User className="h-4 w-4" />
                     <span>Guests</span>
                   </div>
-                  <span className="font-medium">{bookingData.guests}</span>
+                  <span className={`font-medium ${!Number.isInteger(bookingData?.guests) || bookingData?.guests <= 0 ? 'text-red-500' : ''}`}>
+                    {bookingData?.guests}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -302,9 +333,7 @@ export default function PaymentPage() {
                     <Building className="h-4 w-4" />
                     <span>Rooms</span>
                   </div>
-                  <span className="font-medium">
-                    {Math.ceil(bookingData.guests / bookingData.roomCapacity)}
-                  </span>
+                  <span className="font-medium">{bookingData?.roomCount}</span>
                 </div>
               </div>
 
@@ -312,25 +341,25 @@ export default function PaymentPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Room Rate ({bookingData.nights} nights)</span>
-                  <span>₹{bookingData.price}</span>
+                  <span>Room Rate ({nights} nights)</span>
+                  <span>₹{bookingData?.discountedPrice || bookingData?.basePrice}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>GST (18%)</span>
-                  <span>₹{bookingData.taxesAndFees.gst.toFixed(2)}</span>
+                  <span>VAT ({room?.taxes?.vat}%)</span>
+                  <span>₹{bookingData?.taxesAndFees?.gst?.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Service Fee</span>
-                  <span>₹{bookingData.taxesAndFees.serviceFee.toFixed(2)}</span>
+                  <span>Service Fee ({room?.taxes?.serviceTax}%)</span>
+                  <span>₹{bookingData?.taxesAndFees?.serviceFee?.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Municipal Tax</span>
-                  <span>₹{bookingData.taxesAndFees.municipalTax.toFixed(2)}</span>
+                  <span>Other Taxes ({room?.taxes?.other}%)</span>
+                  <span>₹{bookingData?.taxesAndFees?.municipalTax?.toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total Amount</span>
-                  <span>₹{(bookingData.price + bookingData.taxesAndFees.total).toFixed(2)}</span>
+                  <span>₹{bookingData?.totalPrice?.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
@@ -359,4 +388,3 @@ export default function PaymentPage() {
     </div>
   );
 }
-
