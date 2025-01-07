@@ -424,6 +424,11 @@ const UserBookings = () => {
                 ) : (
                   <div className="flex items-center gap-4">
                     <RatingStars
+aewgggg
+
+
+
+
                       rating={selectedRating}
                       onRatingChange={(rating) => {
                         setSelectedRating(rating);
