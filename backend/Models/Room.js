@@ -89,6 +89,10 @@ const roomSchema = new mongoose.Schema({
       default: 0,
     },
   },
+  totaltax:{
+    type:Number,
+    default: 0,
+  },
   isAvailable: {
     type: Boolean,
     default: true, // Default value is true, indicating the room is available

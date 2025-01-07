@@ -1,5 +1,5 @@
 import express from 'express'
-import { changePassword, deleteUser, GetAllUsers, getUserDetails, profile, updateUser } from '../Controllers/userController.js';
+import { changePassword, deleteUser, GetAllUsers, GetUserChange, getUserDetails, profile, updateUser } from '../Controllers/userController.js';
 import { authMiddleware, authorizeRoles } from '../Middleware/AuthMiddleware.js';
 import { requestPasswordReset, resetPassword } from '../Controllers/auth.js';
 const router2 = express.Router();
@@ -29,7 +29,7 @@ router2.put(
   authorizeRoles("admin", "user"),
   changePassword
 );
-
+router2.get("/userchange",authMiddleware,authorizeRoles("admin"), GetUserChange)
 //testtt
 router2.post('/request-reset', requestPasswordReset);
 router2.post('/reset-password/:token', resetPassword);

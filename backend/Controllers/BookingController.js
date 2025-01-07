@@ -10,18 +10,14 @@ export const CreateBooking = async (req, res) => {
     checkInDate,
     checkOutDate,
     noofguests,
-    // noofchildrens = 0,
-    noOfRooms = 1,
+    noOfRooms = 1,  // Default to 1 if not provided
   } = req.body;
 
   try {
-    // Validate number of guests and children
+    // Validate number of guests
     if (!Number.isInteger(noofguests) || noofguests <= 0) {
       return res.status(400).json({ message: "Number of guests must be a positive integer." });
     }
-    // if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
-    //   return res.status(400).json({ message: "Number of children must be a non-negative integer." });
-    // }
 
     // Validate check-in and check-out dates
     const checkIn = new Date(checkInDate);
@@ -41,30 +37,30 @@ export const CreateBooking = async (req, res) => {
       console.error(`Room with ID ${roomId} not found.`);
       return res.status(404).json({ message: "Room not found." });
     }
-    // console.log(room.maxOccupancy)
-    // if (room.isAvailable === undefined) {
-    //   console.error(`Room status undefined for ID: ${roomId}`);
-    //   return res.status(500).json({ message: "Room status not initialized properly." });
-    // }
 
-    // if (!room.isAvailable) {
-    //   return res.status(400).json({ message: "This room is not available for booking." });
-    // }
+    // Check if there are enough available slots
+    if (room.availableSlots < noOfRooms) {
+      return res.status(400).json({ message: `Only ${room.availableSlots} rooms are available. You cannot book ${noOfRooms} rooms.` });
+    }
 
-    // Calculate total price based on nights
+    // Calculate the number of nights
     const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
     if (numberOfNights <= 0) {
       return res.status(400).json({ message: "Invalid booking dates." });
     }
 
+    // Determine the price per room based on DiscountedPrice or pricePerNight
     const pricePerRoom = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
     const basePrice = pricePerRoom * numberOfNights * noOfRooms;
 
-    // Calculate taxes
+    // Calculate taxes based on the room's tax configuration
     const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
     const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
     const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+
+    // Total price and total tax calculation
     const totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
+    const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
 
     // Create the booking object
     const booking = new Booking({
@@ -74,13 +70,13 @@ export const CreateBooking = async (req, res) => {
       checkOutDate: checkOut,
       totalPrice,
       noofguests,
-      // noofchildrens,
       noOfRooms,
       taxes: {
         vat: vatAmount,
         serviceTax: serviceTaxAmount,
         other: otherTaxAmount,
       },
+      totaltax: totaltax,  // Storing the total tax in the booking
     });
 
     // Save the booking
@@ -128,6 +124,7 @@ export const CreateBooking = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -228,6 +225,7 @@ export const UpdateBooking = async (req, res) => {
         serviceTax: serviceTaxAmount,
         other: otherTaxAmount,
       };
+      booking.totaltax=vatAmount + serviceTaxAmount + otherTaxAmount
     }
 
     // Update guest numbers if requested
@@ -681,7 +679,7 @@ export const All = async (req, res) => {
 
     // Recent Bookings (sorted by booking date, limited to 5)
     const recentBookings = await Booking.find()
-      .sort({ bookingDate: -1 }) // Sort by booking date descending
+      .sort({ bookingDate: -1 }).populate("user") // Sort by booking date descending
       .limit(5);
 
     res.json({
@@ -696,3 +694,72 @@ export const All = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch dashboard stats' });
   }
 }
+
+import moment from "moment";// Adjust the path according to your project structure
+
+export const GetBookingChange = async (req, res) => {
+  try {
+    const currentDate = moment();
+
+    // Get the first and last day of the current month
+    const firstDayOfCurrentMonth = currentDate.startOf("month").toDate();
+    const lastDayOfCurrentMonth = currentDate.endOf("month").toDate();
+
+    // Get the first and last day of the previous month
+    const firstDayOfLastMonth = currentDate
+      .subtract(1, "month")
+      .startOf("month")
+      .toDate();
+    const lastDayOfLastMonth = currentDate
+      .endOf("month")
+      .toDate();
+
+    // Fetch bookings for the current and last month
+    const currentMonthBookingsCount = await Booking.countDocuments({
+      checkInDate: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth },
+    });
+
+    const lastMonthBookingsCount = await Booking.countDocuments({
+      checkInDate: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth },
+    });
+
+    // Calculate booking change
+    const bookingChange = currentMonthBookingsCount - lastMonthBookingsCount;
+
+    // Calculate percentage change
+    let percentageChange = 0;
+    if (lastMonthBookingsCount > 0) {
+      percentageChange = (
+        (bookingChange / lastMonthBookingsCount) *
+        100
+      ).toFixed(2);
+    } else if (currentMonthBookingsCount > 0) {
+      percentageChange = 100; // If last month had no bookings, consider it a 100% increase
+    }
+
+    // Determine change status
+    let changeStatus = "No change";
+    if (percentageChange > 0) {
+      changeStatus = `Increased by ${percentageChange}%`;
+    } else if (percentageChange < 0) {
+      changeStatus = `Decreased by ${Math.abs(percentageChange)}%`;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Booking change compared to last month.",
+      currentMonthBookingsCount,
+      lastMonthBookingsCount,
+      bookingChange,
+      percentageChange,
+      changeStatus,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error occurred while calculating booking change.",
+      error: error.message,
+    });
+  }
+};

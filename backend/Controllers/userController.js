@@ -253,3 +253,67 @@ export const changePassword = async (req, res) => {
 };
 
 
+import moment from 'moment'; // Assuming the User model is defined and imported correctly
+
+export const GetUserChange = async (req, res) => {
+  try {
+    // Get the current date and calculate the first and last date of the current month
+    const currentDate = moment();
+    const firstDayOfCurrentMonth = currentDate.startOf('month').toDate();
+    const lastDayOfCurrentMonth = currentDate.endOf('month').toDate();
+
+    // Get the first and last date of the previous month
+    const firstDayOfLastMonth = currentDate
+      .subtract(1, 'month')
+      .startOf('month')
+      .toDate();
+    const lastDayOfLastMonth = currentDate
+      // .subtract(1, 'month')
+      .endOf('month')
+      .toDate();
+
+    // Fetch the number of users created in the current month
+    const currentMonthUsersCount = await User.countDocuments({
+      createdAt: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth },
+    });
+
+    // Fetch the number of users created in the previous month
+    const lastMonthUsersCount = await User.countDocuments({
+      createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth },
+    });
+
+    // Calculate the increase or decrease in user count
+    const userChange = currentMonthUsersCount - lastMonthUsersCount;
+
+    // Calculate percentage change
+    let percentageChange = 0;
+    if (lastMonthUsersCount > 0) {
+      percentageChange = (userChange / lastMonthUsersCount) * 100;
+    }
+
+    // Determine whether it's an increase, decrease, or no change
+    let changeStatus = 'No change';
+    if (userChange > 0) {
+      changeStatus = `Increased by ${userChange} users (${percentageChange.toFixed(2)}%)`;
+    } else if (userChange < 0) {
+      changeStatus = `Decreased by ${Math.abs(userChange)} users (${Math.abs(percentageChange).toFixed(2)}%)`;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User change compared to last month.`,
+      currentMonthUsersCount,
+      lastMonthUsersCount,
+      userChange,
+      percentageChange: percentageChange.toFixed(2),
+      changeStatus,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while calculating user change.',
+      error: error.message,
+    });
+  }
+};
