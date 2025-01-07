@@ -183,5 +183,5 @@ router.put(
   UploadHotelLogo
 );
 router.get("/hotel", GetHotel);
-router.get("/admindashboard",authorizeRoles("admin"),All)
+router.get("/admindashboard",authMiddleware, authorizeRoles("admin"), All)
 export default router;

@@ -17,7 +17,22 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Users, DollarSign, Star, CheckCircle2, XCircle, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+    Loader2,
+    Plus,
+    Users,
+    DollarSign,
+    Star,
+    CheckCircle2,
+    XCircle,
+    Edit,
+    Trash2,
+    ChevronLeft,
+    ChevronRight,
+    Bed,
+    Bath,
+    Wifi
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useRoom } from '@/context/RoomContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,7 +43,7 @@ const CustomizeRooms = () => {
     const navigate = useNavigate();
     const { Rooms, getAllRooms, deleteRoom, getImageUrl, loading } = useRoom();
     const { user } = useAuth();
-    
+
     const [roomToDelete, setRoomToDelete] = useState(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -40,7 +55,7 @@ const CustomizeRooms = () => {
             return;
         }
         getAllRooms();
-    }, [user, navigate]);
+    }, []);
 
     const confirmDelete = (room) => {
         setRoomToDelete(room);
@@ -93,6 +108,29 @@ const CustomizeRooms = () => {
                 [roomId]: currentIndex <= 0 ? maxIndex : currentIndex - 1
             };
         });
+    };
+
+    const getKeyAmenities = (room) => {
+        const amenitiesByCategory = {};
+        room.amenities?.forEach(category => {
+            amenitiesByCategory[category.category] = category.items;
+        });
+
+        return {
+            beds: amenitiesByCategory['No of Bed']?.[0]?.quantity || 0,
+            bathrooms: amenitiesByCategory['No of Washroom']?.[0]?.quantity || 0,
+            hasWifi: amenitiesByCategory['Basic Facilities']?.some(item =>
+                item.name.toLowerCase().includes('wifi'))
+        };
+    };
+
+    const calculateTotalPrice = (price, taxes) => {
+        const taxAmount = price * (
+            (taxes?.vat || 0) / 100 +
+            (taxes?.serviceTax || 0) / 100 +
+            (taxes?.other || 0) / 100
+        );
+        return price + taxAmount;
     };
 
     const filteredRooms = Rooms.filter(room =>
@@ -189,95 +227,134 @@ const CustomizeRooms = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRooms.map((room) => (
-                    <Card key={room._id} className="overflow-hidden">
-                        <CardHeader className="p-0 relative">
-                            {room.images && room.images.length > 0 ? (
-                                <>
-                                    <img
-                                        src={getImageUrl(room.images[activeImageIndices[room._id] || 0])}
-                                        alt={room.name}
-                                        className="w-full h-48 object-cover"
-                                    />
-                                    {room.images.length > 1 && (
-                                        <>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
-                                                onClick={() => handlePrevImage(room._id)}
-                                            >
-                                                <ChevronLeft className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
-                                                onClick={() => handleNextImage(room._id)}
-                                            >
-                                                <ChevronRight className="h-4 w-4" />
-                                            </Button>
-                                            <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm">
-                                                {(activeImageIndices[room._id] || 0) + 1}/{room.images.length}
-                                            </div>
-                                        </>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                                    <span className="text-gray-400">No image available</span>
-                                </div>
-                            )}
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <CardTitle className="text-xl">{room.name}</CardTitle>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <Badge variant={room.isAvailable ? "success" : "secondary"}>
-                                            {room.isAvailable ?
-                                                <CheckCircle2 className="w-3 h-3 mr-1" /> :
-                                                <XCircle className="w-3 h-3 mr-1" />
-                                            }
-                                            {room.isAvailable ? 'Available' : 'Not Available'}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-4">{room.description}</p>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div className="flex items-center gap-1">
-                                ₹
-                                    <span className='font-semibold text-base'>{room.pricePerNight} /night</span>
-                                </div>
-                                {room.ratings && room.ratings.length > 0 && (
-                                    <div className="flex items-center gap-1">
-                                        <Star className="w-4 h-4 text-yellow-400" />
-                                        <span>
-                                            {(room.ratings.reduce((acc, curr) => acc + curr.rating, 0) / room.ratings.length).toFixed(1)}
-                                        </span>
+                {filteredRooms.map((room) => {
+                    const keyAmenities = getKeyAmenities(room);
+                    const totalPrice = calculateTotalPrice(room.pricePerNight, room.taxes);
+
+                    return (
+                        <Card key={room._id} className="overflow-hidden">
+                            <CardHeader className="p-0 relative">
+                                {room.images && room.images.length > 0 ? (
+                                    <>
+                                        <img
+                                            src={getImageUrl(room.images[activeImageIndices[room._id] || 0])}
+                                            alt={room.name}
+                                            className="w-full h-48 object-cover"
+                                        />
+                                        {room.images.length > 1 && (
+                                            <>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                                                    onClick={() => handlePrevImage(room._id)}
+                                                >
+                                                    <ChevronLeft className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                                                    onClick={() => handleNextImage(room._id)}
+                                                >
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                                <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm">
+                                                    {(activeImageIndices[room._id] || 0) + 1}/{room.images.length}
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                        <span className="text-gray-400">No image available</span>
                                     </div>
                                 )}
-                                <div className="flex items-center gap-1">
-                                    <Users className="w-4 h-4" />
-                                    <span>Max {room.maxOccupancy} guests</span>
+                            </CardHeader>
+                            <CardContent className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <CardTitle className="text-xl">{room.name}</CardTitle>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <Badge variant={room.isAvailable ? "success" : "secondary"}>
+                                                {room.isAvailable ?
+                                                    <CheckCircle2 className="w-3 h-3 mr-1" /> :
+                                                    <XCircle className="w-3 h-3 mr-1" />
+                                                }
+                                                {room.isAvailable ? 'Available' : 'Not Available'}
+                                            </Badge>
+                                            <Badge variant="outline">
+                                                {room.availableSlots}/{room.totalSlots} slots
+                                            </Badge>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="flex justify-between p-4">
-                            <Button variant="outline" asChild>
-                                <Link to={`/dashboard/rooms/${room._id}`}>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit
-                                </Link>
-                            </Button>
-                            <Button variant="destructive" onClick={() => confirmDelete(room)}>
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
+                                <p className="text-sm text-gray-600 mb-4">
+                                    {room?.description?.length > 100
+                                        ? `${room?.description.slice(0, 100)}...`
+                                        : room?.description}
+                                </p>
+                                <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                                    <div className="flex items-center gap-1">
+                                        <span className="font-semibold text-base">
+                                            {room.DiscountedPrice > 0 ? (
+                                                <>
+                                                    <span className="text-green-600">₹{room.DiscountedPrice}</span>
+                                                    <span className="text-sm line-through text-gray-400 ml-2">
+                                                        ₹{room.pricePerNight}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span>₹{room.pricePerNight}</span>
+                                            )}
+                                            <span className="text-sm text-gray-500">/night</span>
+                                        </span>
+                                    </div>
+                                    {room.ratings && room.ratings.length > 0 && (
+                                        <div className="flex items-center gap-1">
+                                            <Star className="w-4 h-4 text-yellow-400" />
+                                            <span>
+                                                {(room.ratings.reduce((acc, curr) => acc + curr.rating, 0) / room.ratings.length).toFixed(1)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-4 text-sm text-gray-600">
+                                    <div className="flex items-center gap-1">
+                                        <Bed className="w-4 h-4" />
+                                        <span>{keyAmenities.beds} Beds</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Bath className="w-4 h-4" />
+                                        <span>{keyAmenities.bathrooms} Baths</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Users className="w-4 h-4" />
+                                        <span>Max {room.maxOccupancy}</span>
+                                    </div>
+                                    {keyAmenities.hasWifi && (
+                                        <div className="flex items-center gap-1">
+                                            <Wifi className="w-4 h-4" />
+                                            <span>WiFi</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                            <CardFooter className="flex justify-between p-4">
+                                <Button variant="outline" asChild>
+                                    <Link to={`/dashboard/rooms/${room._id}`}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                    </Link>
+                                </Button>
+                                <Button variant="destructive" onClick={() => confirmDelete(room)}>
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    );
+                })}
             </div>
 
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -286,7 +363,8 @@ const CustomizeRooms = () => {
                         <DialogTitle>Are you sure you want to delete this room?</DialogTitle>
                         <DialogDescription>
                             This action cannot be undone. This will permanently delete the room
-                            and remove the data from our servers.
+                            and remove all associated data from our servers including bookings,
+                            ratings, and images.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

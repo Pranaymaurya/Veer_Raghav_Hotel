@@ -94,6 +94,8 @@ export const BookingProvider = ({ children }) => {
           title: 'Success',
           description: response.data.message,
           variant: 'success',
+          className: 'bg-green-200 border-green-400 text-black text-lg',
+          duration: 3000
         })
         return response.data;
       } else {
