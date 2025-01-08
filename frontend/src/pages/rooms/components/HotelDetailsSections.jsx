@@ -22,7 +22,7 @@ const HotelDetailsSections = ({ onMessageHost }) => {
         <div className="grid md:grid-cols-2 gap-6">
           <div>
             <h4 className="font-medium mb-2 text-sm  text-orange-900">Meal options are provided at the property</h4>
-            <ul className="space-y-2 list-disc text-black">
+            <ul className="space-y-2 list-disc text-grey-700">
               <li className="text-sm ml-5">
                 Meals offered: {foodAndDining?.mealsOffered?.join(', ')}
               </li>
@@ -41,7 +41,7 @@ const HotelDetailsSections = ({ onMessageHost }) => {
           </div>
           <div>
             <h4 className="font-medium mb-2 text-sm  text-orange-900">Additional information</h4>
-            <ul className='list-disc text-black'>
+            <ul className='list-disc text-grey-700'>
               <li className="text-sm ml-5">
                 {foodAndDining?.outsideFoodAllowed 
                   ? 'Outside food is allowed'
