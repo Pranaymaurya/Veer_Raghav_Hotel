@@ -1,7 +1,7 @@
 import Booking from "../Models/Booking.js";
 import Room from "../Models/Room.js";
 import User from "../Models/userModel.js";
-
+// import sendBookingConfirmation from "./auth.js";
 
 export const CreateBooking = async (req, res) => {
   const {
@@ -10,7 +10,7 @@ export const CreateBooking = async (req, res) => {
     checkInDate,
     checkOutDate,
     noofguests,
-    noOfRooms = 1,  // Default to 1 if not provided
+    noOfRooms = 1, // Default to 1 if not provided
   } = req.body;
 
   try {
@@ -34,13 +34,14 @@ export const CreateBooking = async (req, res) => {
     // Find the room by ID and check availability
     const room = await Room.findById(roomId);
     if (!room) {
-      console.error(`Room with ID ${roomId} not found.`);
       return res.status(404).json({ message: "Room not found." });
     }
 
-    // Check if there are enough available slots
+    // Check room availability
     if (room.availableSlots < noOfRooms) {
-      return res.status(400).json({ message: `Only ${room.availableSlots} rooms are available. You cannot book ${noOfRooms} rooms.` });
+      return res.status(400).json({
+        message: `Only ${room.availableSlots} rooms are available. You cannot book ${noOfRooms} rooms.`,
+      });
     }
 
     // Calculate the number of nights
@@ -49,20 +50,18 @@ export const CreateBooking = async (req, res) => {
       return res.status(400).json({ message: "Invalid booking dates." });
     }
 
-    // Determine the price per room based on DiscountedPrice or pricePerNight
+    // Pricing and taxes
     const pricePerRoom = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
     const basePrice = pricePerRoom * numberOfNights * noOfRooms;
 
-    // Calculate taxes based on the room's tax configuration
     const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
     const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
     const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
 
-    // Total price and total tax calculation
-    const totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
     const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
+    const totalPrice = basePrice + totaltax;
 
-    // Create the booking object
+    // Create booking
     const booking = new Booking({
       user: userId,
       room: roomId,
@@ -76,52 +75,61 @@ export const CreateBooking = async (req, res) => {
         serviceTax: serviceTaxAmount,
         other: otherTaxAmount,
       },
-      totaltax: totaltax,  // Storing the total tax in the booking
+      totaltax,
     });
 
-    // Save the booking
     const savedBooking = await booking.save();
 
-    // Update the room availability by reducing the available slots and increasing booked slots
+    // Update room availability
     await Room.updateOne(
       { _id: roomId },
       {
-        $set: { 
-          availableSlots: room.availableSlots - noOfRooms, // Reduce available slots
-          isAvailable: room.availableSlots - noOfRooms > 0, // If no rooms are left, mark as unavailable
-        },
-        $inc: {
-          bookedSlots: noOfRooms, // Increment the booked slots by the number of rooms booked
-        },
-      }
-    );
-
-    // Update user's booking status and the number of rooms they've booked
-    await User.updateOne(
-      { _id: userId },
-      {
         $set: {
-          IsBooking: true,
-          currentBooking: savedBooking._id,
+          availableSlots: room.availableSlots - noOfRooms,
+          isAvailable: room.availableSlots - noOfRooms > 0,
         },
-        $inc: {
-          bookedSlots: noOfRooms, // Increment the number of rooms booked by the user
-        },
+        $inc: { bookedSlots: noOfRooms },
       }
     );
 
-    // Respond with success
+    // Update user booking status
+    const user = await User.findById(userId);
+    if (user) {
+      await User.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            IsBooking: true,
+            currentBooking: savedBooking._id,
+          },
+          $inc: { bookedSlots: noOfRooms },
+        }
+      );
+
+      // Send email confirmation
+      try {
+        await sendBookingConfirmation({
+          email: user.email,
+          name: user.name,
+          bookingId: savedBooking._id,
+          service: room.name,
+          checkInDate: savedBooking.checkInDate,
+      checkOutDate:savedBooking.checkOutDate,
+      totalPrice,
+        });
+      } catch (emailError) {
+        console.error("Failed to send booking confirmation email:", emailError.message);
+      }
+    }
+
     res.status(201).json({
       message: "Booking created successfully.",
       bookingId: savedBooking._id,
       booking: savedBooking,
     });
   } catch (error) {
-    console.error("Error creating booking:", error);
-    res.status(500).json({
-      message: "Failed to create booking.",
-      error: error.message,
-    });
+    console.error("Error creating booking:", error.message);
+    res.status(500).json({ message: "Failed to create booking.", error: error.message });
   }
 };
 
@@ -696,6 +704,7 @@ export const All = async (req, res) => {
 }
 
 import moment from "moment";// Adjust the path according to your project structure
+import { sendBookingConfirmation } from "./auth.js";
 
 export const GetBookingChange = async (req, res) => {
   try {
@@ -759,6 +768,74 @@ export const GetBookingChange = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error occurred while calculating booking change.",
+      error: error.message,
+    });
+  }
+};
+export const GetRevenueChange = async (req, res) => {
+  try {
+    // Get the current date and calculate the first and last date of the current month
+    const currentDate = moment();
+    const firstDayOfCurrentMonth = currentDate.startOf('month').toDate();
+    const lastDayOfCurrentMonth = currentDate.endOf('month').toDate();
+
+    // Get the first and last date of the previous month
+    const firstDayOfLastMonth = currentDate
+      .subtract(1, 'month')
+      .startOf('month')
+      .toDate();
+    const lastDayOfLastMonth = currentDate
+      // .subtract(1, 'month')
+      .endOf('month')
+      .toDate();
+
+    // Fetch the total revenue in the current month
+    const currentMonthRevenue = await Booking.aggregate([
+      { $match: { createdAt: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth } } },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+    ]);
+
+    const currentMonthRevenueAmount = currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
+
+    // Fetch the total revenue in the previous month
+    const lastMonthRevenue = await Booking.aggregate([
+      { $match: { createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth } } },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+    ]);
+
+    const lastMonthRevenueAmount = lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
+
+    // Calculate the increase or decrease in revenue
+    const revenueChange = currentMonthRevenueAmount - lastMonthRevenueAmount;
+
+    // Calculate percentage change
+    let percentageChange = 0;
+    if (lastMonthRevenueAmount > 0) {
+      percentageChange = (revenueChange / lastMonthRevenueAmount) * 100;
+    }
+
+    // Determine whether it's an increase, decrease, or no change
+    let changeStatus = 'No change';
+    if (revenueChange > 0) {
+      changeStatus = `Increased by $${revenueChange.toFixed(2)} (${percentageChange.toFixed(2)}%)`;
+    } else if (revenueChange < 0) {
+      changeStatus = `Decreased by $${Math.abs(revenueChange).toFixed(2)} (${Math.abs(percentageChange).toFixed(2)}%)`;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Revenue change compared to last month.`,
+      currentMonthRevenue: currentMonthRevenueAmount.toFixed(2),
+      lastMonthRevenue: lastMonthRevenueAmount.toFixed(2),
+      revenueChange: revenueChange.toFixed(2),
+      percentageChange: percentageChange.toFixed(2),
+      changeStatus,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while calculating revenue change.',
       error: error.message,
     });
   }

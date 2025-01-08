@@ -211,3 +211,127 @@ export const resetPassword = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+// Import necessary modules
+// import nodemailer from 'nodemailer';
+// import User from '../Models/userModel.js';
+
+// Utility function to send email
+const sendEmail = async ({ to, subject, html }) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: true,
+            },
+        });
+
+        await transporter.sendMail({
+            from: `Veer Raghav <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            html,
+        });
+
+        console.log('Email sent successfully');
+    } catch (error) {
+        console.error('Error sending email:', error);
+        throw new Error('Email sending failed');
+    }
+};
+
+// Function to send booking confirmation email
+export const sendBookingConfirmation = async (bookingDetails) => {
+  try {
+    const { email, name, bookingId, service, checkInDate, checkOutDate, totalPrice } = bookingDetails;
+
+    if (!email || !name || !bookingId || !checkInDate || !checkOutDate || !service) {
+      throw new Error('Missing required booking details');
+    }
+
+    const emailTemplate = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Booking Confirmation</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f9f9f9;
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                max-width: 600px;
+                margin: 20px auto;
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+                background: #4CAF50;
+                color: #fff;
+                padding: 15px;
+                text-align: center;
+                font-size: 24px;
+                border-radius: 8px 8px 0 0;
+            }
+            .content {
+                padding: 20px;
+                font-size: 16px;
+                line-height: 1.6;
+            }
+            .footer {
+                text-align: center;
+                font-size: 12px;
+                color: #777;
+                margin-top: 20px;
+            }
+            .highlight {
+                color: #4CAF50;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">Booking Confirmation</div>
+            <div class="content">
+                <p>Dear <span class="highlight">${name}</span>,</p>
+                <p>Thank you for booking with Veer Raghav. We are pleased to confirm your booking:</p>
+                <ul>
+                    <li><strong>Booking ID:</strong> ${bookingId}</li>
+                    <li><strong>Service:</strong> ${service}</li>
+                    <li><strong>Check-in Date:</strong> ${checkInDate}</li>
+                    <li><strong>Check-out Date:</strong> ${checkOutDate}</li>
+                    <li><strong>Total Price:</strong> $${totalPrice.toFixed(2)}</li>
+                </ul>
+                <p>We look forward to serving you. If you have any questions or need to reschedule, please contact us at <a href="mailto:${process.env.EMAIL_USER}">${process.env.EMAIL_USER}</a>.</p>
+                <p>Best regards,</p>
+                <p>The Veer Raghav Team</p>
+            </div>
+            <div class="footer">&copy; 2023 Veer Raghav. All rights reserved.</div>
+        </div>
+    </body>
+    </html>
+    `;
+
+    // Send email using a pre-configured email service
+    await sendEmail({
+      to: email,
+      subject: 'Booking Confirmation - Veer Raghav',
+      html: emailTemplate,
+    });
+
+    console.log(`Booking confirmation email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending booking confirmation email:', error.message);
+    throw error; // Re-throw to handle it in the calling function
+  }
+};

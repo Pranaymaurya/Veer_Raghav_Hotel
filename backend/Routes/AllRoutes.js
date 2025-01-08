@@ -8,6 +8,7 @@ import {
   getavgrating,
   GetBookingById,
   GetBookingChange,
+  GetRevenueChange,
   GetUserBookings,
   GetUserBookingsById,
   Putrating,
@@ -190,4 +191,5 @@ router.put(
 );
 router.get("/hotel", GetHotel);
 router.get("/admindashboard",authMiddleware,authorizeRoles("admin"),All)
+router.get("/revenuechange",authMiddleware,authorizeRoles("admin"),GetRevenueChange)
 export default router;
