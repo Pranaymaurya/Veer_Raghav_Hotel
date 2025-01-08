@@ -7,6 +7,7 @@ import {
   GetAllBookings,
   getavgrating,
   GetBookingById,
+  GetBookingChange,
   GetUserBookings,
   GetUserBookingsById,
   Putrating,
@@ -137,7 +138,12 @@ router.get(
   authorizeRoles("user", "admin"),
   GetUserBookingsById
 );
-
+router.get(
+  "/bookingchange",
+  authMiddleware,
+  authorizeRoles("admin"),
+  GetBookingChange
+);
 //booking by userid
 router.post(
   "/room/rating/:id",
@@ -183,5 +189,5 @@ router.put(
   UploadHotelLogo
 );
 router.get("/hotel", GetHotel);
-router.get("/admindashboard",authMiddleware, authorizeRoles("admin"), All)
+router.get("/admindashboard",authMiddleware,authMiddleware, authorizeRoles("admin"), All)
 export default router;
