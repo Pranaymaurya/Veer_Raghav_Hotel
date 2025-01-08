@@ -37,10 +37,20 @@ export const CreateBooking = async (req, res) => {
       return res.status(404).json({ message: "Room not found." });
     }
 
-    // Check room availability
-    if (room.availableSlots < noOfRooms) {
+    // Check for any existing bookings in the date range
+    const existingBooking = await Booking.findOne({
+      room: roomId,
+      checkInDate: { $lt: checkOut },
+      checkOutDate: { $gt: checkIn }
+    });
+
+    if (existingBooking) {
       return res.status(400).json({
-        message: `Only ${room.availableSlots} rooms are available. You cannot book ${noOfRooms} rooms.`,
+        message: "Room is already booked for the selected dates.",
+        conflictingBooking: {
+          checkIn: existingBooking.checkInDate,
+          checkOut: existingBooking.checkOutDate
+        }
       });
     }
 
@@ -48,6 +58,13 @@ export const CreateBooking = async (req, res) => {
     const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
     if (numberOfNights <= 0) {
       return res.status(400).json({ message: "Invalid booking dates." });
+    }
+
+    // Check room availability
+    if (room.availableSlots < noOfRooms) {
+      return res.status(400).json({
+        message: `Only ${room.availableSlots} rooms are available. You cannot book ${noOfRooms} rooms.`,
+      });
     }
 
     // Pricing and taxes
@@ -114,8 +131,8 @@ export const CreateBooking = async (req, res) => {
           bookingId: savedBooking._id,
           service: room.name,
           checkInDate: savedBooking.checkInDate,
-      checkOutDate:savedBooking.checkOutDate,
-      totalPrice,
+          checkOutDate: savedBooking.checkOutDate,
+          totalPrice,
         });
       } catch (emailError) {
         console.error("Failed to send booking confirmation email:", emailError.message);
@@ -135,11 +152,13 @@ export const CreateBooking = async (req, res) => {
 
 
 
-
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
-  const { checkInDate, checkOutDate, roomId, noofguests,
-    // noofchildrens 
+  const {
+    checkInDate,
+    checkOutDate,
+    roomId,
+    noofguests,
   } = req.body;
 
   try {
@@ -202,15 +221,21 @@ export const UpdateBooking = async (req, res) => {
 
       // Check for room availability on new dates
       const overlappingBooking = await Booking.findOne({
-        room: roomId,
+        room: roomId || booking.room,
+        _id: { $ne: id }, // Exclude current booking from the check
         $or: [
-          { checkInDate: { $lte: endDate }, checkOutDate: { $gte: startDate } },
-          { checkInDate: { $gte: startDate }, checkOutDate: { $lte: endDate } }
+          { checkInDate: { $lt: endDate }, checkOutDate: { $gt: startDate } }
         ]
       });
 
       if (overlappingBooking) {
-        return res.status(400).json({ message: "The room is not available for the selected dates" });
+        return res.status(400).json({ 
+          message: "The room is not available for the selected dates",
+          conflictingBooking: {
+            checkIn: overlappingBooking.checkInDate,
+            checkOut: overlappingBooking.checkOutDate
+          }
+        });
       }
 
       // Calculate new price
@@ -222,18 +247,18 @@ export const UpdateBooking = async (req, res) => {
       const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
       const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
       const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
-
+      const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
 
       // Update booking dates and price
       booking.checkInDate = startDate;
       booking.checkOutDate = endDate;
-      booking.totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
+      booking.totalPrice = basePrice + totaltax;
       booking.taxes = {
         vat: vatAmount,
         serviceTax: serviceTaxAmount,
         other: otherTaxAmount,
       };
-      booking.totaltax=vatAmount + serviceTaxAmount + otherTaxAmount
+      booking.totaltax = totaltax;
     }
 
     // Update guest numbers if requested
@@ -250,13 +275,6 @@ export const UpdateBooking = async (req, res) => {
       booking.noofguests = noofguests;
     }
 
-    // if (noofchildrens !== undefined) {
-    //   if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
-    //     return res.status(400).json({ message: "Number of children must be a non-negative integer" });
-    //   }
-    //   booking.noofchildrens = noofchildrens;
-    // }
-
     // Save updated booking
     const updatedBooking = await booking.save();
 
@@ -271,11 +289,14 @@ export const UpdateBooking = async (req, res) => {
   }
 };
 
-
 export const UpdateBookingForAdmin = async (req, res) => {
   const { id } = req.params;
-  const { checkInDate, checkOutDate, status, roomId, noofguests,
-    // noofchildrens
+  const {
+    checkInDate,
+    checkOutDate,
+    status,
+    roomId,
+    noofguests,
   } = req.body;
 
   try {
@@ -352,15 +373,21 @@ export const UpdateBookingForAdmin = async (req, res) => {
 
       // Check for room availability on new dates
       const overlappingBooking = await Booking.findOne({
-        room: roomId,
+        room: roomId || booking.room,
+        _id: { $ne: id }, // Exclude current booking from the check
         $or: [
-          { checkInDate: { $lte: endDate }, checkOutDate: { $gte: startDate } },
-          { checkInDate: { $gte: startDate }, checkOutDate: { $lte: endDate } }
+          { checkInDate: { $lt: endDate }, checkOutDate: { $gt: startDate } }
         ]
       });
 
       if (overlappingBooking) {
-        return res.status(400).json({ message: "The room is not available for the selected dates" });
+        return res.status(400).json({ 
+          message: "The room is not available for the selected dates",
+          conflictingBooking: {
+            checkIn: overlappingBooking.checkInDate,
+            checkOut: overlappingBooking.checkOutDate
+          }
+        });
       }
 
       // Calculate new price
@@ -372,17 +399,18 @@ export const UpdateBookingForAdmin = async (req, res) => {
       const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
       const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
       const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
-
+      const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
 
       // Update booking dates and price
       booking.checkInDate = startDate;
       booking.checkOutDate = endDate;
-      booking.totalPrice = basePrice + vatAmount + serviceTaxAmount + otherTaxAmount;
+      booking.totalPrice = basePrice + totaltax;
       booking.taxes = {
         vat: vatAmount,
         serviceTax: serviceTaxAmount,
         other: otherTaxAmount,
       };
+      booking.totaltax = totaltax;
     }
 
     // Update guest numbers if requested
@@ -399,13 +427,6 @@ export const UpdateBookingForAdmin = async (req, res) => {
       booking.noofguests = noofguests;
     }
 
-    // if (noofchildrens !== undefined) {
-    //   if (!Number.isInteger(noofchildrens) || noofchildrens < 0) {
-    //     return res.status(400).json({ message: "Number of children must be a non-negative integer" });
-    //   }
-    //   booking.noofchildrens = noofchildrens;
-    // }
-
     // Save updated booking
     const updatedBooking = await booking.save();
 
@@ -419,8 +440,6 @@ export const UpdateBookingForAdmin = async (req, res) => {
     res.status(500).json({ message: "Failed to update booking", error: error.message });
   }
 };
-
-
 
 export const UpdateForAdmin = async (req, res) => {
   const { id } = req.params;
@@ -523,22 +542,95 @@ export const GetUserBookingsById = async (req, res) => {
 
 // Cancel a booking
 export const CancelBooking = async (req, res) => {
-  try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
+  const { id } = req.params;
 
-    // Cancel the booking
+  try {
+    // Find the booking and validate it exists
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Check if booking is already cancelled
+    if (booking.status === "Cancelled") {
+      return res.status(400).json({ message: "Booking is already cancelled" });
+    }
+
+    // Check if the booking is past check-out date
+    const currentDate = new Date();
+    if (new Date(booking.checkOutDate) < currentDate) {
+      return res.status(400).json({ message: "Cannot cancel a completed booking" });
+    }
+
+    // Find the room
+    const room = await Room.findById(booking.room);
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Update booking status
     booking.status = "Cancelled";
     await booking.save();
 
-    // Mark the room as available
-    const room = await Room.findById(booking.room);
-    room.isAvailable = true;
-    await room.save();
+    // Update room availability and counts
+    await Room.updateOne(
+      { _id: booking.room },
+      {
+        $inc: { 
+          availableSlots: booking.noOfRooms, 
+          bookedSlots: -booking.noOfRooms 
+        },
+        $set: { 
+          isAvailable: true 
+        }
+      }
+    );
 
-    res.status(200).json({ message: "Booking cancelled successfully", booking });
+    // Update user booking status if needed
+    const user = await User.findById(booking.user);
+    if (user) {
+      await User.updateOne(
+        { _id: booking.user },
+        {
+          $set: { 
+            IsBooking: false,
+            currentBooking: null
+          },
+          $inc: { 
+            bookedSlots: -booking.noOfRooms 
+          }
+        }
+      );
+
+      // Optionally send cancellation confirmation email
+      try {
+        await sendBookingCancellationEmail({
+          email: user.email,
+          name: user.name,
+          bookingId: booking._id,
+          roomName: room.name,
+          checkInDate: booking.checkInDate,
+          checkOutDate: booking.checkOutDate
+        });
+      } catch (emailError) {
+        console.error("Failed to send cancellation email:", emailError.message);
+        // Don't return error since the booking was still cancelled successfully
+      }
+    }
+
+    // Send success response
+    res.status(200).json({ 
+      message: "Booking cancelled successfully", 
+      booking,
+      refundInfo: "If applicable, refund will be processed within 5-7 business days"
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Failed to cancel booking", error: error.message });
+    console.error("Error cancelling booking:", error);
+    res.status(500).json({ 
+      message: "Failed to cancel booking", 
+      error: error.message 
+    });
   }
 };
 
