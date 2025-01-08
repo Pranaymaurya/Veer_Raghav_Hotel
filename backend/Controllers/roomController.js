@@ -12,6 +12,7 @@ export const AddRoom = async (req, res) => {
     maxOccupancy,
     isAvailable,
     totalSlots, // Added totalSlots as part of the request body
+    taxes, // Added taxes as part of the request body
   } = req.body;
 
   try {
@@ -37,12 +38,22 @@ export const AddRoom = async (req, res) => {
       });
     });
 
-    // Collect images if any are uploaded
-    const images = req.files ? req.files.map(file => file.path) : [];
+    // Validate taxes (if provided)
+    if (taxes) {
+      if (typeof taxes.vat !== 'number' || typeof taxes.serviceTax !== 'number' || typeof taxes.other !== 'number') {
+        return res.status(400).json({ message: "Taxes must be numbers" });
+      }
+    } else {
+      // If taxes are not provided, set them to defaults (0)
+      taxes = { vat: 0, serviceTax: 0, other: 0 };
+    }
 
     // Calculate availableSlots based on totalSlots and initially set bookedSlots to 0
     const bookedSlots = 0;  // Initially, no rooms are booked
     const availableSlots = totalSlots - bookedSlots;  // Available slots will be totalSlots - bookedSlots
+
+    // Collect images if any are uploaded
+    const images = req.files ? req.files.map(file => file.path) : [];
 
     // Create the room document
     const room = new Room({
@@ -57,6 +68,7 @@ export const AddRoom = async (req, res) => {
       bookedSlots,       // Set the initially booked slots to 0
       availableSlots,    // Calculate available slots
       images,
+      taxes,             // Include taxes in the room creation
     });
 
     // Save the room to the database
@@ -71,6 +83,7 @@ export const AddRoom = async (req, res) => {
     return res.status(500).json({ message: "Failed to add room", error: error.message });
   }
 };
+
 
 
 // Update room amenities

@@ -25,6 +25,10 @@ const bookingSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  totaltax:{
+    type:Number,
+    default: 0,
+  },
   status: {
     type: String,
     enum: ['Pending', 'Confirmed', 'Cancelled'],
@@ -42,6 +46,20 @@ const bookingSchema = new mongoose.Schema({
   // },
   noOfRooms:{
     type:Number,
+    },
+    taxes: {
+      vat: {
+        type: Number, // VAT percentage
+        default: 0,
+      },
+      serviceTax: {
+        type: Number, // Service tax percentage
+        default: 0,
+      },
+      other: {
+        type: Number, // Any other tax
+        default: 0,
+      },
     },
 }, 
 {
