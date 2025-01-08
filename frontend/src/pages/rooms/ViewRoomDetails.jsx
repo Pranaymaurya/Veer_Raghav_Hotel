@@ -19,6 +19,7 @@ import ImageSlider from './components/ImageSlider';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
 import PriceDetails from './components/PriceDetails';
+import HotelDetailsSections from './components/HotelDetailsSections';
 
 // Loading skeleton component (same as before)
 const RoomDetailsSkeleton = () => (
@@ -429,6 +430,9 @@ export default function ViewRoomDetails() {
     before: new Date(),
   };
 
+
+
+
   return (
     <div className="container mx-auto p-4">
       {/* Header */}
@@ -443,14 +447,28 @@ export default function ViewRoomDetails() {
             <ChevronLeft className="mr-2" /> Back to Rooms
           </Button>
         </div>
-        <div className="flex items-center">
-          <Star className="text-yellow-500 mr-2" />
-          <span className="font-semibold">
-            {room?.rating?.toFixed(1) || "New"}
+        <div className="flex items-center text-yellow-500">
+          <Star className="w-4 h-4 fill-current" />
+          <span className="ml-1">
+            {room?.ratings?.length > 0
+              ? (room?.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+                room?.ratings.length).toFixed(1)
+              : "New"}
           </span>
-          <span className="text-gray-500 ml-2">
-            ({getRoomQuality(room?.rating)})
-          </span>
+          {room?.ratings?.length > 0 && (
+            <span className="ml-2 text-sm text-gray-600">
+              {(() => {
+                const avgRating =
+                  room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+                  room.ratings.length;
+
+                if (avgRating > 4.5) return "Excellent";
+                if (avgRating > 4) return "Very Good";
+                if (avgRating > 3.2) return "Good";
+                return "Okay";
+              })()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -529,85 +547,10 @@ export default function ViewRoomDetails() {
           </div>
 
           <Separator />
-          {/* Food & Dining */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Food & Dining</h3>
-            <div className="flex textblack ">
-              <div>
-                <h1>Meal options are provided at the property</h1>
-                <ul className='text-base list-disc'>
-                  <li className='text-sm ml-5'>Meals offered: Breakfast, Lunch, Dinner</li>
-                  <li className='text-sm ml-5'>Only veg meals will be served by the property</li>
-                  <li className='text-sm ml-5'>Cuisines available: Local, South Indian, North Indian, Chinese</li>
-                  <li className='text-sm ml-5'>Meal charges (approx): INR 200 per person per meal</li>
-                </ul>
-              </div>
 
-              <div>
-                <h1>Additional information</h1>
-                <ul className='text-base list-disc'>
-                  <li className='text-sm ml-5'>Outside food is allowed</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <Separator />
-          {/* Host Information Card */}
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-gray-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Hosted by Ankur</h3>
-                  <p className="text-gray-600">Hosting since 2024</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Languages className="text-primary" />
-                  <span>Speaks English, Hindi</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="text-primary" />
-                  <span>Responds within 24 hours</span>
-                </div>
-              </div>
-
-              <p className="text-gray-600">
-                During your stay, you will be hosted by Ankur. He has been hosting since 2024.
-                Ankur is an affable person and loves hosting guests from various corners of the world...
-                <Button
-                  variant="link"
-                  onClick={() => setShowHostInfo(true)}
-                  className="text-primary"
-                >
-                  Read more
-                </Button>
-              </p>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">
-                  During your stay, a Caretaker will be available at the property.
-                </h4>
-                <p className="text-gray-600">
-                  <strong>Caretaker Responsibilities:</strong> Cleaning kitchen/utensils,
-                  Cab bookings, Car/bike rentals, Gardening, Help buying groceries,
-                  Restaurant reservations, Pick up and Drop services
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full flex items-center justify-center gap-2"
-                  onClick={handleLogin}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  LOGIN TO MESSAGE HOST
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Hotel Details */}
+          <HotelDetailsSections onMessageHost={handleLogin} />
+          
         </div>
 
         {/* Right Section - 1/3 width */}

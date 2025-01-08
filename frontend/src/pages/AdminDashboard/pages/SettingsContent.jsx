@@ -11,6 +11,7 @@ import { useSettings } from '../../../context/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRoom } from '@/context/RoomContext';
+import api from '@/utils/api';
 // import { validateHotelData } from '../components/hotelValidation';
 
 
@@ -46,12 +47,11 @@ const SkeletonLoader = () => (
 );
 
 const SettingsContent = () => {
-  const { hotel, isLoading, createHotel, updateHotel, uploadLogo } = useSettings();
+  const { hotel, isLoading, createHotel, updateHotel, fetchHotel } = useSettings();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [fileError, setFileError] = useState('');
-  const { getImageUrl } = useRoom();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -142,27 +142,15 @@ const SettingsContent = () => {
       return false;
     }
 
-    // Create an image element to check dimensions
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
+    // Instead of using Image constructor, we'll check the file type
+    if (!file.type.startsWith('image/')) {
+      setFileError('Invalid file type. Please upload an image.');
+      return false;
+    }
 
-    return new Promise((resolve) => {
-      img.onload = () => {
-        URL.revokeObjectURL(img.src);
-        if (img.width > 200 || img.height > 200) {
-          setFileError('Image dimensions must be 200x200 pixels or smaller');
-          resolve(false);
-        }
-        resolve(true);
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(img.src);
-        setFileError('Invalid image file');
-        resolve(false);
-      };
-    });
+    return true;
   };
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -199,34 +187,96 @@ const SettingsContent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    try {
-      let response;
 
+    try {
+      // First, let's log the current formData to debug
+      console.log('Current formData:', formData);
+
+      // Create the hotel data object, checking for undefined values
       const hotelData = {
-        ...formData,
-        contactNumbers: formData.contactNumbers.filter(num => num.trim() !== '')
+        name: formData?.name || '',
+        contactNumbers: formData?.contactNumbers?.filter(num => num && num.trim() !== '') || [],
+        address: formData?.address || '',
+        checkInTime: formData?.checkInTime || '',
+        checkOutTime: formData?.checkOutTime || '',
+        Email: formData?.Email || '',
+        foodAndDining: {
+          mealOptionsProvided: formData?.foodAndDining?.mealOptionsProvided ?? true,
+          mealsOffered: formData?.foodAndDining?.mealsOffered || ['Breakfast', 'Lunch', 'Dinner'],
+          vegetarianOnly: formData?.foodAndDining?.vegetarianOnly ?? true,
+          cuisinesAvailable: formData?.foodAndDining?.cuisinesAvailable || ['Local', 'South Indian', 'North Indian', 'Chinese'],
+          mealChargesApprox: formData?.foodAndDining?.mealChargesApprox || 'INR 200 per person per meal',
+          outsideFoodAllowed: formData?.foodAndDining?.outsideFoodAllowed ?? true
+        },
+        hostDetails: {
+          hostName: formData?.hostDetails?.hostName || '',
+          hostingSince: formData?.hostDetails?.hostingSince || '',
+          speaks: formData?.hostDetails?.speaks || ['English', 'Hindi'],
+          responseTime: formData?.hostDetails?.responseTime || 'within 24 hours',
+          description: formData?.hostDetails?.description || ''
+        },
+        caretakerDetails: {
+          available: formData?.caretakerDetails?.available ?? true,
+          responsibilities: formData?.caretakerDetails?.responsibilities || [
+            'Cleaning kitchen/utensils',
+            'Cab bookings',
+            'Car/bike rentals',
+            'Gardening',
+            'Help buying groceries',
+            'Restaurant reservations',
+            'Pick up and Drop services'
+          ]
+        }
       };
 
+      // Log the constructed hotelData for debugging
+      console.log('Constructed hotelData:', hotelData);
+
+      let response;
+
+      // Update or create hotel
       if (Array.isArray(hotel) && hotel.length > 0) {
         const hotelId = hotel[0]._id;
+        console.log('Updating hotel with ID:', hotelId);
         response = await updateHotel(hotelId, hotelData);
       } else {
+        console.log('Creating new hotel');
         response = await createHotel(hotelData);
       }
 
-      if (logo && response?.hotel?._id) {
+      // Handle logo upload
+      if (logo && (response?._id || (Array.isArray(hotel) && hotel[0]?._id))) {
+        const hotelId = response?._id || hotel[0]._id;
         const logoFormData = new FormData();
         logoFormData.append('logo', logo);
-        await uploadLogo(logoFormData);
+
+        try {
+          console.log('Uploading logo for hotel ID:', hotelId);
+          await api.put(`/hotel/image/${hotelId}`, logoFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('Logo uploaded successfully');
+        } catch (logoError) {
+          console.error('Failed to upload logo:', logoError);
+          toast({
+            title: "Warning",
+            description: "Hotel data saved but logo upload failed. Please try uploading the logo again.",
+            variant: "warning",
+          });
+        }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await fetchHotel(); // Refresh the data
 
       toast({
         title: hotel?.length > 0 ? "Hotel Updated" : "Hotel Created",
         description: hotel?.length > 0 ? "Your changes have been saved successfully." : "New hotel has been created successfully.",
       });
+
       setIsEditing(false);
+
     } catch (error) {
       console.error('Failed to save hotel:', error);
       toast({
@@ -239,8 +289,15 @@ const SettingsContent = () => {
     }
   };
 
+
+  const getLogoUrl = (logoPath) => {
+    if (!logoPath) return null;
+    // Assuming your API base URL is configured in your environment
+    return `${import.meta.env.VITE_BACKEND_UPLOAD_URL}/${logoPath}`;
+  };
+
+
   const handleCancel = () => {
-    // Reset form data to original values
     if (Array.isArray(hotel) && hotel.length > 0) {
       const hotelData = hotel[0];
       setFormData({
@@ -249,9 +306,76 @@ const SettingsContent = () => {
         address: hotelData.address || '',
         checkInTime: hotelData.checkInTime || '',
         checkOutTime: hotelData.checkOutTime || '',
+        Email: hotelData.Email || '',
+        foodAndDining: {
+          mealOptionsProvided: hotelData.foodAndDining?.mealOptionsProvided ?? true,
+          mealsOffered: hotelData.foodAndDining?.mealsOffered || ['Breakfast', 'Lunch', 'Dinner'],
+          vegetarianOnly: hotelData.foodAndDining?.vegetarianOnly ?? true,
+          cuisinesAvailable: hotelData.foodAndDining?.cuisinesAvailable || ['Local', 'South Indian', 'North Indian', 'Chinese'],
+          mealChargesApprox: hotelData.foodAndDining?.mealChargesApprox || 'INR 200 per person per meal',
+          outsideFoodAllowed: hotelData.foodAndDining?.outsideFoodAllowed ?? true
+        },
+        hostDetails: {
+          hostName: hotelData.hostDetails?.hostName || '',
+          hostingSince: hotelData.hostDetails?.hostingSince || '',
+          speaks: hotelData.hostDetails?.speaks || ['English', 'Hindi'],
+          responseTime: hotelData.hostDetails?.responseTime || 'within 24 hours',
+          description: hotelData.hostDetails?.description || ''
+        },
+        caretakerDetails: {
+          available: hotelData.caretakerDetails?.available ?? true,
+          responsibilities: hotelData.caretakerDetails?.responsibilities || [
+            'Cleaning kitchen/utensils',
+            'Cab bookings',
+            'Car/bike rentals',
+            'Gardening',
+            'Help buying groceries',
+            'Restaurant reservations',
+            'Pick up and Drop services'
+          ]
+        }
+      });
+    } else {
+      // Reset to default values if no hotel data exists
+      setFormData({
+        name: '',
+        contactNumbers: [''],
+        address: '',
+        checkInTime: '',
+        checkOutTime: '',
+        Email: '',
+        foodAndDining: {
+          mealOptionsProvided: true,
+          mealsOffered: ['Breakfast', 'Lunch', 'Dinner'],
+          vegetarianOnly: true,
+          cuisinesAvailable: ['Local', 'South Indian', 'North Indian', 'Chinese'],
+          mealChargesApprox: 'INR 200 per person per meal',
+          outsideFoodAllowed: true
+        },
+        hostDetails: {
+          hostName: '',
+          hostingSince: '',
+          speaks: ['English', 'Hindi'],
+          responseTime: 'within 24 hours',
+          description: ''
+        },
+        caretakerDetails: {
+          available: true,
+          responsibilities: [
+            'Cleaning kitchen/utensils',
+            'Cab bookings',
+            'Car/bike rentals',
+            'Gardening',
+            'Help buying groceries',
+            'Restaurant reservations',
+            'Pick up and Drop services'
+          ]
+        }
       });
     }
     setIsEditing(false);
+    setLogo(null); // Reset logo state
+    setFileError(''); // Reset file error state
   };
 
   if (isLoading || isSaving) {
@@ -268,15 +392,9 @@ const SettingsContent = () => {
     );
   }
 
-  const renderValue = (label, value) => (
-    <div className="flex flex-col space-y-1">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-lg">{value || 'Not set'}</span>
-    </div>
-  );
-
+  
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
       <Card className="w-full">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
           <div>
@@ -980,9 +1098,10 @@ const SettingsContent = () => {
                     )}
                     <div className="flex flex-col sm:flex-row gap-6">
                       <div className="w-full sm:w-1/3">
+                        {console.log(hotel)}
                         {hotel?.[0]?.logo ? (
                           <img
-                            src={getImageUrl(hotel[0].logo)}
+                            src={getLogoUrl(hotel[0].logo)}
                             alt="Hotel Logo"
                             className="w-full max-w-[200px] h-auto object-contain rounded-lg border mx-auto sm:mx-0"
                           />
