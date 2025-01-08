@@ -17,21 +17,18 @@ const DashboardContent = () => {
       title: 'Total Bookings',
       value: dashboardStats?.totalBookings || 0,
       change: '+12%',
-      bgColor: 'bg-orange-50',
       textColor: 'text-orange-600'
     },
     {
       title: 'Total Guests',
       value: dashboardStats?.totalGuests || 0,
       change: '+5%',
-      bgColor: 'bg-green-50',
       textColor: 'text-green-600'
     },
     {
       title: 'Revenue',
       value: `₹${dashboardStats?.revenue?.toLocaleString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') || 0}`,
       change: '+8%',
-      bgColor: 'bg-blue-50',
       textColor: 'text-blue-600'
     }
   ];

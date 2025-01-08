@@ -4,6 +4,7 @@ import { Calendar, User, Clock, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAdminContext } from '@/context/AdminContext';
 import { useRoom } from '@/context/RoomContext';
+import { Link } from 'react-router-dom';
 
 const RecentActivity = () => {
   const { dashboardStats, Guests, fetchDashboardStats, fetchUsers } = useAdminContext();
@@ -47,19 +48,19 @@ const RecentActivity = () => {
   }, [Guests]);
 
   // Ensure bookings is always an array
-  const bookings = Array.isArray(dashboardStats?.recentBookings) 
-    ? dashboardStats.recentBookings 
+  const bookings = Array.isArray(dashboardStats?.recentBookings)
+    ? dashboardStats.recentBookings
     : [];
 
-  const sortedGuests = React.useMemo(() => 
+  const sortedGuests = React.useMemo(() =>
     Guests?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [],
     [Guests]
   );
-  
+
   const displayedGuests = showAllGuests ? sortedGuests : sortedGuests.slice(0, 5);
 
   const getStatusStyles = useCallback((status) => {
-    return status?.toLowerCase() === 'confirmed' 
+    return status?.toLowerCase() === 'confirmed'
       ? 'bg-green-100 text-green-800'
       : 'bg-yellow-100 text-yellow-800';
   }, []);
@@ -67,10 +68,10 @@ const RecentActivity = () => {
   // Modified BookingCard component
   const BookingCard = React.memo(({ booking }) => {
     if (!booking) return null;
-    
+
     const roomDetails = getRoomDetails(booking.room);
     const userDetails = getUserDetails(booking.user);
-    
+
     return (
       <div className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors space-y-3">
         <div className="flex justify-between items-start">
@@ -91,7 +92,7 @@ const RecentActivity = () => {
             </span>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
           <div className="flex items-center gap-1">
             <LogIn className="h-3 w-3" />
@@ -161,8 +162,7 @@ const RecentActivity = () => {
                     </div>
                   </div>
                 ))}
-                
-                {sortedGuests.length > 5 && (
+                {/* {sortedGuests.length > 5 && (
                   <Button
                     variant="outline"
                     className="w-full mt-4"
@@ -170,10 +170,14 @@ const RecentActivity = () => {
                   >
                     {showAllGuests ? 'Show Less' : `Show All (${sortedGuests.length})`}
                   </Button>
-                )}
+                )} */}
               </>
             )}
           </div>
+
+          <Link to="/dashboard/users">
+            <Button  className='mt-5 w-full' variant="outline">View More</Button>
+          </Link>
         </CardContent>
       </Card>
     </div>

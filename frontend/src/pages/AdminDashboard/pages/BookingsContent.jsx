@@ -55,8 +55,8 @@ const BookingsContent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  // const [selectedBooking, setSelectedBooking] = useState(null);
+  // const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedBookings, setSelectedBookings] = useState(new Set());
   const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -76,7 +76,7 @@ const BookingsContent = () => {
         // Sort by newest first by default
         const sortedBookings = sortBookings(processedBookings, 'newest');
         setBookings(sortedBookings);
-        setTotalPages(Math.ceil(sortedBookings.length / ITEMS_PER_PAGE));
+        setTotalPages(Math.ceil(sortedBookings.length / itemsPerPage));
       } catch (error) {
         console.error('Failed to fetch initial data:', error);
       } finally {
@@ -85,7 +85,7 @@ const BookingsContent = () => {
     };
 
     fetchInitialData();
-  }, []);
+  }, [ ]);
 
   // Update total pages when items per page changes
   const updateTotalPages = (totalItems) => {
@@ -209,19 +209,19 @@ const BookingsContent = () => {
     }
   };
 
-  const handleDeleteBooking = async () => {
-    if (selectedBooking) {
-      try {
-        await deleteBooking(selectedBooking.id);
-        const updatedBookings = await getAllBookings();
-        const processedBookings = processBookingData(updatedBookings, Guests, Rooms);
-        setBookings(sortBookings(processedBookings, sortOrder));
-        setIsDeleteDialogOpen(false);
-      } catch (error) {
-        console.error('Failed to delete booking:', error);
-      }
-    }
-  };
+  // const handleDeleteBooking = async () => {
+  //   if (selectedBooking) {
+  //     try {
+  //       await deleteBooking(selectedBooking.id);
+  //       const updatedBookings = await getAllBookings();
+  //       const processedBookings = processBookingData(updatedBookings, Guests, Rooms);
+  //       setBookings(sortBookings(processedBookings, sortOrder));
+  //       setIsDeleteDialogOpen(false);
+  //     } catch (error) {
+  //       console.error('Failed to delete booking:', error);
+  //     }
+  //   }
+  // };
 
   const toggleDeleteMode = () => {
     setIsDeleteMode(!isDeleteMode);

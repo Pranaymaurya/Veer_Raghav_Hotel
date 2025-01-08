@@ -6,27 +6,20 @@ import { useToast } from '@/hooks/use-toast';
 const BookingContext = createContext();
 
 export const BookingProvider = ({ children }) => {
-  const [userBookings , setUserBookings] = useState([]);
+  const [userBookings, setUserBookings] = useState([]);
   const { toast } = useToast();
 
 
   const createBooking = useCallback(async (bookingData) => {
-    console.log('Booking data:', bookingData);
-    
+
     try {
       const response = await api.post('/booking', bookingData);
+      console.log(response.data);
 
       return {
         success: true,
-        booking: {
-          ...response.data,
-          id: response.data.id || response.data._id,
-          userId: bookingData._id,
-          roomId: bookingData.roomId,
-          checkInDate: bookingData.checkInDate,
-          checkOutDate: bookingData.checkOutDate,
-          totalPrice: bookingData.totalPrice
-        }
+        message: "Booking created successfully.",
+        booking: response.data.booking
       };
     } catch (error) {
       console.error('Booking error:', error);
@@ -38,7 +31,6 @@ export const BookingProvider = ({ children }) => {
       };
     }
   }, []);
-
   const cancelBooking = async (bookingId) => {
     try {
       const response = await api.put(`/booking/${bookingId}/cancel`, {});
@@ -102,7 +94,7 @@ export const BookingProvider = ({ children }) => {
         console.log(response.data.message);
         return response.data;
       }
-      
+
     } catch (error) {
       console.error('Error fetching bookings by user:', error);
       throw error;
