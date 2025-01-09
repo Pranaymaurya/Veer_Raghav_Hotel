@@ -45,7 +45,7 @@ export const SettingsProvider = ({ children }) => {
 
   const createHotel = async (hotelData) => {
     try {
-      const config = await getAuthConfig();
+      //const config = await getAuthConfig();
       const response = await api.post('/hotel', hotelData);
       setHotel(response.data);
       return response.data;
