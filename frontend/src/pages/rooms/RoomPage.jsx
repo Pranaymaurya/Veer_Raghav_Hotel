@@ -22,7 +22,8 @@ import {
   Search,
   RotateCcw,
   Bed,
-  Home
+  Home,
+  Badge
 } from 'lucide-react';
 import {
   Popover,
@@ -32,7 +33,6 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useRoom } from '@/context/RoomContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -51,7 +51,8 @@ export default function RoomsPage() {
     priceRange: [0, 10000],
     type: searchParams.get('roomType') || "",
     guests: searchParams.get('guests') || "",
-    rooms: searchParams.get('rooms') || "1",
+    requestedRooms: searchParams.get('rooms') ? 
+      parseInt(searchParams.get('rooms')) : 1,
     startDate: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')) : null,
     endDate: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')) : null,
     searchQuery: searchParams.get('search') || ""
@@ -64,7 +65,7 @@ export default function RoomsPage() {
     const params = new URLSearchParams();
     if (filters?.type) params.set('roomType', filters?.type);
     if (filters?.guests) params.set('guests', filters?.guests);
-    if (filters?.rooms) params.set('rooms', filters?.rooms);
+    if (filters?.requestedRooms) params.set('rooms', filters?.requestedRooms.toString());
     if (filters?.startDate) params.set('checkIn', filters?.startDate.toISOString());
     if (filters?.endDate) params.set('checkOut', filters?.endDate.toISOString());
     if (filters?.searchQuery) params.set('search', filters?.searchQuery);
@@ -77,7 +78,7 @@ export default function RoomsPage() {
       priceRange: [0, 10000],
       type: "",
       guests: "",
-      rooms: "1",
+      requestedRooms: 1,
       startDate: null,
       endDate: null,
       searchQuery: ""
@@ -115,12 +116,17 @@ export default function RoomsPage() {
     if (!Rooms?.length) return [];
 
     return Rooms?.filter(room => {
+      // Basic availability check
+      if (!room?.isAvailable || room?.availableSlots === 0) return false;
+
+      // Check if requested number of rooms can be accommodated
+      if (room?.availableSlots < filters?.requestedRooms) return false;
+
       const priceMatch = room?.pricePerNight >= filters?.priceRange[0] &&
         room?.pricePerNight <= filters?.priceRange[1];
       const typeMatch = !filters?.type || room?.name === filters?.type;
       const guestsMatch = !filters?.guests ||
         room?.maxOccupancy >= parseInt(filters?.guests || "0");
-      const availabilityMatch = room?.isAvailable;
       const searchMatch = !filters?.searchQuery ||
         room?.name.toLowerCase().includes(filters?.searchQuery.toLowerCase()) ||
         room?.description?.toLowerCase().includes(filters?.searchQuery.toLowerCase()) ||
@@ -130,7 +136,7 @@ export default function RoomsPage() {
           )
         );
 
-      return priceMatch && typeMatch && guestsMatch && availabilityMatch && searchMatch;
+      return priceMatch && typeMatch && guestsMatch && searchMatch;
     });
   }, [Rooms, filters]);
 
@@ -141,6 +147,40 @@ export default function RoomsPage() {
     const diffTime = Math.abs(endDate - startDate);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
+
+
+  const RoomCountSelector = () => (
+    <div className="flex items-center justify-center border border-gray-300 rounded-md">
+      <label className="mr-2">Rooms</label>
+      <Button
+        variant="ghost"
+        onClick={() =>
+          setFilters((prev) => ({
+            ...prev,
+            requestedRooms: Math.max(1, prev.requestedRooms - 1),
+          }))
+        }
+        className="p-2"
+        disabled={filters.requestedRooms <= 1}
+      >
+        -
+      </Button>
+      <div className="mx-4 text-center w-8">{filters.requestedRooms}</div>
+      <Button
+        variant="ghost"
+        onClick={() =>
+          setFilters((prev) => ({
+            ...prev,
+            requestedRooms: prev.requestedRooms + 1,
+          }))
+        }
+        className="p-2"
+        disabled={!filteredRooms.some(room => room.availableSlots > filters.requestedRooms)}
+      >
+        +
+      </Button>
+    </div>
+  );
 
 
   const RoomSkeleton = () => (
@@ -165,6 +205,8 @@ export default function RoomsPage() {
       </CardContent>
     </Card>
   );
+
+
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -235,7 +277,7 @@ export default function RoomsPage() {
             </Select>
 
             {/* Number of Rooms Select */}
-            <Select
+            {/* <Select
               value={filters?.rooms}
               onValueChange={(value) => setFilters(prev => ({ ...prev, rooms: value }))}
             >
@@ -250,7 +292,8 @@ export default function RoomsPage() {
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
+            <RoomCountSelector />
 
             <div className="flex items-center justify-center border border-gray-300 rounded-md">
               <label className="mr-2">Guests</label>
@@ -353,6 +396,7 @@ export default function RoomsPage() {
               <CardContent className="p-4 space-y-3 border-t">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg sm:text-xl font-bold">{room?.name}</h3>
+                  
                   <div className="flex items-center text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
                     <span className="ml-1">
@@ -364,7 +408,11 @@ export default function RoomsPage() {
                   </div>
                 </div>
 
-
+                {room?.availableSlots <= 3 && (
+                    <p className="text-red-500 text-sm">
+                      Hurry! Only {room.availableSlots} room{room.availableSlots !== 1 ? 's' : ''} left
+                    </p>
+                )} 
 
                 <p className="text-gray-600 text-sm">
                   {room?.description?.length > 100
@@ -403,13 +451,16 @@ export default function RoomsPage() {
 
                 <RoomCard
                   room={room}
-                  filters={filters}
+                  filters={{
+                    ...filters,
+                    rooms: filters.requestedRooms
+                  }}
                   onBookNow={(roomId) => navigate(`/rooms/${roomId}`, {
                     state: {
                       startDate: filters?.startDate,
                       endDate: filters?.endDate,
                       guests: filters?.guests,
-                      rooms: filters?.rooms
+                      rooms: filters?.requestedRooms
                     }
                   })}
                 />

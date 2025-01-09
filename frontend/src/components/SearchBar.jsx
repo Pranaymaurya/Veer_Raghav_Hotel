@@ -316,8 +316,8 @@ const HotelBookingSystem = () => {
                         </div>
                       </div>
                       <p className="text-gray-600 mb-4">
-                        {room.description?.length > 150
-                          ? `${room.description.slice(0, 150)}...`
+                        {room.description?.length > 50
+                          ? `${room.description.slice(0, 50)}...`
                           : room.description}
 
                       </p>

@@ -143,7 +143,7 @@ function Gallery() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-serif font-bold text-center mb-12">
           Our Hotel Gallery
-        </h1>z
+        </h1>
         <GalleryGrid cards={cards} />
       </div>
     </div>

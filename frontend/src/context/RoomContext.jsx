@@ -130,6 +130,15 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  const getRoomBookingDates = async (roomId) => {
+    try {
+      const response = await api.get(`/booking/roomdates/${roomId}`);
+      return response.data.dates;
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
   const handleApiError = (error) => {
     if (error.response?.status === 401) {
       throw new Error('Authentication required. Please log in again.');
@@ -148,7 +157,8 @@ export const RoomProvider = ({ children }) => {
     updateRoom,
     Rooms,
     getImageUrl,
-    loading
+    loading,
+    getRoomBookingDates
   };
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
