@@ -62,7 +62,7 @@ export const register = async (req, res) => {
 // Login Function
 export const login = async (req, res) => {
   const { email, password } = req.body;
- 
+
   try {
     // Input validation
     if (!email || !password) {
@@ -72,8 +72,12 @@ export const login = async (req, res) => {
       });
     }
 
+    // Trim and normalize email and password
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
     // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: trimmedEmail });
 
     if (!user || !user.password) {
       return res.status(400).json({
@@ -81,28 +85,42 @@ export const login = async (req, res) => {
         message: "User not found or password is missing."
       });
     }
+
+    // Debugging log
+    // console.log('User found:', user);
+    // console.log('Stored hashed password:', user.password);
+
     // Check password match
-    const isMatch = await bcryptjs.compare(password, user.password);
-    // console.log(user.password)
+    const isMatch = await bcryptjs.compare(trimmedPassword, user.password);
+
+console.log('Password comparison:');
+console.log('Plain password:', trimmedPassword);
+console.log('Hashed password from DB:', user.password);
+console.log('Comparison result:', isMatch); // This should log `true` if passwords match.
+
+
     if (!isMatch) {
       return res.status(400).json({
         success: false,
         message: "Invalid credentials. Password is incorrect."
       });
     }
+
     // Generate JWT
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'secretkey',
       { expiresIn: '5h' }
     );
+
     // Set cookie with the token
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-      sameSite: 'strict', // Protect against CSRF
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       maxAge: 60 * 60 * 1000 // 1 hour
     });
+
     // Send response
     return res.status(200).json({
       success: true,
@@ -118,13 +136,15 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error during login:', error);
     return res.status(500).json({
       success: false,
       message: "Server error. Please try again later."
     });
   }
 };
+
+
 export const logout = (req, res) => {
   try {
     // Clear the token cookie

@@ -8,6 +8,8 @@ import {
   getavgrating,
   GetBookingById,
   GetBookingChange,
+  getBookingDatesByRoom,
+  getBookingsByRoom,
   GetRevenueChange,
   GetUserBookings,
   GetUserBookingsById,
@@ -140,6 +142,18 @@ router.get(
   GetUserBookingsById
 );
 router.get(
+  "/booking/room/:id",
+  authMiddleware,
+  authorizeRoles("admin"),
+  getBookingsByRoom
+);router.get(
+  "/booking/roomdates/:id",
+  authMiddleware,
+  authorizeRoles("user", "admin"),
+  getBookingDatesByRoom
+);
+
+router.get( 
   "/bookingchange",
   authMiddleware,
   authorizeRoles("admin"),
