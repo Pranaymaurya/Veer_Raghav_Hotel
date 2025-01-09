@@ -44,6 +44,8 @@ export default function GuestContent() {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showBookings, setShowBookings] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+
 
   useEffect(() => {
     fetchUsers();
@@ -53,12 +55,18 @@ export default function GuestContent() {
     setCurrentPage(1);
   }, [itemsPerPage]);
 
+  
   const handleViewBookings = async (userId) => {
-    setSelectedUserId(userId);
-    await getBookingsByUserIdbyAdmin(userId);
-    console.log(userBookings);
-
-    setShowBookings(true);
+    try {
+      setIsLoadingBookings(true);
+      setSelectedUserId(userId);
+      const response = await getBookingsByUserIdbyAdmin(userId);
+      setShowBookings(true);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setIsLoadingBookings(false);
+    }
   };
 
   const filteredAndSortedGuests = Guests
@@ -77,6 +85,13 @@ export default function GuestContent() {
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
+
+
+  useEffect(() => {
+    if (userBookings) {
+      console.log('User Bookings updated:', userBookings);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -189,7 +204,11 @@ export default function GuestContent() {
             </DialogTitle>
           </DialogHeader>
 
-          {userBookings && userBookings.length > 0 ? (
+          {isLoadingBookings ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          ) : userBookings && userBookings.bookings && userBookings.bookings.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -200,10 +219,10 @@ export default function GuestContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {userBookings.map((booking) => (
-                  <TableRow key={booking._id}>
+                {userBookings.bookings.map((booking) => (
+                  <TableRow key={booking.id}>
                     <TableCell>
-                      {new Date(booking.createdAt).toLocaleDateString()}
+                      {new Date(booking.checkInDate).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       {new Date(booking.checkInDate).toLocaleDateString()}
@@ -212,11 +231,12 @@ export default function GuestContent() {
                       {new Date(booking.checkOutDate).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-sm ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                        }`}>
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                      <span className={`px-2 py-1 rounded-full text-sm ${
+                        booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {booking.status || 'pending'}
                       </span>
                     </TableCell>
                   </TableRow>

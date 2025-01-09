@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { format, differenceInDays, addDays, isBefore, isToday } from 'date-fns';
 import {
-  Bed, Users, Star, ChevronLeft, Plus, Minus, Info,
-  AlertCircle, User, MessageSquare, Clock, Languages,
-  ChevronRight,
-  Check
+  Bed, Users, Star, ChevronLeft, Plus, Minus, AlertCircle, Check
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +16,9 @@ import ImageSlider from './components/ImageSlider';
 import { useAuth } from '@/hooks/useAuth';
 import { Separator } from '@/components/ui/separator';
 import PriceDetails from './components/PriceDetails';
+import HotelDetailsSections from './components/HotelDetailsSections';
+import { useToast } from '@/hooks/use-toast';
 
-// Loading skeleton component (same as before)
 const RoomDetailsSkeleton = () => (
   <div className="container mx-auto p-4 space-y-6">
     <div className="flex justify-between items-center mb-6">
@@ -57,209 +55,331 @@ const RoomDetailsSkeleton = () => (
 export default function ViewRoomDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const { user } = useAuth();
-  const { Rooms, getAllRooms, loading: roomsLoading } = useRoom();
+  const { Rooms, getAllRooms, loading: roomsLoading, getRoomBookingDates } = useRoom();
+  const { toast } = useToast();
 
-  // States for new UI elements
+  // UI States
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
-  // const [showAllFoodDining, setShowAllFoodDining] = useState(false);
   const [showHostInfo, setShowHostInfo] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Popular Amenities');
+  const [bookedDates, setBookedDates] = useState([]);
 
-
+  // Get current room
   const room = Rooms?.find(room => room?._id === id);
-  // Initialize states (same as before)
-  const [roomCount, setRoomCount] = useState(() => {
-    try {
-      const roomsParam = searchParams?.get('rooms');
-      if (roomsParam) {
-        const parsedRooms = parseInt(roomsParam);
-        return parsedRooms > 0 ? parsedRooms : 1;
-      }
 
-      const locationRooms = location.state?.rooms;
-      if (locationRooms) {
-        const parsedLocationRooms = parseInt(locationRooms);
-        return parsedLocationRooms > 0 ? parsedLocationRooms : 1;
-      }
-
-      return 1;
-    } catch (error) {
-      console.error('Error initializing room count:', error);
-      return 1;
-    }
+  // Initialize states with URL parameters or defaults
+  const [guests, setGuests] = useState(() => {
+    const guestsParam = parseInt(searchParams.get('guests')) || location.state?.guests || 1;
+    return Math.max(1, guestsParam);
   });
 
-  const [guests, setGuests] = useState(() => {
-    try {
-      const guestsParam = searchParams?.get('guests');
-      if (guestsParam) {
-        const parsedGuests = parseInt(guestsParam);
-        return parsedGuests > 0 ? parsedGuests : 1;
-      }
-
-      const locationGuests = location.state?.guests;
-      if (locationGuests) {
-        const parsedLocationGuests = parseInt(locationGuests);
-        return parsedLocationGuests > 0 ? parsedLocationGuests : 1;
-      }
-
-      return 1;
-    } catch (error) {
-      console.error('Error initializing guests count:', error);
-      return 1;
-    }
+  const [roomCount, setRoomCount] = useState(() => {
+    const roomsParam = parseInt(searchParams.get('rooms')) || location.state?.rooms || 1;
+    return Math.max(1, roomsParam);
   });
 
   const [date, setDate] = useState(() => {
-    try {
-      const checkIn = searchParams.get('checkIn');
-      const checkOut = searchParams.get('checkOut');
+    const checkIn = searchParams.get('checkIn') || location.state?.startDate;
+    const checkOut = searchParams.get('checkOut') || location.state?.endDate;
 
-      const locationStartDate = location.state?.startDate;
-      const locationEndDate = location.state?.endDate;
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = addDays(today, 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
+    // Only set dates if they're provided in URL params or location state
+    if (checkIn && checkOut) {
       return {
-        from: checkIn ? new Date(checkIn) : locationStartDate ? new Date(locationStartDate) : today,
-        to: checkOut ? new Date(checkOut) : locationEndDate ? new Date(locationEndDate) : tomorrow,
-        selecting: false
-      };
-    } catch (error) {
-      console.error('Error initializing dates:', error);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = addDays(today, 1);
-      return {
-        from: today,
-        to: tomorrow,
+        from: new Date(checkIn),
+        to: new Date(checkOut),
         selecting: false
       };
     }
+
+    // Otherwise return null values
+    return {
+      from: null,
+      to: null,
+      selecting: false
+    };
   });
 
   const [dateError, setDateError] = useState('');
   const [priceIncreased, setPriceIncreased] = useState(false);
 
-  // Effects (same as before)
+  // Effects
   useEffect(() => {
     getAllRooms();
   }, []);
 
   useEffect(() => {
-    if (!room) return;
-
-    const validateRoomAssignment = () => {
-      const currentGuests = guests;
-      const currentRooms = roomCount;
-      const maxGuestsPerRoom = room?.maxOccupancy;
-      const minimumRequiredRooms = Math.ceil(currentGuests / maxGuestsPerRoom);
-
-      if (currentRooms * maxGuestsPerRoom < currentGuests) {
-        setRoomCount(minimumRequiredRooms);
-        setPriceIncreased(minimumRequiredRooms > 1);
+    const fetchBookedDates = async () => {
+      if (id) {
+        try {
+          const dates = await getRoomBookingDates(id);
+          setBookedDates(dates.map(date => new Date(date)));
+        } catch (error) {
+          console.error('Error fetching booked dates:', error);
+        }
       }
     };
+    fetchBookedDates();
+  }, [id, getRoomBookingDates]);
 
-    validateRoomAssignment();
+  useEffect(() => {
+    // Only run this check if we have booked dates and dates from params/state
+    if (bookedDates.length > 0 && date?.from && date?.to) {
+      // Check if the selected date range is available
+      const isAvailable = isDateRangeAvailable(date.from, date.to);
+      
+      if (!isAvailable) {
+        // Reset the dates and show error toast
+        setDate({
+          from: null,
+          to: null,
+          selecting: false
+        });
+        
+        toast({
+          title: "Dates Unavailable",
+          description: "Your selected dates are not available. Please choose different dates.",
+          variant: "destructive",
+        });
+  
+        // Update URL to remove date params
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('checkIn');
+        newSearchParams.delete('checkOut');
+        setSearchParams(newSearchParams);
+      }
+    }
+  }, [bookedDates, date?.from, date?.to]);
+
+  useEffect(() => {
+    if (room) {
+      const requiredRooms = Math.ceil(guests / room.maxOccupancy);
+      if (roomCount < requiredRooms) {
+        setRoomCount(requiredRooms);
+        setPriceIncreased(requiredRooms > 1);
+      }
+    }
   }, [room, guests]);
 
   useEffect(() => {
-    if (!room) return;
-
-    const params = new URLSearchParams(searchParams);
-    params.set('guests', guests?.toString());
-    params.set('rooms', roomCount.toString());
-    if (date.from) params.set('checkIn', date.from.toISOString());
-    if (date.to) params.set('checkOut', date.to.toISOString());
-
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}?${params.toString()}`
-    );
-  }, [guests, roomCount, date, room]);
-
-  useEffect(() => {
-    if (room && date?.from && date?.to) {
+    if (date?.from && date?.to) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       if (isBefore(date.from, today) && !isToday(date.from)) {
         setDateError('Check-in date cannot be in the past');
-        return;
-      }
-
-      if (date.to && isBefore(date.to, date.from)) {
+      } else if (isBefore(date.to, date.from)) {
         setDateError('Check-out date must be after check-in date');
-        return;
-      }
-
-      const days = differenceInDays(date.to, date.from);
-
-      if (days < 1) {
+      } else if (differenceInDays(date.to, date.from) < 1) {
         setDateError('Minimum stay is 1 night');
       } else {
         setDateError('');
       }
     }
-  }, [date, room]);
+  }, [date]);
 
-  // Handlers (same as before)
+  // Utility functions
+  const isDateBooked = (date) => {
+    // Convert the input date to midnight UTC to match the API date format
+    const dateToCheck = format(new Date(date), 'yyyy-MM-dd');
+    return bookedDates.some(bookedDate => {
+      // Convert booked date to the same format for comparison
+      const formattedBookedDate = format(new Date(bookedDate), 'yyyy-MM-dd');
+      return formattedBookedDate === dateToCheck;
+    });
+  };
+
+  const isDateRangeAvailable = (startDate, endDate) => {
+    if (!startDate || !endDate) return true;
+
+    // Create a new date object to iterate through
+    let currentDate = new Date(startDate);
+    const endDateTime = new Date(endDate);
+
+    // Exclude the checkout date from the availability check
+    while (isBefore(currentDate, endDateTime)) {
+      if (isDateBooked(currentDate)) {
+        return false;
+      }
+      currentDate = addDays(currentDate, 1);
+    }
+    return true;
+  };
+
+  const calculateTotalTaxes = (basePrice, nights, rooms) => {
+    if (!room?.taxes) return 0;
+    const totalBasePrice = basePrice * nights * rooms;
+    const totalTaxPercentage = (room.taxes.vat || 0) + (room.taxes.serviceTax || 0) + (room.taxes.other || 0);
+    return (totalBasePrice * totalTaxPercentage) / 100;
+  };
+
+  const calculateFinalPrice = () => {
+    if (!room || !date.from || !date.to) return 0;
+
+    const nights = differenceInDays(date.to, date.from);
+    const basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+    const totalBasePrice = basePrice * nights * roomCount;
+    const totalTaxes = calculateTotalTaxes(basePrice, nights, roomCount);
+
+    return totalBasePrice + totalTaxes;
+  };
+
+  const isValidDateRange = (dateRange) => {
+    if (!dateRange || !dateRange.from || !dateRange.to) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+  
+    try {
+      // Check if both dates are valid Date objects
+      if (!(dateRange.from instanceof Date) || !(dateRange.to instanceof Date)) return false;
+      if (isNaN(dateRange.from.getTime()) || isNaN(dateRange.to.getTime())) return false;
+  
+      // Check if dates are not in the past (allow today)
+      if (isBefore(dateRange.from, today) && !isToday(dateRange.from)) return false;
+  
+      // Check if check-out is after check-in
+      if (!isBefore(dateRange.from, dateRange.to)) return false;
+  
+      // Check if dates are within booking window (e.g., 1 year)
+      const maxBookingDate = addDays(today, 365);
+      if (isBefore(maxBookingDate, dateRange.to)) return false;
+  
+      // Verify minimum stay requirement (1 night)
+      const nights = differenceInDays(dateRange.to, dateRange.from);
+      if (nights < 1) return false;
+  
+      return true;
+    } catch (error) {
+      console.error('Error validating date range:', error);
+      return false;
+    }
+  };
+  
+  // Format date range for display
+  const formatDateRange = (dateRange) => {
+    try {
+      if (!dateRange || !dateRange.from || !dateRange.to) {
+        return "Select your dates";
+      }
+      return `${format(dateRange.from, "EEE, MMM d, yyyy")} - ${format(dateRange.to, "EEE, MMM d, yyyy")}`;
+    } catch (error) {
+      console.error('Error formatting date range:', error);
+      return "Select your dates";
+    }
+  };
+  
+  // Calculate number of nights in a date range
+  const calculateNights = (dateRange) => {
+    try {
+      if (!isValidDateRange(dateRange)) return 0;
+      return differenceInDays(dateRange.to, dateRange.from);
+    } catch (error) {
+      console.error('Error calculating nights:', error);
+      return 0;
+    }
+  };
+  
+  // Get error message for invalid date range
+  const getDateRangeError = (dateRange) => {
+    if (!dateRange || !dateRange.from || !dateRange.to) return '';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+  
+    try {
+      if (isBefore(dateRange.from, today) && !isToday(dateRange.from)) {
+        return 'Check-in date cannot be in the past';
+      }
+  
+      if (!isBefore(dateRange.from, dateRange.to)) {
+        return 'Check-out date must be after check-in date';
+      }
+  
+      const nights = differenceInDays(dateRange.to, dateRange.from);
+      if (nights < 1) {
+        return 'Minimum stay is 1 night';
+      }
+  
+      const maxBookingDate = addDays(today, 365);
+      if (isBefore(maxBookingDate, dateRange.to)) {
+        return 'Cannot book more than 1 year in advance';
+      }
+  
+      return '';
+    } catch (error) {
+      console.error('Error getting date range error:', error);
+      return 'Invalid date selection';
+    }
+  };
+
+  // Event handlers
   const handleDateSelect = (newDate) => {
     if (!newDate) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = addDays(today, 1);
       setDate({
-        from: today,
-        to: tomorrow,
+        from: null,
+        to: null,
         selecting: false
       });
       return;
     }
 
-    if (!newDate.from) {
-      setDate({
-        from: null,
-        to: null,
-        selecting: true
-      });
-    } else if (!newDate.to) {
+    // If only start date is selected, allow the selection
+    if (!newDate.to) {
       setDate({
         from: newDate.from,
-        to: null,
+        to: undefined,
         selecting: true
       });
-    } else {
-      setDate({
-        from: newDate.from,
-        to: newDate.to,
-        selecting: false
-      });
+      return;
     }
+
+    const dateRange = {
+      from: newDate.from,
+      to: newDate.to,
+      selecting: false
+    };
+
+    if (!isValidDateRange(dateRange)) {
+      const error = getDateRangeError(dateRange);
+      setDateError(error);
+      return;
+    }
+
+    if (!isDateRangeAvailable(newDate.from, newDate.to)) {
+      toast({
+        title: "Dates Unavailable",
+        description: "Some dates in your selection are already booked. Please choose different dates.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDate(dateRange);
+    setDateError('');
   };
 
   const handleGuestChange = (increment) => {
     if (!room) return;
 
     const newGuestCount = Math.max(1, guests + increment);
-    setGuests(newGuestCount);
+    const requiredRooms = Math.ceil(newGuestCount / room.maxOccupancy);
 
-    if (!searchParams.get('rooms')) {
-      const minimumRequiredRooms = Math.ceil(newGuestCount / room.maxOccupancy);
-      if (minimumRequiredRooms !== roomCount) {
-        setRoomCount(minimumRequiredRooms);
-        setPriceIncreased(minimumRequiredRooms > 1);
-      }
+    if (requiredRooms > room.availableSlots) {
+      toast({
+        title: "Maximum Capacity Reached",
+        description: `Only ${room.availableSlots} rooms are available (${room.availableSlots * room.maxOccupancy} guests maximum)`,
+        variant: "destructive",
+      });
+      return;
     }
+
+    setGuests(newGuestCount);
+    setRoomCount(requiredRooms);
+    setPriceIncreased(requiredRooms > 1);
   };
 
   const handleLogin = () => {
@@ -271,538 +391,381 @@ export default function ViewRoomDetails() {
     });
   };
 
-  // const totalTaxPercentage = (room.taxes.vat || 0) + (room.taxes.serviceTax || 0) + (room.taxes.other || 0);
+  
 
-  const calculateTotalTaxes = (basePrice, nights, rooms) => {
-    if (!room?.taxes) return 0;
-    const totalBasePrice = basePrice * nights * rooms;
-    const totalTaxPercentage = (room?.taxes?.vat || 0) + (room?.taxes?.serviceTax || 0) + (room?.taxes?.other || 0);
-    return (totalBasePrice * totalTaxPercentage) / 100;
+const handleBookNow = () => {
+  if (!date?.from || !date?.to || !room) return;
+
+  const nights = differenceInDays(date.to, date.from);
+  const basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+  const totalTaxes = calculateTotalTaxes(basePrice, nights, roomCount);
+  const finalPrice = (basePrice * nights * roomCount) + totalTaxes;
+
+  const booking = {
+    roomId: room._id,
+    roomName: room.name,
+    pricePerNight: basePrice,
+    startDate: date.from,
+    endDate: date.to,
+    guests,
+    nights,
+    roomCount,
+    totalPrice: finalPrice.toFixed(2),
+    taxes: totalTaxes.toFixed(2),
+    amenities: room.amenities,
+    taxBreakdown: {
+      vat: `${room.taxes?.vat || 0}%`,
+      serviceTax: `${room.taxes?.serviceTax || 0}%`,
+      other: `${room.taxes?.other || 0}%`,
+    },
   };
 
+  navigate(`/booking/${room._id}`, { state: { booking } });
+};
 
-  const calculateRating = (ratings) => {
-    if (!ratings?.length) return null;
-    const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
-    return sum / ratings.length;
-  };
+// Loading and error states
+if (roomsLoading) {
+  return <RoomDetailsSkeleton />;
+}
 
-  const formatPrice = (originalPrice, discountedPrice) => {
-    if (!discountedPrice) return originalPrice;
-    return {
-      original: originalPrice,
-      discounted: discountedPrice,
-      savings: originalPrice - discountedPrice
-    };
-  };
-
-  const calculateFinalPrice = () => {
-    if (!room || !date.from || !date.to) return 0;
-
-    const nights = differenceInDays(date.to, date.from);
-    const basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
-    const totalBasePrice = basePrice * nights * roomCount;
-
-    // Calculate taxes on the total base price
-    const totalTaxes = calculateTotalTaxes(basePrice, nights, roomCount);
-
-    return totalBasePrice + totalTaxes;
-  };
+if (!room) {
+  return (
+    <div className="container mx-auto p-4 text-center">
+      <Card className="max-w-md mx-auto">
+        <CardContent className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Room Not Found</h2>
+          <p className="text-muted-foreground mb-4">
+            The room you are looking for does not exist or has been removed.
+          </p>
+          <Button onClick={() => navigate('/rooms')}>
+            Back to Rooms
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 
-  const handleBookNow = () => {
-    if (!date?.from || !date?.to || !room) return;
 
-    // Calculate nights
-    const nights = differenceInDays(date.to, date.from);
+return (
+  <div className="container mx-auto p-4">
+    {/* Header */}
+    <div className="flex justify-between items-center mb-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-800">{room?.name}</h1>
+        <Button
+          variant="link"
+          onClick={() => navigate('/rooms')}
+          className="pl-0 text-gray-600 hover:text-primary"
+        >
+          <ChevronLeft className="mr-2" /> Back to Rooms
+        </Button>
+      </div>
+      <div className="flex items-center text-yellow-500">
+        <Star className="w-4 h-4 fill-current" />
+        <span className="ml-1">
+          {room?.ratings?.length > 0
+            ? (room?.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+              room?.ratings.length).toFixed(1)
+            : "New"}
+        </span>
+        {room?.ratings?.length > 0 && (
+          <span className="ml-2 text-sm text-gray-600">
+            {(() => {
+              const avgRating =
+                room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
+                room.ratings.length;
 
-    // Determine the base price (discounted price or original price)
-    const basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+              if (avgRating > 4.5) return "Excellent";
+              if (avgRating > 4) return "Very Good";
+              if (avgRating > 3.2) return "Good";
+              return "Okay";
+            })()}
+          </span>
+        )}
+      </div>
+    </div>
 
-    // Calculate total taxes based on the base price
-    const totalTaxes = ((room.taxes?.vat || 0) + (room.taxes?.serviceTax || 0) + (room.taxes?.other || 0)) * basePrice / 100;
+    <div className="grid md:grid-cols-3 gap-6">
+      {/* Left Section - 2/3 width */}
+      <div className="md:col-span-2 space-y-6">
+        {/* Image Slider */}
+        <div className="relative">
+          <ImageSlider images={room?.images || []} />
+        </div>
 
-    // Final total price for the stay
-    const finalPrice = (basePrice + totalTaxes) * nights * roomCount;
-
-    // Prepare booking object
-    const booking = {
-      roomId: room._id,
-      roomName: room.name,
-      pricePerNight: basePrice,
-      startDate: date.from,
-      endDate: date.to,
-      guests,
-      nights,
-      roomCount,
-      totalPrice: finalPrice.toFixed(2), // Rounded to 2 decimal places
-      taxes: totalTaxes.toFixed(2), // Total taxes for the stay, rounded
-      amenities: room.amenities,
-      taxBreakdown: {
-        vat: `${room.taxes?.vat || 0}%`,
-        serviceTax: `${room.taxes?.serviceTax || 0}%`,
-        other: `${room.taxes?.other || 0}%`,
-      },
-    };
-
-    // Navigate to booking page with the booking state
-    navigate(`/booking/${room._id}`, { state: { booking } });
-
-    console.log("Booking details:", booking);
-  };
-
-  const isValidDateRange = (dateRange) => {
-    if (!dateRange || !dateRange.from || !dateRange.to) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    try {
-      return (
-        dateRange.from instanceof Date &&
-        dateRange.to instanceof Date &&
-        !isNaN(dateRange.from) &&
-        !isNaN(dateRange.to) &&
-        (isToday(dateRange.from) || isBefore(today, dateRange.from))
-      );
-    } catch (error) {
-      console.error('Error validating date range:', error);
-      return false;
-    }
-  };
-
-  const formatDateRange = (dateRange) => {
-    try {
-      if (!isValidDateRange(dateRange)) {
-        return "Select dates";
-      }
-      return `${format(dateRange.from, "EEE, MMM d, yyyy")} - ${format(dateRange.to, "EEE, MMM d, yyyy")}`;
-    } catch (error) {
-      console.error('Error formatting date range:', error);
-      return "Select dates";
-    }
-  };
-
-  const calculateNights = (dateRange) => {
-    try {
-      if (!isValidDateRange(dateRange)) return 0;
-      return Math.max(differenceInDays(dateRange.to, dateRange.from), 0);
-    } catch (error) {
-      console.error('Error calculating nights:', error);
-      return 0;
-    }
-  };
-
-  const getRoomQuality = (rating) => {
-    if (!rating) return "New";
-    if (rating > 4.5) return "Excellent";
-    if (rating > 4) return "Very Good";
-    if (rating >= 3.5) return "Good";
-    return "Okay";
-  };
-
-  // Loading and error states
-  if (roomsLoading) {
-    return <RoomDetailsSkeleton />;
-  }
-
-  const finalPrice = calculateFinalPrice();
-
-  if (!room) {
-    return (
-      <div className="container mx-auto p-4 text-center">
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Room Not Found</h2>
-            <p className="text-muted-foreground mb-4">
-              The room you are looking for does not exist or has been removed.
+        {/* Room Info */}
+        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <h3 className="font-semibold text-gray-700 flex items-center">
+              <Bed className="mr-2 text-primary" /> Room Type
+            </h3>
+            <p className="text-gray-600">{room?.name}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-700 flex items-center">
+              <Users className="mr-2 text-primary" /> Capacity
+            </h3>
+            <p className="text-gray-600">
+              {room?.amenities?.find(cat => cat.category === 'No of Bed')?.items[0]?.quantity || 1} Bed(s) •
+              Fits {room?.maxOccupancy} Guests
             </p>
-            <Button onClick={() => navigate('/rooms')}>
-              Back to Rooms
-            </Button>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Description</h3>
+          <p className="text-gray-600">
+            {room?.description?.length > 150
+              ? `${room?.description.slice(0, 150)}...`
+              : room?.description}
+            {room?.description?.length > 150 && (
+              <Button
+                variant="link"
+                onClick={() => setShowFullDescription(true)}
+                className="text-primary"
+              >
+                Read more
+              </Button>
+            )}
+          </p>
+        </div>
+
+        {/* Amenities */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">Amenities</h3>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {room?.amenities?.map((category, index) => (
+              <Button
+
+                key={index}
+                variant={selectedCategory === category.category ? "default" : "outline"}
+                onClick={() => setSelectedCategory(category.category)}
+                className="whitespace-nowrap"
+              >
+                {category.category}
+              </Button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {room?.amenities
+              ?.find(cat => cat.category === selectedCategory)
+              ?.items.map(item => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <Check className="text-primary h-4 w-4" />
+                  <span>{item.name} {item.quantity > 1 ? `(${item.quantity})` : ''}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Hotel Details */}
+        <HotelDetailsSections onMessageHost={handleLogin} />
+
+      </div>
+
+      {/* Right Section - 1/3 width */}
+      <div className="md:col-span-1">
+        <Card className="sticky top-4">
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-4">
+              {/* Date Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Select Stay Dates
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !isValidDateRange(date) && "text-muted-foreground"
+                      )}
+                    >
+                      {formatDateRange(date)}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={date?.from || new Date()}
+                      selected={{
+                        from: date?.from,
+                        to: date?.to
+                      }}
+                      onSelect={handleDateSelect}
+                      numberOfMonths={2}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return (
+                          isBefore(date, today) ||
+                          isDateBooked(date)
+                        );
+                      }}
+                      className="rounded-md border"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {dateError && (
+                  <div className="text-red-500 text-sm flex items-center">
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    {dateError}
+                  </div>
+                )}
+                {calculateNights(date) > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    You have selected {calculateNights(date)} nights
+                  </p>
+                )}
+              </div>
+
+              {/* Guests and Rooms */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Guests
+                </label>
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleGuestChange(-1)}
+                    disabled={guests <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span>{guests} {guests === 1 ? 'Guest' : 'Guests'}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleGuestChange(1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {room && (
+                  <div className="text-sm text-muted-foreground">
+                    {roomCount} room{roomCount !== 1 ? 's' : ''} will be booked
+                    {room.availableSlots < roomCount && (
+                      <div className="text-destructive mt-1">
+                        Only {room.availableSlots} room{room.availableSlots !== 1 ? 's' : ''} available
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Price Display */}
+              <PriceDetails
+                pricePerNight={room?.pricePerNight}
+                discountedPrice={room?.DiscountedPrice}
+                taxes={room?.taxes}
+                roomCount={roomCount}
+                date={date}
+                finalPrice={calculateFinalPrice()}
+                totalTaxes={calculateTotalTaxes(
+                  room?.DiscountedPrice > 0 ? room?.DiscountedPrice : room?.pricePerNight,
+                  date.from && date.to ? differenceInDays(date.to, date.from) : 0,
+                  roomCount
+                )}
+              />
+
+
+              {/* Book Now Button */}
+              {!user ? (
+                <Button
+                  onClick={handleLogin}
+                  className="w-full bg-orange-600 text-white hover:bg-orange-700"
+                >
+                  Login to Book
+                </Button>
+              ) : (
+                <Button
+                  disabled={!!dateError || !date?.from || !date?.to}
+                  onClick={handleBookNow}
+                  className="w-full bg-orange-600 text-white hover:bg-orange-700"
+                >
+                  Book Now
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
-    );
-  }
+    </div>
 
-  const disabledDays = {
-    before: new Date(),
-  };
+    {/* Modals */}
+    <Dialog open={showFullDescription} onOpenChange={setShowFullDescription}>
+      <DialogContent className='textblack'>
+        <DialogHeader>
+          <DialogTitle>Room Description</DialogTitle>
+        </DialogHeader>
+        <Separator />
+        <p className="text-gray-600">{room?.description}</p>
+      </DialogContent>
+    </Dialog>
 
-  return (
-    <div className="container mx-auto p-4">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">{room?.name}</h1>
-          <Button
-            variant="link"
-            onClick={() => navigate('/rooms')}
-            className="pl-0 text-gray-600 hover:text-primary"
-          >
-            <ChevronLeft className="mr-2" /> Back to Rooms
-          </Button>
-        </div>
-        <div className="flex items-center">
-          <Star className="text-yellow-500 mr-2" />
-          <span className="font-semibold">
-            {room?.rating?.toFixed(1) || "New"}
-          </span>
-          <span className="text-gray-500 ml-2">
-            ({getRoomQuality(room?.rating)})
-          </span>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Left Section - 2/3 width */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Image Slider */}
-          <div className="relative">
-            <ImageSlider images={room?.images || []} />
-          </div>
-
-          {/* Room Info */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div>
-              <h3 className="font-semibold text-gray-700 flex items-center">
-                <Bed className="mr-2 text-primary" /> Room Type
-              </h3>
-              <p className="text-gray-600">{room?.name}</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-700 flex items-center">
-                <Users className="mr-2 text-primary" /> Capacity
-              </h3>
-              <p className="text-gray-600">
-                {room?.amenities?.find(cat => cat.category === 'No of Bed')?.items[0]?.quantity || 1} Bed(s) •
-                Fits {room?.maxOccupancy} Guests
-              </p>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Description</h3>
-            <p className="text-gray-600">
-              {room?.description?.length > 150
-                ? `${room?.description.slice(0, 150)}...`
-                : room?.description}
-              {room?.description?.length > 150 && (
-                <Button
-                  variant="link"
-                  onClick={() => setShowFullDescription(true)}
-                  className="text-primary"
-                >
-                  Read more
-                </Button>
+    <Dialog open={showAllAmenities} onOpenChange={setShowAllAmenities}>
+      <DialogContent className="textblack">
+        <DialogHeader>
+          <DialogTitle>All Amenities</DialogTitle>
+        </DialogHeader>
+        <Separator />
+        <div className="space-y-6">
+          {room?.amenities?.map(category => (
+            <div key={category.category} className="space-y-2">
+              <h4 className="font-semibold">{category.category}</h4>
+              {category.description && (
+                <p className="text-sm text-gray-600">{category.description}</p>
               )}
-            </p>
-          </div>
-
-          {/* Amenities */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Amenities</h3>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {room?.amenities?.map((category, index) => (
-                <Button
-
-                  key={index}
-                  variant={selectedCategory === category.category ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(category.category)}
-                  className="whitespace-nowrap"
-                >
-                  {category.category}
-                </Button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {room?.amenities
-                ?.find(cat => cat.category === selectedCategory)
-                ?.items.map(item => (
+              <div className="grid grid-cols-2 gap-2">
+                {category.items.map(item => (
                   <div key={item.name} className="flex items-center gap-2">
                     <Check className="text-primary h-4 w-4" />
                     <span>{item.name} {item.quantity > 1 ? `(${item.quantity})` : ''}</span>
                   </div>
                 ))}
-            </div>
-          </div>
-
-          <Separator />
-          {/* Food & Dining */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg">Food & Dining</h3>
-            <div className="flex textblack ">
-              <div>
-                <h1>Meal options are provided at the property</h1>
-                <ul className='text-base list-disc'>
-                  <li className='text-sm ml-5'>Meals offered: Breakfast, Lunch, Dinner</li>
-                  <li className='text-sm ml-5'>Only veg meals will be served by the property</li>
-                  <li className='text-sm ml-5'>Cuisines available: Local, South Indian, North Indian, Chinese</li>
-                  <li className='text-sm ml-5'>Meal charges (approx): INR 200 per person per meal</li>
-                </ul>
-              </div>
-
-              <div>
-                <h1>Additional information</h1>
-                <ul className='text-base list-disc'>
-                  <li className='text-sm ml-5'>Outside food is allowed</li>
-                </ul>
               </div>
             </div>
-          </div>
-          <Separator />
-          {/* Host Information Card */}
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-gray-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Hosted by Ankur</h3>
-                  <p className="text-gray-600">Hosting since 2024</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Languages className="text-primary" />
-                  <span>Speaks English, Hindi</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="text-primary" />
-                  <span>Responds within 24 hours</span>
-                </div>
-              </div>
-
-              <p className="text-gray-600">
-                During your stay, you will be hosted by Ankur. He has been hosting since 2024.
-                Ankur is an affable person and loves hosting guests from various corners of the world...
-                <Button
-                  variant="link"
-                  onClick={() => setShowHostInfo(true)}
-                  className="text-primary"
-                >
-                  Read more
-                </Button>
-              </p>
-
-              <div className="space-y-2">
-                <h4 className="font-semibold">
-                  During your stay, a Caretaker will be available at the property.
-                </h4>
-                <p className="text-gray-600">
-                  <strong>Caretaker Responsibilities:</strong> Cleaning kitchen/utensils,
-                  Cab bookings, Car/bike rentals, Gardening, Help buying groceries,
-                  Restaurant reservations, Pick up and Drop services
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full flex items-center justify-center gap-2"
-                  onClick={handleLogin}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  LOGIN TO MESSAGE HOST
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          ))}
         </div>
+      </DialogContent>
+    </Dialog>
 
-        {/* Right Section - 1/3 width */}
-        <div className="md:col-span-1">
-          <Card className="sticky top-4">
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-4">
-                {/* Date Selection */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Select Stay Dates
-                  </label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !isValidDateRange(date) && "text-muted-foreground"
-                        )}
-                      >
-                        {formatDateRange(date)}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from || new Date()}
-                        selected={{
-                          from: date?.from,
-                          to: date?.to
-                        }}
-                        onSelect={handleDateSelect}
-                        numberOfMonths={2}
-                        disabled={disabledDays}
-                        className="rounded-md border"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {dateError && (
-                    <div className="text-red-500 text-sm flex items-center">
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      {dateError}
-                    </div>
-                  )}
-                  {calculateNights(date) > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      You have selected {calculateNights(date)} nights
-                    </p>
-                  )}
-                </div>
-
-                {/* Guests and Rooms */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Guests
-                    </label>
-                    <div className="flex items-center justify-between">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleGuestChange(-1)}
-                        disabled={guests <= 1}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span>{guests} {guests === 1 ? 'Guest' : 'Guests'}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleGuestChange(1)}
-                        disabled={guests >= room?.maxOccupancy * roomCount}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Rooms Required
-                    </label>
-                    <div className="bg-orange-50 text-secondary-foreground px-4 py-2 rounded-md text-center">
-                      {roomCount} {roomCount === 1 ? 'Room' : 'Rooms'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Price Display */}
-                <PriceDetails
-                  pricePerNight={room?.pricePerNight}
-                  discountedPrice={room?.DiscountedPrice}
-                  taxes={room?.taxes}
-                  roomCount={roomCount}
-                  date={date}
-                  finalPrice={calculateFinalPrice()}
-                  totalTaxes={calculateTotalTaxes(
-                    room?.DiscountedPrice > 0 ? room?.DiscountedPrice : room?.pricePerNight,
-                    date.from && date.to ? differenceInDays(date.to, date.from) : 0,
-                    roomCount
-                  )}
-                />
-
-
-                {/* Book Now Button */}
-                {!user ? (
-                  <Button
-                    onClick={handleLogin}
-                    className="w-full bg-orange-600 text-white hover:bg-orange-700"
-                  >
-                    Login to Book
-                  </Button>
-                ) : (
-                  <Button
-                    disabled={!!dateError || !date?.from || !date?.to}
-                    onClick={handleBookNow}
-                    className="w-full bg-orange-600 text-white hover:bg-orange-700"
-                  >
-                    Book Now
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+    <Dialog open={showHostInfo} onOpenChange={setShowHostInfo}>
+      <DialogContent className='textblack'>
+        <DialogHeader>
+          <DialogTitle>About Your Host</DialogTitle>
+        </DialogHeader>
+        <Separator />
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            During your stay, you will be hosted by Ankur. He has been hosting since 2024.
+            Ankur is an affable person and loves hosting guests from various corners of the world.
+            Besides hosting, Ankur likes travelling, listening to music, reading and playing sports.
+            He has always been passionate about donning the hat of a perfect host.
+          </p>
+          <div>
+            <h4 className="font-semibold mb-2">Caretaker Services</h4>
+            <ul className="space-y-2">
+              <li>• Cleaning kitchen/utensils</li>
+              <li>• Cab bookings</li>
+              <li>• Car/bike rentals</li>
+              <li>• Gardening</li>
+              <li>• Help buying groceries</li>
+              <li>• Restaurant reservations</li>
+              <li>• Pick up and Drop services</li>
+            </ul>
+          </div>
         </div>
-      </div>
-
-      {/* Modals */}
-      <Dialog open={showFullDescription} onOpenChange={setShowFullDescription}>
-        <DialogContent className='textblack'>
-          <DialogHeader>
-            <DialogTitle>Room Description</DialogTitle>
-          </DialogHeader>
-          <Separator />
-          <p className="text-gray-600">{room?.description}</p>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showAllAmenities} onOpenChange={setShowAllAmenities}>
-        <DialogContent className="textblack">
-          <DialogHeader>
-            <DialogTitle>All Amenities</DialogTitle>
-          </DialogHeader>
-          <Separator />
-          <div className="space-y-6">
-            {room?.amenities?.map(category => (
-              <div key={category.category} className="space-y-2">
-                <h4 className="font-semibold">{category.category}</h4>
-                {category.description && (
-                  <p className="text-sm text-gray-600">{category.description}</p>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {category.items.map(item => (
-                    <div key={item.name} className="flex items-center gap-2">
-                      <Check className="text-primary h-4 w-4" />
-                      <span>{item.name} {item.quantity > 1 ? `(${item.quantity})` : ''}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showHostInfo} onOpenChange={setShowHostInfo}>
-        <DialogContent className='textblack'>
-          <DialogHeader>
-            <DialogTitle>About Your Host</DialogTitle>
-          </DialogHeader>
-          <Separator />
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              During your stay, you will be hosted by Ankur. He has been hosting since 2024.
-              Ankur is an affable person and loves hosting guests from various corners of the world.
-              Besides hosting, Ankur likes travelling, listening to music, reading and playing sports.
-              He has always been passionate about donning the hat of a perfect host.
-            </p>
-            <div>
-              <h4 className="font-semibold mb-2">Caretaker Services</h4>
-              <ul className="space-y-2">
-                <li>• Cleaning kitchen/utensils</li>
-                <li>• Cab bookings</li>
-                <li>• Car/bike rentals</li>
-                <li>• Gardening</li>
-                <li>• Help buying groceries</li>
-                <li>• Restaurant reservations</li>
-                <li>• Pick up and Drop services</li>
-              </ul>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+      </DialogContent>
+    </Dialog>
+  </div>
+);
 }

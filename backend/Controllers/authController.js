@@ -110,7 +110,7 @@ console.log('Comparison result:', isMatch); // This should log `true` if passwor
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'secretkey',
-      { expiresIn: '1h' }
+      { expiresIn: '5h' }
     );
 
     // Set cookie with the token

@@ -24,8 +24,6 @@ export default function BookingSuccessPage() {
     });
     return null;
   }
-
-  console.log(bookingData);
   
 
   const startDate = new Date(bookingData?.checkInDate);
@@ -47,7 +45,7 @@ export default function BookingSuccessPage() {
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
           <h1 className="text-3xl font-bold">Booking Confirmed!</h1>
           <p className="text-muted-foreground">
-            Booking ID: {bookingData?.booking?.bookingId}
+            Booking ID: {bookingData?.booking?._id}
           </p>
         </div>
 
@@ -112,14 +110,27 @@ export default function BookingSuccessPage() {
             <Separator />
 
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Room Rate ({nights} nights)</span>
-                <span>₹{bookingData?.basePrice?.toFixed(2)}</span>
+              
+              {/* Tax Breakdown */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">VAT</span>
+                  <span>₹{bookingData?.taxes?.vat?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Service Tax</span>
+                  <span>₹{bookingData?.taxes?.serviceTax?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Other Charges</span>
+                  <span>₹{bookingData?.taxes?.other?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Total Taxes & Fees</span>
+                  <span>₹{bookingData?.taxes?.vat + bookingData?.taxes?.serviceTax + bookingData?.taxes?.other}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Taxes & Fees</span>
-                <span>₹{(bookingData?.totalPrice - bookingData?.basePrice)?.toFixed(2)}</span>
-              </div>
+
               <Separator />
               <div className="flex justify-between text-lg font-semibold">
                 <span>Total Amount Paid</span>
@@ -195,4 +206,3 @@ export default function BookingSuccessPage() {
     </div>
   );
 }
-
