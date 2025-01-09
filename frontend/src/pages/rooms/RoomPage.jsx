@@ -43,15 +43,17 @@ import RoomCard from './components/RoomCard';
 export default function RoomsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { Rooms, getAllRooms } = useRoom();
+  const { Rooms, getAllRooms, getRoomBookingDates } = useRoom();
   const [isLoading, setIsLoading] = useState(true);
+
+  const [disabledDates, setDisabledDates] = useState({});
 
   // Initialize filters from URL params
   const defaultFilters = {
     priceRange: [0, 10000],
     type: searchParams.get('roomType') || "",
     guests: searchParams.get('guests') || "",
-    requestedRooms: searchParams.get('rooms') ? 
+    requestedRooms: searchParams.get('rooms') ?
       parseInt(searchParams.get('rooms')) : 1,
     startDate: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')) : null,
     endDate: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')) : null,
@@ -71,6 +73,45 @@ export default function RoomsPage() {
     if (filters?.searchQuery) params.set('search', filters?.searchQuery);
     setSearchParams(params);
   }, [filters, setSearchParams]);
+
+  useEffect(() => {
+    const fetchBookedDates = async () => {
+      if (!Rooms?.length) return;
+
+      const datesMap = {};
+      await Promise.all(
+        Rooms.map(async (room) => {
+          try {
+            const bookedDates = await getRoomBookingDates(room._id);
+            datesMap[room._id] = bookedDates.map(date => new Date(date));
+          } catch (error) {
+            console.error(`Failed to fetch dates for room ${room._id}:`, error);
+          }
+        })
+      );
+      setDisabledDates(datesMap);
+    };
+
+    fetchBookedDates();
+  }, [Rooms]);
+
+  const getDisabledDates = (date) => {
+    if (!Rooms?.length) return false;
+
+    const relevantRooms = filters.type
+      ? Rooms.filter(room => room.name === filters.type)
+      : Rooms;
+
+    // Check if the date is booked for all relevant rooms
+    return relevantRooms.every(room => {
+      const roomDates = disabledDates[room._id] || [];
+      return roomDates.some(bookedDate =>
+        bookedDate.getDate() === date.getDate() &&
+        bookedDate.getMonth() === date.getMonth() &&
+        bookedDate.getFullYear() === date.getFullYear()
+      );
+    });
+  };
 
 
   const resetFilters = () => {
@@ -125,8 +166,7 @@ export default function RoomsPage() {
       const priceMatch = room?.pricePerNight >= filters?.priceRange[0] &&
         room?.pricePerNight <= filters?.priceRange[1];
       const typeMatch = !filters?.type || room?.name === filters?.type;
-      const guestsMatch = !filters?.guests ||
-        room?.maxOccupancy >= parseInt(filters?.guests || "0");
+      // Remove the guestsMatch check since we want to allow any number of guests
       const searchMatch = !filters?.searchQuery ||
         room?.name.toLowerCase().includes(filters?.searchQuery.toLowerCase()) ||
         room?.description?.toLowerCase().includes(filters?.searchQuery.toLowerCase()) ||
@@ -136,7 +176,7 @@ export default function RoomsPage() {
           )
         );
 
-      return priceMatch && typeMatch && guestsMatch && searchMatch;
+      return priceMatch && typeMatch && searchMatch;
     });
   }, [Rooms, filters]);
 
@@ -257,6 +297,10 @@ export default function RoomsPage() {
                     }));
                   }}
                   numberOfMonths={2}
+                  disabled={(date) =>
+                    date < new Date() || // Disable past dates
+                    getDisabledDates(date) // Disable booked dates
+                  }
                 />
               </PopoverContent>
             </Popover>
@@ -277,24 +321,9 @@ export default function RoomsPage() {
             </Select>
 
             {/* Number of Rooms Select */}
-            {/* <Select
-              value={filters?.rooms}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, rooms: value }))}
-            >
-              <SelectTrigger className="flex items-center">
-                <Home className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Rooms" />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} {num === 1 ? 'Room' : 'Rooms'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
-            <RoomCountSelector />
 
+            <RoomCountSelector />
+            {/* Number of Guests */}
             <div className="flex items-center justify-center border border-gray-300 rounded-md">
               <label className="mr-2">Guests</label>
               <Button
@@ -306,6 +335,7 @@ export default function RoomsPage() {
                   }))
                 }
                 className="p-2"
+                disabled={parseInt(filters?.guests || "1") <= 1}
               >
                 -
               </Button>
@@ -396,7 +426,7 @@ export default function RoomsPage() {
               <CardContent className="p-4 space-y-3 border-t">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg sm:text-xl font-bold">{room?.name}</h3>
-                  
+
                   <div className="flex items-center text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
                     <span className="ml-1">
@@ -409,10 +439,10 @@ export default function RoomsPage() {
                 </div>
 
                 {room?.availableSlots <= 3 && (
-                    <p className="text-red-500 text-sm">
-                      Hurry! Only {room.availableSlots} room{room.availableSlots !== 1 ? 's' : ''} left
-                    </p>
-                )} 
+                  <p className="text-red-500 text-sm">
+                    Hurry! Only {room.availableSlots} room{room.availableSlots !== 1 ? 's' : ''} left
+                  </p>
+                )}
 
                 <p className="text-gray-600 text-sm">
                   {room?.description?.length > 100
@@ -432,7 +462,7 @@ export default function RoomsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {room?.amenities?.slice(0, 4).flatMap((amenity) => 
+                  {room?.amenities?.slice(0, 4).flatMap((amenity) =>
                     amenity.items.slice(0, 2).map((item) => (
                       <span key={item._id} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs sm:text-sm">
                         {item.name}

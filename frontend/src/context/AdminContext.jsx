@@ -15,10 +15,14 @@ export const AdminProvider = ({ children }) => {
         recentBookings: []
     });
 
+    const [Percentage, setPercentage] = useState(0);
+
     const fetchDashboardStats = async () => {
         setLoading(true);
         try {
             const response = await api.get('/admindashboard');
+            console.log(response.data);
+            
             // Ensure recentBookings is always an array
             const recentBookings = Array.isArray(response.data.recentBookings) 
                 ? response.data.recentBookings 
@@ -84,6 +88,28 @@ export const AdminProvider = ({ children }) => {
         }
     };
 
+    const getBookingsPercentage = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get('/dashboard-stats');
+            if (response.data) {
+                setPercentage(response.data);
+                // toast ({
+                //     title: 'Success',
+                //     description: 'Dashboard stats fetched successfully',
+                //     status: 'success',
+                //     duration: 5000,
+                //     isClosable: true
+                // })
+                return response.data;
+            } 
+        } catch (error) {
+            console.error('Error fetching bookings percentage:', error);
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <AdminContext.Provider value={{ 
             fetchUsers,
@@ -91,7 +117,9 @@ export const AdminProvider = ({ children }) => {
             fetchDashboardStats,
             dashboardStats,
             Guests,
-            loading
+            loading,
+            getBookingsPercentage,
+            Percentage
         }}>
             {children}
         </AdminContext.Provider>

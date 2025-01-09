@@ -70,7 +70,10 @@ const RoomsForm = () => {
       serviceTax: 0,
       other: 0
     },
-    isAvailable: true
+    isAvailable: true,
+    totalSlots: 10, // Default value
+    bookedSlots: 0,
+    availableSlots: 10
   });
 
   // window.location.reload();
@@ -94,6 +97,9 @@ const RoomsForm = () => {
             maxOccupancy: roomData.maxOccupancy.toString(),
             existingImages: roomData.images || [],
             images: [],
+            totalSlots: roomData.totalSlots || 10,
+            bookedSlots: roomData.bookedSlots || 0,
+            availableSlots: roomData.availableSlots || 10
           });
         } catch (error) {
           if (error.message === 'Authentication required. Please log in again.') {
@@ -121,7 +127,10 @@ const RoomsForm = () => {
         amenities: formData.amenities.filter(category =>
           category.items.some(item => item.name.trim() !== '')
         ),
-        images: formData.existingImages
+        images: formData.existingImages,
+        totalSlots: parseInt(formData.totalSlots),
+        bookedSlots: parseInt(formData.bookedSlots),
+        availableSlots: parseInt(formData.totalSlots) - parseInt(formData.bookedSlots)
       };
 
       if (isNewRoom) {
@@ -312,6 +321,63 @@ const RoomsForm = () => {
                   setFormData(prev => ({ ...prev, isAvailable: checked }))
                 }
               />
+            </div>
+
+            {/* room slots */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-medium mb-4">Room Slots Management</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="totalSlots">Total Slots *</Label>
+                  <Input
+                    id="totalSlots"
+                    type="number"
+                    min="1"
+                    value={formData.totalSlots}
+                    onChange={(e) => {
+                      const newTotalSlots = parseInt(e.target.value) || 0;
+                      setFormData(prev => ({
+                        ...prev,
+                        totalSlots: newTotalSlots,
+                        availableSlots: Math.max(0, newTotalSlots - prev.bookedSlots)
+                      }));
+                    }}
+                    required
+                    className="font-medium"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Set the total number of slots for this room
+                  </span>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="bookedSlots">Currently Booked</Label>
+                  <Input
+                    id="bookedSlots"
+                    type="number"
+                    value={formData.bookedSlots}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Number of slots currently booked
+                  </span>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="availableSlots">Available Slots</Label>
+                  <Input
+                    id="availableSlots"
+                    type="number"
+                    value={formData.availableSlots}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Remaining available slots
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Basic Information */}

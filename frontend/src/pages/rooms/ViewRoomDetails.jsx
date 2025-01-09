@@ -55,7 +55,7 @@ const RoomDetailsSkeleton = () => (
 export default function ViewRoomDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const { user } = useAuth();
   const { Rooms, getAllRooms, loading: roomsLoading, getRoomBookingDates } = useRoom();
@@ -86,13 +86,19 @@ export default function ViewRoomDetails() {
     const checkIn = searchParams.get('checkIn') || location.state?.startDate;
     const checkOut = searchParams.get('checkOut') || location.state?.endDate;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = addDays(today, 1);
+    // Only set dates if they're provided in URL params or location state
+    if (checkIn && checkOut) {
+      return {
+        from: new Date(checkIn),
+        to: new Date(checkOut),
+        selecting: false
+      };
+    }
 
+    // Otherwise return null values
     return {
-      from: checkIn ? new Date(checkIn) : today,
-      to: checkOut ? new Date(checkOut) : tomorrow,
+      from: null,
+      to: null,
       selecting: false
     };
   });
@@ -118,6 +124,35 @@ export default function ViewRoomDetails() {
     };
     fetchBookedDates();
   }, [id, getRoomBookingDates]);
+
+  useEffect(() => {
+    // Only run this check if we have booked dates and dates from params/state
+    if (bookedDates.length > 0 && date?.from && date?.to) {
+      // Check if the selected date range is available
+      const isAvailable = isDateRangeAvailable(date.from, date.to);
+      
+      if (!isAvailable) {
+        // Reset the dates and show error toast
+        setDate({
+          from: null,
+          to: null,
+          selecting: false
+        });
+        
+        toast({
+          title: "Dates Unavailable",
+          description: "Your selected dates are not available. Please choose different dates.",
+          variant: "destructive",
+        });
+  
+        // Update URL to remove date params
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('checkIn');
+        newSearchParams.delete('checkOut');
+        setSearchParams(newSearchParams);
+      }
+    }
+  }, [bookedDates, date?.from, date?.to]);
 
   useEffect(() => {
     if (room) {
@@ -148,16 +183,24 @@ export default function ViewRoomDetails() {
 
   // Utility functions
   const isDateBooked = (date) => {
-    return bookedDates.some(bookedDate =>
-      format(bookedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    );
+    // Convert the input date to midnight UTC to match the API date format
+    const dateToCheck = format(new Date(date), 'yyyy-MM-dd');
+    return bookedDates.some(bookedDate => {
+      // Convert booked date to the same format for comparison
+      const formattedBookedDate = format(new Date(bookedDate), 'yyyy-MM-dd');
+      return formattedBookedDate === dateToCheck;
+    });
   };
 
   const isDateRangeAvailable = (startDate, endDate) => {
     if (!startDate || !endDate) return true;
 
-    let currentDate = startDate;
-    while (currentDate <= endDate) {
+    // Create a new date object to iterate through
+    let currentDate = new Date(startDate);
+    const endDateTime = new Date(endDate);
+
+    // Exclude the checkout date from the availability check
+    while (isBefore(currentDate, endDateTime)) {
       if (isDateBooked(currentDate)) {
         return false;
       }
@@ -219,13 +262,13 @@ export default function ViewRoomDetails() {
   // Format date range for display
   const formatDateRange = (dateRange) => {
     try {
-      if (!isValidDateRange(dateRange)) {
-        return "Select dates";
+      if (!dateRange || !dateRange.from || !dateRange.to) {
+        return "Select your dates";
       }
       return `${format(dateRange.from, "EEE, MMM d, yyyy")} - ${format(dateRange.to, "EEE, MMM d, yyyy")}`;
     } catch (error) {
       console.error('Error formatting date range:', error);
-      return "Select dates";
+      return "Select your dates";
     }
   };
   
@@ -276,13 +319,20 @@ export default function ViewRoomDetails() {
   // Event handlers
   const handleDateSelect = (newDate) => {
     if (!newDate) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = addDays(today, 1);
       setDate({
-        from: today,
-        to: tomorrow,
+        from: null,
+        to: null,
         selecting: false
+      });
+      return;
+    }
+
+    // If only start date is selected, allow the selection
+    if (!newDate.to) {
+      setDate({
+        from: newDate.from,
+        to: undefined,
+        selecting: true
       });
       return;
     }
@@ -290,24 +340,22 @@ export default function ViewRoomDetails() {
     const dateRange = {
       from: newDate.from,
       to: newDate.to,
-      selecting: !newDate.to
+      selecting: false
     };
 
-    if (newDate.from && newDate.to) {
-      if (!isValidDateRange(dateRange)) {
-        const error = getDateRangeError(dateRange);
-        setDateError(error);
-        return;
-      }
+    if (!isValidDateRange(dateRange)) {
+      const error = getDateRangeError(dateRange);
+      setDateError(error);
+      return;
+    }
 
-      if (!isDateRangeAvailable(newDate.from, newDate.to)) {
-        toast({
-          title: "Dates Unavailable",
-          description: "Some dates in your selection are already booked. Please choose different dates.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!isDateRangeAvailable(newDate.from, newDate.to)) {
+      toast({
+        title: "Dates Unavailable",
+        description: "Some dates in your selection are already booked. Please choose different dates.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setDate(dateRange);

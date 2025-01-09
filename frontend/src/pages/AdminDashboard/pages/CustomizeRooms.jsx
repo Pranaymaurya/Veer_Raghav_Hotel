@@ -290,8 +290,8 @@ const CustomizeRooms = () => {
                                     </div>
                                 </div>
                                 <p className="text-sm text-gray-600 mb-4">
-                                    {room?.description?.length > 100
-                                        ? `${room?.description.slice(0, 100)}...`
+                                    {room?.description?.length > 70
+                                        ? `${room?.description.slice(0, 70)}...`
                                         : room?.description}
                                 </p>
                                 <div className="grid grid-cols-2 gap-2 text-sm mb-4">

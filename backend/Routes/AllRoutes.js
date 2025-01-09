@@ -148,8 +148,6 @@ router.get(
   getBookingsByRoom
 );router.get(
   "/booking/roomdates/:id",
-  authMiddleware,
-  authorizeRoles("user", "admin"),
   getBookingDatesByRoom
 );
 
