@@ -120,7 +120,6 @@ export const updateHotel = async (req, res) => {
   }
 };
 
-
 export const UploadHotelLogo = async (req, res) => {
   const { id } = req.params; // Get hotel ID from the request parameters
 
