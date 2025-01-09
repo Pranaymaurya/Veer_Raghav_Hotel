@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import ImageSlider from '@/pages/rooms/components/ImageSlider';
+import StatusBadge from '@/components/StatusBadge';
 
 const BookingDetailsDialog = ({ booking }) => {
   const formatDate = (date) => format(new Date(date), 'PPP');
@@ -78,11 +80,7 @@ const BookingDetailsDialog = ({ booking }) => {
                 <div className="grid grid-cols-2 gap-4">
                   {booking.roomImage && (
                     <div className="col-span-2">
-                      <img 
-                        src={booking.roomImage} 
-                        alt="Room" 
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
+                      <ImageSlider images={[booking.roomImage]} />
                     </div>
                   )}
                   <div>
@@ -138,9 +136,7 @@ const BookingDetailsDialog = ({ booking }) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Payment Status</p>
-                    <Badge variant="outline">
-                      {booking.paymentStatus || 'Pending'}
-                    </Badge>
+                   <StatusBadge status={booking.paymentStatus} />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Payment Method</p>

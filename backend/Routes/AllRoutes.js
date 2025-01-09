@@ -148,8 +148,6 @@ router.get(
   getBookingsByRoom
 );router.get(
   "/booking/roomdates/:id",
-  authMiddleware,
-  authorizeRoles("user", "admin"),
   getBookingDatesByRoom
 );
 
@@ -204,6 +202,6 @@ router.put(
   UploadHotelLogo
 );
 router.get("/hotel", GetHotel);
-router.get("/admindashboard",authMiddleware,authorizeRoles("admin"),All)
+router.get("/admindashboard",authMiddleware,authMiddleware, authorizeRoles("admin"), All)
 router.get("/revenuechange",authMiddleware,authorizeRoles("admin"),GetRevenueChange)
 export default router;

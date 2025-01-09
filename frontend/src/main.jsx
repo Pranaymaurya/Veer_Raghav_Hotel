@@ -49,6 +49,7 @@ import UserProfile from './pages/UserProfile/components/UserProfile';
 import UserSettings from './pages/UserProfile/components/UserSettings';
 import PaymentPage from './pages/bookingpage/PaymentPage';
 import ScrollRestoration from './components/ScrollRestoration';
+import BookingContentLayout from './pages/AdminDashboard/pages/BookingContentLayout';
 
 
 
@@ -141,7 +142,7 @@ const router = createBrowserRouter([
     element: <DashboardLayout />,
     children: [
       { path: "", element: <DashboardContent /> },
-      { path: "bookings", element: <BookingsContent /> },
+      { path: "bookings", element: <BookingContentLayout /> },
       { path: "guests", element: <GuestsContent /> },
       { path: "users", element: <UserContent /> },
       { path: "rooms", element: <CustomizeRooms /> },

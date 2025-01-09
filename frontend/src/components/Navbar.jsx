@@ -192,7 +192,7 @@ const Navbar = () => {
             renderUserDropdown()
           ) : (
             <div className="space-x-2">
-              <Button asChild variant="default" className="bg-[#FF9933] hover:bg-[#a3611f] text-black">
+              <Button asChild variant="default" className="bg-[#FF9933] hover:bg-[#FF9933] hover:text-black">
                 <Link to="/auth/login">Login</Link>
               </Button>
               <Button asChild variant="outline">

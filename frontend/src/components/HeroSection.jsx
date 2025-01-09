@@ -143,7 +143,7 @@ function HeroSection() {
               onClick={() => handleThumbnailClick(index)}
               ref={(el) => (thumbnailsRef.current[index] = el)}
             >
-              <img src={image.src} alt={`Thumbnail ${index + 1}`} />
+              <img src={image.src} alt={`Thumbnail ${index + 1}`} className="cursor-pointer"/>
             </div>
           ))}
         </div>

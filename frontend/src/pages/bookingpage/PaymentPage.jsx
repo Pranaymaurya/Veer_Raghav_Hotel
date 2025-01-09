@@ -54,11 +54,11 @@ export default function PaymentPage() {
 
     if (name === 'number') {
       formattedValue = value.replace(/\s/g, '')
-                           .match(/.{1,4}/g)?.join(' ') || '';
+        .match(/.{1,4}/g)?.join(' ') || '';
     }
     if (name === 'expiry') {
       formattedValue = value.replace(/\D/g, '')
-                           .match(/.{1,2}/g)?.join('/') || '';
+        .match(/.{1,2}/g)?.join('/') || '';
     }
     if (name === 'cvv') {
       formattedValue = value.slice(0, 4);
@@ -87,7 +87,7 @@ export default function PaymentPage() {
 
     setShowPaymentModal(true);
   };
-  
+
 
   const handleBookingSuccess = async () => {
     try {
@@ -100,30 +100,39 @@ export default function PaymentPage() {
         noofguests: bookingData?.guests,
         noOfRooms: bookingData?.roomCount,
       };
-  
+
       const response = await createBooking(bookingPayload);
+
+      console.log('Booking response:', response);
       
+
       if (response.success) {
         setShowPaymentModal(false);
-        
+
         toast({
           title: "Booking Success",
           description: "Your booking has been successfully created.",
           variant: "default",
           className: "bg-green-200 border-green-400 text-black"
         });
-  
+
         navigate('/booking/success', {
           state: {
-            bookingId: response.booking._id,
             booking: response.booking,
             roomName: bookingData?.roomName,
             roomType: bookingData?.roomType,
             checkInDate: bookingData?.startDate,
             checkOutDate: bookingData?.endDate,
-            guestCount: bookingData?.guests,
+            guests: bookingData?.guests,
+            roomCount: bookingData?.roomCount,
+            basePrice: bookingData?.discountedPrice || bookingData?.basePrice,
             totalPrice: bookingData?.totalPrice,
-            taxesAndFees: response.taxesAndFees
+            // Add tax information from booking summary
+            taxes: {
+              vat: bookingData?.taxesAndFees?.gst,
+              serviceTax: bookingData?.taxesAndFees?.serviceFee,
+              other: bookingData?.taxesAndFees?.municipalTax
+            }
           }
         });
       } else {
@@ -158,8 +167,8 @@ export default function PaymentPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         className="mb-4"
         onClick={() => navigate(-1)}
       >
@@ -188,7 +197,7 @@ export default function PaymentPage() {
                   <TabsTrigger value="card">Card Payment</TabsTrigger>
                   <TabsTrigger value="upi">UPI Payment</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="card">
                   <form onSubmit={handlePayment} className="space-y-6">
                     <div className="space-y-2">
@@ -244,8 +253,8 @@ export default function PaymentPage() {
                       </div>
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full"
                     >
                       Pay ₹{bookingData?.totalPrice?.toFixed(2)}
@@ -266,8 +275,8 @@ export default function PaymentPage() {
                       />
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full"
                     >
                       Pay ₹{bookingData?.totalPrice?.toFixed(2)}
@@ -380,7 +389,7 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      <PaymentProcessingModal 
+      <PaymentProcessingModal
         isOpen={showPaymentModal}
         bookingData={bookingData}
         onSuccess={handleBookingSuccess}

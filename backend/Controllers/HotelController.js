@@ -121,28 +121,29 @@ export const updateHotel = async (req, res) => {
 };
 
 export const UploadHotelLogo = async (req, res) => {
-  const { id } = req.params; // Get hotel ID from the request parameters
+  const { id } = req.params;
 
   try {
-    // Find the hotel by ID
     const hotel = await Hotel.findById(id);
     if (!hotel) {
       return res.status(404).json({ message: "Hotel not found" });
     }
 
-    // Check if a file was uploaded
-    console.log(req.file)
     if (!req.file) {
       return res.status(400).json({ message: "No logo file uploaded" });
     }
 
-    // Store the file path to the logo field
-    hotel.logo = req.file.path;
+    // Store the correct path
+    hotel.logo = `uploads/${req.file.filename}`; // Match your actual upload directory
+    // or if you prefer:
+    // hotel.logo = req.file.path.replace(/\\/g, '/'); // Handle Windows path separators
 
-    // Save the updated hotel document
     const updatedHotel = await hotel.save();
 
-    return res.status(200).json({ message: "Logo uploaded successfully", hotel: updatedHotel });
+    return res.status(200).json({ 
+      message: "Logo uploaded successfully", 
+      hotel: updatedHotel 
+    });
   } catch (error) {
     return res.status(500).json({ message: "Failed to upload logo", error: error.message });
   }

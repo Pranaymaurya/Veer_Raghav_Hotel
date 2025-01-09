@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, NavLink, Outlet, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, User, Calendar } from "lucide-react";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const UserProfileLayout = () => {
   const { user, loading, fetchUserProfile } = useAuth();
   const location = useLocation();
-  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const navigationItems = [
     {

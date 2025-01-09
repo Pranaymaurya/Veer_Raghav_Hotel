@@ -7,24 +7,10 @@ const SettingsContext = createContext();
 export const useSettings = () => useContext(SettingsContext);
 
 export const SettingsProvider = ({ children }) => {
-
-  // const { getToken } = useAuth();
   const [hotel, setHotel] = useState(null);
   const [ hotelInfo, setHotelInfo ] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hotelData, setHotelData] = useState(null);
-
-  // const getAuthConfig = useCallback(async () => {
-  //   const token = await getToken();
-  //   return {
-  //     headers: {
-  //       'Authorization': `Bearer ${token}`,
-  //       'Content-Type': 'application/json',
-  //     },
-  //   };
-  // }, [getToken]);
-
- 
 
   useEffect(() => {
     fetchHotel();
@@ -59,7 +45,7 @@ export const SettingsProvider = ({ children }) => {
 
   const createHotel = async (hotelData) => {
     try {
-      const config = await getAuthConfig();
+      //const config = await getAuthConfig();
       const response = await api.post('/hotel', hotelData);
       setHotel(response.data);
       return response.data;
@@ -71,21 +57,9 @@ export const SettingsProvider = ({ children }) => {
 
   const updateHotel = async (hotelId, hotelData) => {
     try {
-    
-      // Ensure data is properly formatted
-      const formattedData = {
-        name: hotelData.name || '',
-        contactNumbers: Array.isArray(hotelData.contactNumbers) 
-          ? hotelData.contactNumbers.filter(num => num.trim() !== '')
-          : [],
-        address: hotelData.address || '',
-        checkInTime: hotelData.checkInTime || '',
-        checkOutTime: hotelData.checkOutTime || '',
-      };
-  
-      console.log('Sending data:', formattedData); // For debugging
-  
-      const response = await api.put(`/hotel/${hotelId}`, formattedData);
+      console.log('Making PUT request to:', `/hotel/${hotelId}`);
+      console.log('With data:', hotelData);
+      const response = await api.put(`/hotel/${hotelId}`, hotelData);
       
       if (response.data) {
         setHotel(Array.isArray(response.data) ? response.data : [response.data]);
@@ -108,8 +82,30 @@ export const SettingsProvider = ({ children }) => {
     try {
       const formData = new FormData();
       formData.append('logo', file);
-      const response = await api.put(`/hotel/image/${hotelData._id}`, formData);
-      setHotel(prevHotel => ({ ...prevHotel, logoUrl: response.data.logoUrl }));
+
+      // Make sure we have hotel id
+      if (!hotel?.[0]?._id) {
+        throw new Error('Hotel ID not found');
+      }
+
+      const response = await api.put(`/hotel/image/${hotel[0]._id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data) {
+        // Update the hotel state with the new logo URL
+        setHotel(prevHotel => {
+          const updatedHotel = [...prevHotel];
+          updatedHotel[0] = {
+            ...updatedHotel[0],
+            logo: response.data.logo
+          };
+          return updatedHotel;
+        });
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Failed to upload logo:', error);
