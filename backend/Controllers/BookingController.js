@@ -10,13 +10,16 @@ export const CreateBooking = async (req, res) => {
     checkInDate,
     checkOutDate,
     noofguests,
-    noOfRooms = 1, // Default to 1 if not provided
+    noOfRooms = 1,
+    noofchildrens // Default to 1 if not provided
   } = req.body;
 
   try {
     // Validate number of guests
     if (!Number.isInteger(noofguests) || noofguests <= 0) {
-      return res.status(400).json({ message: "Number of guests must be a positive integer." });
+      return res
+        .status(400)
+        .json({ message: "Number of guests must be a positive integer." });
     }
 
     // Validate check-in and check-out dates
@@ -24,11 +27,15 @@ export const CreateBooking = async (req, res) => {
     const checkOut = new Date(checkOutDate);
 
     if (isNaN(checkIn) || isNaN(checkOut)) {
-      return res.status(400).json({ message: "Invalid check-in or check-out date." });
+      return res
+        .status(400)
+        .json({ message: "Invalid check-in or check-out date." });
     }
 
     if (checkOut <= checkIn) {
-      return res.status(400).json({ message: "Check-out date must be after the check-in date." });
+      return res
+        .status(400)
+        .json({ message: "Check-out date must be after the check-in date." });
     }
 
     // Find the room by ID and check availability
@@ -37,22 +44,50 @@ export const CreateBooking = async (req, res) => {
       return res.status(404).json({ message: "Room not found." });
     }
 
-    // Check for any existing bookings in the date range
-    const existingBooking = await Booking.findOne({
-      room: roomId,
-      checkInDate: { $lt: checkOut },
-      checkOutDate: { $gt: checkIn }
-    });
+    // Only check for date conflicts if the room is marked as unavailable
+    // Check if the room is marked as unavailable
+if (!room.isAvailable) {
+  // Check for any conflicting bookings in the requested date range
+  const existingBooking = await Booking.findOne({
+    room: roomId,
+    checkInDate: { $lt: checkOut }, // Overlaps with requested check-out date
+    checkOutDate: { $gt: checkIn }, // Overlaps with requested check-in date
+  });
 
-    if (existingBooking) {
-      return res.status(400).json({
-        message: "Room is already booked for the selected dates.",
-        conflictingBooking: {
-          checkIn: existingBooking.checkInDate,
-          checkOut: existingBooking.checkOutDate
-        }
-      });
-    }
+  if (!existingBooking) {
+    // If no conflicting booking is found, allow the booking
+    console.log('Room is unavailable but no conflicting booking found, proceeding with booking.');
+  } else {
+    // Room is genuinely unavailable due to a conflicting booking
+    return res.status(400).json({
+      message: "Room is already booked for the selected dates.",
+      conflictingBooking: {
+        checkIn: existingBooking.checkInDate,
+        checkOut: existingBooking.checkOutDate,
+      },
+    });
+  }
+}
+
+// Continue with the rest of your booking process
+const existingBooking = await Booking.findOne({
+  room: roomId,
+  checkInDate: { $lt: checkOut },
+  checkOutDate: { $gt: checkIn },
+});
+
+if (existingBooking) {
+  return res.status(400).json({
+    message: "Room is already booked for the selected dates.",
+    conflictingBooking: {
+      checkIn: existingBooking.checkInDate,
+      checkOut: existingBooking.checkOutDate,
+    },
+  });
+}
+
+// Continue with the other checks and booking logic as usual...
+
 
     // Calculate the number of nights
     const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
@@ -68,12 +103,17 @@ export const CreateBooking = async (req, res) => {
     }
 
     // Pricing and taxes
-    const pricePerRoom = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+    const pricePerRoom =
+      room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
     const basePrice = pricePerRoom * numberOfNights * noOfRooms;
 
     const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
-    const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
-    const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+    const serviceTaxAmount = room.taxes?.serviceTax
+      ? (room.taxes.serviceTax / 100) * basePrice
+      : 0;
+    const otherTaxAmount = room.taxes?.other
+      ? (room.taxes.other / 100) * basePrice
+      : 0;
 
     const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
     const totalPrice = basePrice + totaltax;
@@ -93,6 +133,7 @@ export const CreateBooking = async (req, res) => {
         other: otherTaxAmount,
       },
       totaltax,
+      noofchildrens,
     });
 
     const savedBooking = await booking.save();
@@ -103,7 +144,7 @@ export const CreateBooking = async (req, res) => {
       {
         $set: {
           availableSlots: room.availableSlots - noOfRooms,
-          isAvailable: room.availableSlots - noOfRooms > 0,
+          isAvailable: room.availableSlots - noOfRooms > 0, // Automatically set isAvailable
         },
         $inc: { bookedSlots: noOfRooms },
       }
@@ -135,7 +176,10 @@ export const CreateBooking = async (req, res) => {
           totalPrice,
         });
       } catch (emailError) {
-        console.error("Failed to send booking confirmation email:", emailError.message);
+        console.error(
+          "Failed to send booking confirmation email:",
+          emailError.message
+        );
       }
     }
 
@@ -146,20 +190,16 @@ export const CreateBooking = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating booking:", error.message);
-    res.status(500).json({ message: "Failed to create booking.", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create booking.", error: error.message });
   }
 };
 
 
-
 export const UpdateBooking = async (req, res) => {
   const { id } = req.params;
-  const {
-    checkInDate,
-    checkOutDate,
-    roomId,
-    noofguests,
-  } = req.body;
+  const { checkInDate, checkOutDate, roomId, noofguests ,noofchildrens} = req.body;
 
   try {
     // Validate and find existing booking
@@ -186,19 +226,24 @@ export const UpdateBooking = async (req, res) => {
       }
 
       // Update the availability of rooms
+      // Handle room availability updates
       await Room.updateOne(
         { _id: booking.room },
-        { 
-          $set: { isAvailable: true },
-          $inc: { availableSlots: 1, bookedSlots: -1 }
+        {
+          $set: {
+            isAvailable: room.availableSlots + 1 > 0, // Check availability before incrementing slots
+          },
+          $inc: { availableSlots: 1, bookedSlots: -1 },
         }
       );
 
       await Room.updateOne(
         { _id: roomId },
-        { 
-          $set: { isAvailable: false },
-          $inc: { availableSlots: -1, bookedSlots: 1 }
+        {
+          $set: {
+            isAvailable: room.availableSlots - 1 > 0, // Check availability after decrementing slots
+          },
+          $inc: { availableSlots: -1, bookedSlots: 1 },
         }
       );
 
@@ -216,7 +261,9 @@ export const UpdateBooking = async (req, res) => {
         return res.status(400).json({ message: "Invalid date format" });
       }
       if (startDate >= endDate) {
-        return res.status(400).json({ message: "Check-out date must be after check-in date" });
+        return res
+          .status(400)
+          .json({ message: "Check-out date must be after check-in date" });
       }
 
       // Check for room availability on new dates
@@ -224,29 +271,38 @@ export const UpdateBooking = async (req, res) => {
         room: roomId || booking.room,
         _id: { $ne: id }, // Exclude current booking from the check
         $or: [
-          { checkInDate: { $lt: endDate }, checkOutDate: { $gt: startDate } }
-        ]
+          { checkInDate: { $lt: endDate }, checkOutDate: { $gt: startDate } },
+        ],
       });
 
       if (overlappingBooking) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "The room is not available for the selected dates",
           conflictingBooking: {
             checkIn: overlappingBooking.checkInDate,
-            checkOut: overlappingBooking.checkOutDate
-          }
+            checkOut: overlappingBooking.checkOutDate,
+          },
         });
       }
 
       // Calculate new price
-      const numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-      const pricePerNight = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+      const numberOfNights = Math.ceil(
+        (endDate - startDate) / (1000 * 60 * 60 * 24)
+      );
+      const pricePerNight =
+        room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
       const basePrice = pricePerNight * numberOfNights;
 
       // Calculate taxes
-      const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
-      const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
-      const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+      const vatAmount = room.taxes?.vat
+        ? (room.taxes.vat / 100) * basePrice
+        : 0;
+      const serviceTaxAmount = room.taxes?.serviceTax
+        ? (room.taxes.serviceTax / 100) * basePrice
+        : 0;
+      const otherTaxAmount = room.taxes?.other
+        ? (room.taxes.other / 100) * basePrice
+        : 0;
       const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
 
       // Update booking dates and price
@@ -259,17 +315,22 @@ export const UpdateBooking = async (req, res) => {
         other: otherTaxAmount,
       };
       booking.totaltax = totaltax;
+      booking.noofchildrens=noofchildrens;
     }
 
     // Update guest numbers if requested
     if (noofguests !== undefined) {
       if (!Number.isInteger(noofguests) || noofguests <= 0) {
-        return res.status(400).json({ message: "Number of guests must be a positive integer" });
+        return res
+          .status(400)
+          .json({ message: "Number of guests must be a positive integer" });
       }
 
       // Check if the number of guests exceeds the room's max occupancy
       if (noofguests > room.maxOccupancy) {
-        return res.status(400).json({ message: "Number of guests exceeds room's max occupancy" });
+        return res
+          .status(400)
+          .json({ message: "Number of guests exceeds room's max occupancy" });
       }
 
       booking.noofguests = noofguests;
@@ -280,24 +341,19 @@ export const UpdateBooking = async (req, res) => {
 
     res.status(200).json({
       message: "Booking updated successfully",
-      booking: updatedBooking
+      booking: updatedBooking,
     });
-
   } catch (error) {
     console.error("Error updating booking:", error);
-    res.status(500).json({ message: "Failed to update booking", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to update booking", error: error.message });
   }
 };
 
 export const UpdateBookingForAdmin = async (req, res) => {
   const { id } = req.params;
-  const {
-    checkInDate,
-    checkOutDate,
-    status,
-    roomId,
-    noofguests,
-  } = req.body;
+  const { checkInDate, checkOutDate, status, roomId, noofguests ,noofchildrens} = req.body;
 
   try {
     // Validate and find existing booking
@@ -307,13 +363,15 @@ export const UpdateBookingForAdmin = async (req, res) => {
     }
 
     // Check if the user is an admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: "You do not have permission to update the booking" });
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "You do not have permission to update the booking" });
     }
 
     // Handle status update if provided
     if (status) {
-      const validStatuses = ['Confirmed', 'Cancelled', 'Pending'];
+      const validStatuses = ["Confirmed", "Cancelled", "Pending"];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: "Invalid booking status" });
       }
@@ -338,19 +396,24 @@ export const UpdateBookingForAdmin = async (req, res) => {
       }
 
       // Update the availability of rooms
+      // Handle room availability updates
       await Room.updateOne(
         { _id: booking.room },
-        { 
-          $set: { isAvailable: true },
-          $inc: { availableSlots: 1, bookedSlots: -1 }
+        {
+          $set: {
+            isAvailable: room.availableSlots + 1 > 0, // Check availability before incrementing slots
+          },
+          $inc: { availableSlots: 1, bookedSlots: -1 },
         }
       );
 
       await Room.updateOne(
         { _id: roomId },
-        { 
-          $set: { isAvailable: false },
-          $inc: { availableSlots: -1, bookedSlots: 1 }
+        {
+          $set: {
+            isAvailable: room.availableSlots - 1 > 0, // Check availability after decrementing slots
+          },
+          $inc: { availableSlots: -1, bookedSlots: 1 },
         }
       );
 
@@ -368,7 +431,9 @@ export const UpdateBookingForAdmin = async (req, res) => {
         return res.status(400).json({ message: "Invalid date format" });
       }
       if (startDate >= endDate) {
-        return res.status(400).json({ message: "Check-out date must be after check-in date" });
+        return res
+          .status(400)
+          .json({ message: "Check-out date must be after check-in date" });
       }
 
       // Check for room availability on new dates
@@ -376,29 +441,38 @@ export const UpdateBookingForAdmin = async (req, res) => {
         room: roomId || booking.room,
         _id: { $ne: id }, // Exclude current booking from the check
         $or: [
-          { checkInDate: { $lt: endDate }, checkOutDate: { $gt: startDate } }
-        ]
+          { checkInDate: { $lt: endDate }, checkOutDate: { $gt: startDate } },
+        ],
       });
 
       if (overlappingBooking) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "The room is not available for the selected dates",
           conflictingBooking: {
             checkIn: overlappingBooking.checkInDate,
-            checkOut: overlappingBooking.checkOutDate
-          }
+            checkOut: overlappingBooking.checkOutDate,
+          },
         });
       }
 
       // Calculate new price
-      const numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-      const pricePerNight = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+      const numberOfNights = Math.ceil(
+        (endDate - startDate) / (1000 * 60 * 60 * 24)
+      );
+      const pricePerNight =
+        room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
       const basePrice = pricePerNight * numberOfNights;
 
       // Calculate taxes
-      const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
-      const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
-      const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
+      const vatAmount = room.taxes?.vat
+        ? (room.taxes.vat / 100) * basePrice
+        : 0;
+      const serviceTaxAmount = room.taxes?.serviceTax
+        ? (room.taxes.serviceTax / 100) * basePrice
+        : 0;
+      const otherTaxAmount = room.taxes?.other
+        ? (room.taxes.other / 100) * basePrice
+        : 0;
       const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
 
       // Update booking dates and price
@@ -411,17 +485,22 @@ export const UpdateBookingForAdmin = async (req, res) => {
         other: otherTaxAmount,
       };
       booking.totaltax = totaltax;
+      booking.noofchildrens=noofchildrens
     }
 
     // Update guest numbers if requested
     if (noofguests !== undefined) {
       if (!Number.isInteger(noofguests) || noofguests <= 0) {
-        return res.status(400).json({ message: "Number of guests must be a positive integer" });
+        return res
+          .status(400)
+          .json({ message: "Number of guests must be a positive integer" });
       }
 
       // Check if the number of guests exceeds the room's max occupancy
       if (noofguests > room.maxOccupancy) {
-        return res.status(400).json({ message: "Number of guests exceeds room's max occupancy" });
+        return res
+          .status(400)
+          .json({ message: "Number of guests exceeds room's max occupancy" });
       }
 
       booking.noofguests = noofguests;
@@ -432,12 +511,13 @@ export const UpdateBookingForAdmin = async (req, res) => {
 
     res.status(200).json({
       message: "Booking updated successfully",
-      booking: updatedBooking
+      booking: updatedBooking,
     });
-
   } catch (error) {
     console.error("Error updating booking:", error);
-    res.status(500).json({ message: "Failed to update booking", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to update booking", error: error.message });
   }
 };
 
@@ -451,13 +531,15 @@ export const UpdateForAdmin = async (req, res) => {
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     // Check if the user is an admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: "You do not have permission to update the booking" });
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "You do not have permission to update the booking" });
     }
 
     // Validate and update the status
     if (status) {
-      const validStatuses = ['Confirmed', 'Cancelled', 'Pending']; // Add other statuses as needed
+      const validStatuses = ["Confirmed", "Cancelled", "Pending"]; // Add other statuses as needed
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: "Invalid booking status" });
       }
@@ -468,32 +550,46 @@ export const UpdateForAdmin = async (req, res) => {
 
     // Save the updated booking
     const updatedBooking = await booking.save();
-    res.status(200).json({ message: "Booking status updated successfully", booking: updatedBooking });
+    res
+      .status(200)
+      .json({
+        message: "Booking status updated successfully",
+        booking: updatedBooking,
+      });
   } catch (error) {
-    res.status(500).json({ message: "Failed to update booking", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to update booking", error: error.message });
   }
 };
-
 
 // Get all bookings
 export const GetAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find().populate({ path: "user", select: "-password" }).populate("room");
+    const bookings = await Booking.find()
+      .populate({ path: "user", select: "-password" })
+      .populate("room");
     res.status(200).json(bookings);
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch bookings", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch bookings", error: error.message });
   }
 };
 
 // Get a booking by ID
 export const GetBookingById = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id).populate({ path: "user", select: "-password" }).populate("room");
+    const booking = await Booking.findById(req.params.id)
+      .populate({ path: "user", select: "-password" })
+      .populate("room");
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     res.status(200).json(booking);
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch booking", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to fetch booking", error: error.message });
   }
 };
 export const GetUserBookingsById = async (req, res) => {
@@ -559,7 +655,9 @@ export const CancelBooking = async (req, res) => {
     // Check if the booking is past check-out date
     const currentDate = new Date();
     if (new Date(booking.checkOutDate) < currentDate) {
-      return res.status(400).json({ message: "Cannot cancel a completed booking" });
+      return res
+        .status(400)
+        .json({ message: "Cannot cancel a completed booking" });
     }
 
     // Find the room
@@ -576,13 +674,13 @@ export const CancelBooking = async (req, res) => {
     await Room.updateOne(
       { _id: booking.room },
       {
-        $inc: { 
-          availableSlots: booking.noOfRooms, 
-          bookedSlots: -booking.noOfRooms 
+        $inc: {
+          availableSlots: booking.noOfRooms,
+          bookedSlots: -booking.noOfRooms,
         },
-        $set: { 
-          isAvailable: true 
-        }
+        $set: {
+          isAvailable: true,
+        },
       }
     );
 
@@ -592,13 +690,13 @@ export const CancelBooking = async (req, res) => {
       await User.updateOne(
         { _id: booking.user },
         {
-          $set: { 
+          $set: {
             IsBooking: false,
-            currentBooking: null
+            currentBooking: null,
           },
-          $inc: { 
-            bookedSlots: -booking.noOfRooms 
-          }
+          $inc: {
+            bookedSlots: -booking.noOfRooms,
+          },
         }
       );
 
@@ -610,7 +708,7 @@ export const CancelBooking = async (req, res) => {
           bookingId: booking._id,
           roomName: room.name,
           checkInDate: booking.checkInDate,
-          checkOutDate: booking.checkOutDate
+          checkOutDate: booking.checkOutDate,
         });
       } catch (emailError) {
         console.error("Failed to send cancellation email:", emailError.message);
@@ -619,32 +717,30 @@ export const CancelBooking = async (req, res) => {
     }
 
     // Send success response
-    res.status(200).json({ 
-      message: "Booking cancelled successfully", 
+    res.status(200).json({
+      message: "Booking cancelled successfully",
       booking,
-      refundInfo: "If applicable, refund will be processed within 5-7 business days"
+      refundInfo:
+        "If applicable, refund will be processed within 5-7 business days",
     });
-
   } catch (error) {
     console.error("Error cancelling booking:", error);
-    res.status(500).json({ 
-      message: "Failed to cancel booking", 
-      error: error.message 
+    res.status(500).json({
+      message: "Failed to cancel booking",
+      error: error.message,
     });
   }
 };
 
-
-
 export const Putrating = async (req, res) => {
   try {
-    const { id } = req.params;  // Room being rated
-    const { rating } = req.body;    // Rating value
+    const { id } = req.params; // Room being rated
+    const { rating } = req.body; // Rating value
     const currentUserId = req.user._id;
 
-    console.log(id)
+    console.log(id);
     console.log(rating);
-    console.log(currentUserId)
+    console.log(currentUserId);
 
     // Use findOneAndUpdate instead of find and save to avoid full validation
     const updatedRoom = await Room.findOneAndUpdate(
@@ -653,28 +749,28 @@ export const Putrating = async (req, res) => {
         $push: {
           ratings: {
             userId: currentUserId,
-            rating: rating
-          }
-        }
+            rating: rating,
+          },
+        },
       },
-      { 
-        new: true,  // Return updated document
-        runValidators: false  // Don't run validators for the entire document
+      {
+        new: true, // Return updated document
+        runValidators: false, // Don't run validators for the entire document
       }
     );
 
     if (!updatedRoom) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Room not found.' 
+      return res.status(404).json({
+        success: false,
+        message: "Room not found.",
       });
     }
 
     // Check rating range
     if (rating < 0 || rating > 5) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Rating must be between 0 and 5.' 
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be between 0 and 5.",
       });
     }
 
@@ -684,56 +780,70 @@ export const Putrating = async (req, res) => {
     // );
 
     // if (hasExistingRating) {
-    //   return res.status(400).json({ 
-    //     success: false, 
-    //     message: 'You have already rated this room.' 
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'You have already rated this room.'
     //   });
     // }
 
     res.status(200).json({
       success: true,
-      message: 'Rating added successfully.',
+      message: "Rating added successfully.",
       room: updatedRoom,
     });
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error occurred while adding rating' 
+    res.status(500).json({
+      success: false,
+      message: "Server error occurred while adding rating",
     });
   }
-}
+};
 
 // Get the average rating of a room
 export const getavgrating = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('roomId from params:', id);  // Debugging line
+    console.log("roomId from params:", id); // Debugging line
 
     const room = await Room.findById(id);
 
     if (!room) {
-      return res.status(404).json({ success: false, message: 'Room not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Room not found." });
     }
 
     const ratings = room.ratings;
     if (ratings.length === 0) {
-      return res.status(200).json({ success: true, message: 'No ratings available.', avg: 0 });
+      return res
+        .status(200)
+        .json({ success: true, message: "No ratings available.", avg: 0 });
     }
 
     const sum = ratings.reduce((acc, cur) => acc + cur.rating, 0);
     const avg = Math.round(sum / ratings.length);
 
-    res.status(200).json({ success: true, message: 'Average rating retrieved successfully.', avg });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Average rating retrieved successfully.",
+        avg,
+      });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Server error occurred while retrieving average rating.' });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Server error occurred while retrieving average rating.",
+      });
   }
 };
 export const GetUserBookings = async (req, res) => {
   const userId = req.user.userId;
-  console.log(userId)
+  console.log(userId);
   // Assuming user ID is available via JWT token in req.user
   try {
     // Find all bookings for the current user
@@ -744,20 +854,20 @@ export const GetUserBookings = async (req, res) => {
     if (bookings.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No bookings found for this user."
+        message: "No bookings found for this user.",
       });
     }
 
     res.status(200).json({
       success: true,
       message: "Bookings retrieved successfully.",
-      bookings
+      bookings,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: "Server error occurred while fetching user bookings."
+      message: "Server error occurred while fetching user bookings.",
     });
   }
 };
@@ -774,12 +884,13 @@ export const All = async (req, res) => {
     const totalUsers = await User.countDocuments({ IsBooking: false });
 
     const revenue = await Booking.aggregate([
-      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
     ]);
 
     // Recent Bookings (sorted by booking date, limited to 5)
     const recentBookings = await Booking.find()
-      .sort({ bookingDate: -1 }).populate("user") // Sort by booking date descending
+      .sort({ bookingDate: -1 })
+      .populate("user") // Sort by booking date descending
       .limit(5);
 
     res.json({
@@ -787,15 +898,15 @@ export const All = async (req, res) => {
       totalGuests,
       totalUsers,
       revenue: revenue[0]?.totalRevenue || 0,
-      recentBookings
+      recentBookings,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    res.status(500).json({ error: "Failed to fetch dashboard stats" });
   }
-}
+};
 
-import moment from "moment";// Adjust the path according to your project structure
+import moment from "moment"; // Adjust the path according to your project structure
 import { sendBookingConfirmation } from "./auth.js";
 
 export const GetBookingChange = async (req, res) => {
@@ -811,13 +922,14 @@ export const GetBookingChange = async (req, res) => {
       .subtract(1, "month")
       .startOf("month")
       .toDate();
-    const lastDayOfLastMonth = currentDate
-      .endOf("month")
-      .toDate();
+    const lastDayOfLastMonth = currentDate.endOf("month").toDate();
 
     // Fetch bookings for the current and last month
     const currentMonthBookingsCount = await Booking.countDocuments({
-      checkInDate: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth },
+      checkInDate: {
+        $gte: firstDayOfCurrentMonth,
+        $lte: lastDayOfCurrentMonth,
+      },
     });
 
     const lastMonthBookingsCount = await Booking.countDocuments({
@@ -868,34 +980,47 @@ export const GetRevenueChange = async (req, res) => {
   try {
     // Get the current date and calculate the first and last date of the current month
     const currentDate = moment();
-    const firstDayOfCurrentMonth = currentDate.startOf('month').toDate();
-    const lastDayOfCurrentMonth = currentDate.endOf('month').toDate();
+    const firstDayOfCurrentMonth = currentDate.startOf("month").toDate();
+    const lastDayOfCurrentMonth = currentDate.endOf("month").toDate();
 
     // Get the first and last date of the previous month
     const firstDayOfLastMonth = currentDate
-      .subtract(1, 'month')
-      .startOf('month')
+      .subtract(1, "month")
+      .startOf("month")
       .toDate();
     const lastDayOfLastMonth = currentDate
       // .subtract(1, 'month')
-      .endOf('month')
+      .endOf("month")
       .toDate();
 
     // Fetch the total revenue in the current month
     const currentMonthRevenue = await Booking.aggregate([
-      { $match: { createdAt: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth } } },
-      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+      {
+        $match: {
+          createdAt: {
+            $gte: firstDayOfCurrentMonth,
+            $lte: lastDayOfCurrentMonth,
+          },
+        },
+      },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
     ]);
 
-    const currentMonthRevenueAmount = currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
+    const currentMonthRevenueAmount =
+      currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
 
     // Fetch the total revenue in the previous month
     const lastMonthRevenue = await Booking.aggregate([
-      { $match: { createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth } } },
-      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+      {
+        $match: {
+          createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth },
+        },
+      },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } },
     ]);
 
-    const lastMonthRevenueAmount = lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
+    const lastMonthRevenueAmount =
+      lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
 
     // Calculate the increase or decrease in revenue
     const revenueChange = currentMonthRevenueAmount - lastMonthRevenueAmount;
@@ -907,11 +1032,15 @@ export const GetRevenueChange = async (req, res) => {
     }
 
     // Determine whether it's an increase, decrease, or no change
-    let changeStatus = 'No change';
+    let changeStatus = "No change";
     if (revenueChange > 0) {
-      changeStatus = `Increased by $${revenueChange.toFixed(2)} (${percentageChange.toFixed(2)}%)`;
+      changeStatus = `Increased by $${revenueChange.toFixed(
+        2
+      )} (${percentageChange.toFixed(2)}%)`;
     } else if (revenueChange < 0) {
-      changeStatus = `Decreased by $${Math.abs(revenueChange).toFixed(2)} (${Math.abs(percentageChange).toFixed(2)}%)`;
+      changeStatus = `Decreased by $${Math.abs(revenueChange).toFixed(
+        2
+      )} (${Math.abs(percentageChange).toFixed(2)}%)`;
     }
 
     res.status(200).json({
@@ -927,7 +1056,79 @@ export const GetRevenueChange = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error occurred while calculating revenue change.',
+      message: "Server error occurred while calculating revenue change.",
+      error: error.message,
+    });
+  }
+};
+ export const getBookingsByRoom = async (req, res) => {
+  try {
+    const { id } = req.params; // Extract room ID from request parameters
+
+    // Find all bookings for the given room ID
+    const bookings = await Booking.find({ room: id })
+      .populate('user', 'name email') // Optionally populate user details (if your Booking model references users)
+      .populate('room', 'name availableSlots'); // Optionally populate room details
+
+    // Check if bookings exist
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({ message: 'No bookings found for this room.' });
+    }
+
+    // Send the bookings as the response
+    res.status(200).json({
+      success: true,
+      bookings,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while retrieving bookings.',
+      error: error.message,
+    });
+  }
+};
+
+export const getBookingDatesByRoom = async (req, res) => {
+  try {
+    const { id } = req.params; // Extract room ID from request parameters
+
+    // Find all bookings for the given room ID
+    const bookings = await Booking.find({ room: id }).select('checkInDate checkOutDate -_id');
+
+    // Check if bookings exist
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({ message: 'No bookings found for this room.' });
+    }
+
+    // Generate all dates within the range of check-in and check-out dates
+    const bookedDates = bookings.flatMap(({ checkInDate, checkOutDate }) => {
+      const dates = [];
+      let currentDate = new Date(checkInDate);
+      const endDate = new Date(checkOutDate);
+
+      while (currentDate <= endDate) {
+        dates.push(new Date(currentDate).toISOString().split('T')[0]); // Format date as YYYY-MM-DD
+        currentDate.setDate(currentDate.getDate() + 1); // Increment day
+      }
+
+      return dates;
+    });
+
+    // Remove duplicate dates
+    const uniqueBookedDates = [...new Set(bookedDates)];
+
+    // Send the dates as the response
+    res.status(200).json({
+      success: true,
+      dates: uniqueBookedDates,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while retrieving booked dates.',
       error: error.message,
     });
   }
