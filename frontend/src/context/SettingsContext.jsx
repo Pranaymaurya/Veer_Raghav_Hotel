@@ -18,7 +18,6 @@ export const SettingsProvider = ({ children }) => {
 
   const fetchHotel = async () => {
     try {
-      // const config = await getAuthConfig();
       const response = await api.get('/hotel');
       if (response.data) {
         setHotel(response.data);
@@ -32,7 +31,6 @@ export const SettingsProvider = ({ children }) => {
 
   const gethotel = async () => {
     try {
-      // const config = await getAuthConfig();
       const response = await api.get('/hotel');
       if (response.data) {
         setHotelInfo(response.data);
@@ -45,7 +43,6 @@ export const SettingsProvider = ({ children }) => {
 
   const createHotel = async (hotelData) => {
     try {
-      const config = await getAuthConfig();
       const response = await api.post('/hotel', hotelData);
       setHotel(response.data);
       return response.data;

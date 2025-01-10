@@ -5,44 +5,46 @@ export const AddHotel = async (req, res) => {
   try {
     const {
       name,
-      address,
-      contactNumbers,
-      checkInTime,
-      checkOutTime,
-      logo,
-      foodAndDining,
-      hostDetails,
-      caretakerDetails,
-      Email,
+      // address,
+      // contactNumbers,
+      // checkInTime,
+      // checkOutTime,
+      // logo,
+      // foodAndDining,
+      // hostDetails,
+      // caretakerDetails,
+      // Email,
     } = req.body;
 
-    // Validate required fields
-    if (!name || !address || !contactNumbers || !checkInTime || !checkOutTime) {
-      return res.status(400).json({ message: "Required fields are missing." });
-    }
+    // // Validate required fields
+    // if (!name 
+    //   // || !address || !contactNumbers || !checkInTime || !checkOutTime
+    // ) {
+    //   return res.status(400).json({ message: "Required fields are missing." });
+    // }
 
-    // Ensure contactNumbers is an array
-    if (!Array.isArray(contactNumbers)) {
-      return res.status(400).json({ message: "Contact numbers must be an array." });
-    }
+    // // Ensure contactNumbers is an array
+    // if (!Array.isArray(contactNumbers)) {
+    //   return res.status(400).json({ message: "Contact numbers must be an array." });
+    // }
 
-    // Validate email if provided
-    if (Email && !validator.isEmail(Email)) {
-      return res.status(400).json({ message: "Invalid email address." });
-    }
+    // // Validate email if provided
+    // if (Email && !validator.isEmail(Email)) {
+    //   return res.status(400).json({ message: "Invalid email address." });
+    // }
 
     // Create a new hotel
     const newHotel = new Hotel({
       name,
-      address,
-      contactNumbers,
-      checkInTime,
-      checkOutTime,
-      logo,
-      foodAndDining,
-      hostDetails,
-      caretakerDetails,
-      Email,
+      // address,
+      // contactNumbers,
+      // checkInTime,
+      // checkOutTime,
+      // logo,
+      // foodAndDining,
+      // hostDetails,
+      // caretakerDetails,
+      // Email,
     });
 
     // Save the hotel to the database

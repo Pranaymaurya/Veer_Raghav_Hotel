@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSettings } from '@/context/SettingsContext';
 import { MapPin, Phone, Mail, Clock, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function LocationSection() {
-  const { hotelInfo } = useSettings();
+  const { hotelInfo, gethotel } = useSettings();
+
+  useEffect(() => {
+    gethotel();
+  }, []);
 
   if (!hotelInfo || hotelInfo.length === 0) return null;
 
   const hotelData = hotelInfo[0];
-  const { name, address, contactNumbers, email } = hotelData;
+  const { name, address, contactNumbers, Email } = hotelData;
 
   // Animation variants
   const containerVariants = {
@@ -107,7 +111,7 @@ export default function LocationSection() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-orange-800 mb-1">Email</h4>
-                    <p className="text-orange-700">{!email ? "contact@example.com" : email}</p>
+                    <p className="text-orange-700">{!Email ? "contact@example.com" : Email}</p>
                   </div>
                 </motion.div>
 
