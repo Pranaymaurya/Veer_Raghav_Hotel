@@ -66,7 +66,6 @@ export const SettingsProvider = ({ children }) => {
       throw new Error('No data received from server');
     } catch (error) {
       console.error('Failed to update hotel:', error);
-      // Log more detailed error information
       if (error.response) {
         console.error('Error response:', error.response.data);
         console.error('Error status:', error.response.status);
