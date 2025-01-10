@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_UPLOAD_URL;
 export const RoomProvider = ({ children }) => {
   const [Rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [availabilityData, setAvailabilityData] = useState(null);
 
   const getImageUrl = useCallback((imagePath) => {
     if (!imagePath) return '/placeholder-room.jpg';
@@ -139,6 +140,17 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  const getRoomAvailability = async (roomId) => {
+    try {
+      const response = await api.get(`/booking/rooms/${roomId}`);
+      console.log(response.data);
+      
+      setAvailabilityData(response.data.availability);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
   const handleApiError = (error) => {
     if (error.response?.status === 401) {
       throw new Error('Authentication required. Please log in again.');
@@ -158,7 +170,9 @@ export const RoomProvider = ({ children }) => {
     Rooms,
     getImageUrl,
     loading,
-    getRoomBookingDates
+    getRoomBookingDates,
+    getRoomAvailability,
+    availabilityData
   };
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;

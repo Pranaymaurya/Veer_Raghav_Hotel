@@ -9,12 +9,23 @@ import { Separator } from "@/components/ui/separator";
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import { useToast } from '@/hooks/use-toast';
 import DownloadReceipt from '@/components/DownloadReceipt';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function BookingSuccessPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const bookingData = location.state;
+  const {user} = useAuth();
+
+  if (!user) {
+    toast({
+      title: "Error",
+      description: "User is not authenticated. Please log in.",
+      variant: "destructive",
+    });
+    return null;
+  }
 
   if (!bookingData) {
     toast({

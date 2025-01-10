@@ -26,6 +26,7 @@ const RecentActivity = () => {
   useEffect(() => {
     fetchData();
   }, []);
+  
 
   const formatDate = useCallback((dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -69,8 +70,11 @@ const RecentActivity = () => {
   const BookingCard = React.memo(({ booking }) => {
     if (!booking) return null;
 
+    console.log('bookinggs', booking?.user?._id);
+    
+
     const roomDetails = getRoomDetails(booking.room);
-    const userDetails = getUserDetails(booking.user);
+    const userDetails = getUserDetails(booking?.user?._id);
 
     return (
       <div className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors space-y-3">

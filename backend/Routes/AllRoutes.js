@@ -154,8 +154,6 @@ router.get(
 );
 router.get(
   "/booking/rooms/:id",
-  authMiddleware,
-  authorizeRoles("admin"),
   GetRoomAvailability
 )
 
