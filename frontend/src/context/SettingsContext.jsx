@@ -79,8 +79,6 @@ export const SettingsProvider = ({ children }) => {
     try {
       const formData = new FormData();
       formData.append('logo', file);
-
-      // Make sure we have hotel id
       if (!hotel?.[0]?._id) {
         throw new Error('Hotel ID not found');
       }
@@ -92,7 +90,6 @@ export const SettingsProvider = ({ children }) => {
       });
 
       if (response.data) {
-        // Update the hotel state with the new logo URL
         setHotel(prevHotel => {
           const updatedHotel = [...prevHotel];
           updatedHotel[0] = {
