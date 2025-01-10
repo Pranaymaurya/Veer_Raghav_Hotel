@@ -134,19 +134,86 @@ export const sendBookingConfirmation = async (bookingDetails) => {
       throw new Error('Missing required booking details');
     }
 
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    };
+
+    const formattedCheckInDate = formatDate(checkInDate);
+    const formattedCheckOutDate = formatDate(checkOutDate);
+
     const emailTemplate = `
-      <html>
-      <!-- Your HTML content for the booking confirmation email -->
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Booking Confirmation</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background-color: #FF6600;
+            color: white;
+            padding: 20px;
+            text-align: center;
+          }
+          .content {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #666;
+          }
+          .booking-details {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+          }
+          .booking-details p {
+            margin: 5px 0;
+          }
+          .total-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #FF6600;
+          }
+        </style>
+      </head>
       <body>
-        <h1>Booking Confirmation</h1>
-        <p>Dear ${name},</p>
-        <p>Your booking for ${service} has been confirmed. Details:</p>
-        <ul>
-          <li>Booking ID: ${bookingId}</li>
-          <li>Check-in: ${checkInDate}</li>
-          <li>Check-out: ${checkOutDate}</li>
-          <li>Total Price: $${totalPrice.toFixed(2)}</li>
-        </ul>
+        <div class="header">
+          <h1>Booking Confirmation</h1>
+        </div>
+        <div class="content">
+          <p>Dear ${name},</p>
+          <p>Thank you for choosing our service. Your booking for Room <strong>${service}</strong> has been confirmed.</p>
+          <div class="booking-details">
+            <p><strong>Booking ID:</strong> ${bookingId}</p>
+            <p><strong>Check-in:</strong> ${formattedCheckInDate}</p>
+            <p><strong>Check-out:</strong> ${formattedCheckOutDate}</p>
+            <p class="total-price">Total Price: ₹${totalPrice.toFixed(2)}/- (INR)</p>
+          </div>
+          <p>We look forward to welcoming you and hope you have a great stay!</p>
+        </div>
+        <div class="footer">
+          <p>If you have any questions, please don't hesitate to contact us.</p>
+          <p>&copy; ${new Date().getFullYear()} Veer Raghav. All rights reserved.</p>
+        </div>
       </body>
       </html>
     `;

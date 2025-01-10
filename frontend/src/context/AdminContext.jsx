@@ -21,13 +21,11 @@ export const AdminProvider = ({ children }) => {
         setLoading(true);
         try {
             const response = await api.get('/admindashboard');
-            console.log(response.data);
-            
-            // Ensure recentBookings is always an array
             const recentBookings = Array.isArray(response.data.recentBookings) 
                 ? response.data.recentBookings 
                 : [];
-
+            console.log('recentBookings:', recentBookings);
+            
             setDashboardStats({
                 totalBookings: response.data.totalBookings || 0,
                 totalGuests: response.data.totalGuests || 0,
@@ -91,16 +89,9 @@ export const AdminProvider = ({ children }) => {
     const getBookingsPercentage = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/dashboard-stats');
+            const response = await api.get('/getallchange');
             if (response.data) {
                 setPercentage(response.data);
-                // toast ({
-                //     title: 'Success',
-                //     description: 'Dashboard stats fetched successfully',
-                //     status: 'success',
-                //     duration: 5000,
-                //     isClosable: true
-                // })
                 return response.data;
             } 
         } catch (error) {

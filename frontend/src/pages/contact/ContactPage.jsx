@@ -16,7 +16,7 @@ function ContactPage() {
     name: "Luxury Hotel",
     address: "Near Ram Mandir, Ayodhya",
     contactNumbers: ["+91 123 456 7890", "+91 098 765 4321"],
-    email: "contact@hotel.com",
+    Email: "contact@hotel.com",
     supportEmail: "support@hotel.com",
     checkInTime: "12:00 PM",
     checkOutTime: "11:00 AM",
@@ -29,7 +29,7 @@ function ContactPage() {
     name,
     address,
     contactNumbers = defaultData.contactNumbers,
-    email = defaultData.email,
+    Email = defaultData.Email,
     supportEmail = defaultData.supportEmail,
     description = defaultData.description
   } = hotelData;
@@ -85,7 +85,7 @@ function ContactPage() {
           <QuickContactCard 
             icon={Mail}
             title="Email Us"
-            content={email}
+            content={Email}
             subContent="Quick Response"
           />
           <QuickContactCard 
@@ -116,7 +116,7 @@ function ContactPage() {
                   icon={<span className="text-orange-500">01</span>}
                 />
                 <InputField 
-                  type="email"
+                  type="Email"
                   placeholder="Your Email"
                   icon={<span className="text-orange-500">02</span>}
                 />
@@ -166,17 +166,18 @@ function ContactPage() {
                 content="24/7 Available"
                 subcontent="Always at your service"
               />
-              <InfoCard
-                icon={Phone}
-                title="Phone Numbers"
-                content={contactNumbers[0]}
-                subcontent={contactNumbers[1] || ""}
-              />
+              {contactNumbers.map((number, index) => (
+                <InfoCard
+                  key={index}
+                  icon={Phone}
+                  title="Phone Number"
+                  content={number}
+                />
+              ))}
               <InfoCard
                 icon={Mail}
                 title="Email Address"
-                content={email}
-                subcontent={supportEmail}
+                content={Email}
               />
               <InfoCard
                 icon={MapPin}

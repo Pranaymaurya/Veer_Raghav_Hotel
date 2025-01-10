@@ -18,7 +18,6 @@ export const SettingsProvider = ({ children }) => {
 
   const fetchHotel = async () => {
     try {
-      // const config = await getAuthConfig();
       const response = await api.get('/hotel');
       if (response.data) {
         setHotel(response.data);
@@ -32,7 +31,6 @@ export const SettingsProvider = ({ children }) => {
 
   const gethotel = async () => {
     try {
-      // const config = await getAuthConfig();
       const response = await api.get('/hotel');
       if (response.data) {
         setHotelInfo(response.data);
@@ -45,7 +43,6 @@ export const SettingsProvider = ({ children }) => {
 
   const createHotel = async (hotelData) => {
     try {
-      //const config = await getAuthConfig();
       const response = await api.post('/hotel', hotelData);
       setHotel(response.data);
       return response.data;
@@ -69,7 +66,6 @@ export const SettingsProvider = ({ children }) => {
       throw new Error('No data received from server');
     } catch (error) {
       console.error('Failed to update hotel:', error);
-      // Log more detailed error information
       if (error.response) {
         console.error('Error response:', error.response.data);
         console.error('Error status:', error.response.status);
@@ -82,8 +78,6 @@ export const SettingsProvider = ({ children }) => {
     try {
       const formData = new FormData();
       formData.append('logo', file);
-
-      // Make sure we have hotel id
       if (!hotel?.[0]?._id) {
         throw new Error('Hotel ID not found');
       }
@@ -95,7 +89,6 @@ export const SettingsProvider = ({ children }) => {
       });
 
       if (response.data) {
-        // Update the hotel state with the new logo URL
         setHotel(prevHotel => {
           const updatedHotel = [...prevHotel];
           updatedHotel[0] = {

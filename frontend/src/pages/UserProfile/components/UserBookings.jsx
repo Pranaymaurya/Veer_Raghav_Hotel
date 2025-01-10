@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import { useRoom } from '@/context/RoomContext';
 import StatusBadge from '../../../components/StatusBadge';
 import RoomRating from './RoomRating';
+import DownloadReceiptforUser from '@/components/DownloadReciptforUser';
 
 const UserBookings = () => {
   const { user } = useAuth();
@@ -46,8 +47,8 @@ const UserBookings = () => {
           <Star
             key={star}
             className={`w-6 h-6 cursor-pointer ${(interactive ? hoveredRating || selectedRating : rating) >= star
-                ? 'text-yellow-500 fill-yellow-500'
-                : 'text-gray-300'
+              ? 'text-yellow-500 fill-yellow-500'
+              : 'text-gray-300'
               }`}
             onMouseEnter={() => interactive && setHoveredRating(star)}
             onMouseLeave={() => interactive && setHoveredRating(0)}
@@ -231,63 +232,20 @@ const UserBookings = () => {
   );
 
 
-  // const handleRatingSubmit = async () => {
-  //   if (!selectedBooking || !selectedRating) return;
-
-  //   setIsSubmittingRating(true);
-  //   try {
-  //     // Submit the rating
-  //     const ratingResponse = await putRating(selectedBooking.room._id, {
-  //       rating: selectedRating
-  //     });
-
-  //     if (!ratingResponse || !ratingResponse.success) {
-  //       throw new Error(ratingResponse?.message || 'Failed to submit rating');
-  //     }
-
-  //     // Get updated average rating
-  //     const avgRatingResponse = await getAverageRating(selectedBooking.room._id);
-
-  //     if (avgRatingResponse.success) {
-  //       toast({
-  //         title: "Rating Submitted",
-  //         description: "Thank you for rating your stay!",
-  //         variant: "success",
-  //         className: "bg-green-200 border-green-400 text-black text-lg",
-  //         duration: 2000
-  //       });
-  //     }
-
-  //     setIsRatingDialogOpen(false);
-  //     setSelectedRating(0);
-  //     // Refresh bookings to get updated data
-  //     await getBookingsByUserId(user);
-  //   } catch (error) {
-  //     console.error('Rating error:', error);
-  //     toast({
-  //       title: "Error",
-  //       description: error.message || "Failed to submit rating. Please try again.",
-  //       variant: "destructive",
-  //     });
-  //   } finally {
-  //     setIsSubmittingRating(false);
-  //   }
-  // };
-
   const handleRatingSubmit = async (rating) => {
     if (!selectedBooking || !rating) return;
-  
+
     setIsSubmittingRating(true);
     try {
       // Submit the rating
-      const ratingResponse = await putRating(selectedBooking.room._id, { 
-        rating: rating 
+      const ratingResponse = await putRating(selectedBooking.room._id, {
+        rating: rating
       });
-  
+
       if (!ratingResponse || !ratingResponse.success) {
         throw new Error(ratingResponse?.message || 'Failed to submit rating');
       }
-  
+
       // Update the local booking data immediately
       setSelectedBooking(prev => ({
         ...prev,
@@ -299,7 +257,7 @@ const UserBookings = () => {
           ]
         }
       }));
-  
+
       toast({
         title: "Rating Submitted",
         description: "Thank you for rating your stay!",
@@ -307,10 +265,10 @@ const UserBookings = () => {
         className: "bg-green-200 border-green-400 text-black text-lg",
         duration: 2000
       });
-  
+
       // Optional: Get updated average rating in background
       getAverageRating(selectedBooking.room._id);
-  
+
       return { success: true };
     } catch (error) {
       console.error('Rating error:', error);
@@ -326,9 +284,9 @@ const UserBookings = () => {
   };
 
   const BookingCard = ({ booking, isDetailed = false }) => {
-    const hasUserRated = booking.room.ratings?.some(
-      rating => rating.userId === user?._id
-    );
+    // const hasUserRated = booking.room.ratings?.some(
+    //   rating => rating.userId === user?._id
+    // );
 
 
     return (
@@ -410,51 +368,11 @@ const UserBookings = () => {
         {isDetailed && (
           <div className="space-y-4">
 
-            {/* <Card>
-              <CardHeader>
-                <CardTitle>Rate Your Stay</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {hasUserRated ? (
-                  <Alert>
-                    <AlertDescription>
-                      You have already rated this room. Thank you for your feedback!
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <RatingStars
-aewgggg
-
-
-
-
-                      rating={selectedRating}
-                      onRatingChange={(rating) => {
-                        setSelectedRating(rating);
-                        setIsRatingDialogOpen(true);
-                      }}
-                    />
-                    <span className="text-sm text-gray-500">Click to rate</span>
-                  </div>
-                )}
-                <div className="mt-2">
-                  <span className="text-sm text-gray-500">
-                    {booking.room.ratings?.length > 0
-                      ? `Average rating: ${(
-                        booking.room.ratings.reduce((acc, curr) => acc + curr.rating, 0) /
-                        booking.room.ratings.length
-                      ).toFixed(1)}`
-                      : "No ratings yet"}
-                  </span>
-                </div>
-              </CardContent>
-            </Card> */}
-            <RoomRating 
-  booking={booking}
-  user={user}
-  onRatingSubmit={handleRatingSubmit}
-/>
+            <RoomRating
+              booking={booking}
+              user={user}
+              onRatingSubmit={handleRatingSubmit}
+            />
 
 
 
@@ -466,7 +384,7 @@ aewgggg
                 <p className="text-sm text-muted-foreground mb-4">
                   Download your booking receipt to present during check-in.
                 </p>
-                <DownloadReceipt booking={booking} />
+                <DownloadReceiptforUser bookingData={booking} />
               </CardContent>
             </Card>
 
@@ -570,7 +488,7 @@ aewgggg
                     >
                       <CardHeader className="flex flex-col sm:flex-row justify-between items-start gap-2">
                         <CardTitle className="text-lg sm:text-xl font-bold">{booking.room.name}</CardTitle>
-                        <StatusBadge status={booking.status}/>
+                        <StatusBadge status={booking.status} />
                       </CardHeader>
                       <CardContent>
                         <BookingCard booking={booking} />
@@ -619,7 +537,7 @@ aewgggg
             <DialogHeader className="mt-5">
               <DialogTitle className="flex justify-between items-center">
                 <span>{selectedBooking.room.name}</span>
-                <StatusBadge status={selectedBooking.status}/>
+                <StatusBadge status={selectedBooking.status} />
               </DialogTitle>
             </DialogHeader>
 
