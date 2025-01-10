@@ -3,6 +3,7 @@ import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../Models/userModel.js";
 import DeletedUser from "../Models/UserDelete.js";
+import Booking from "../Models/Booking.js";
 export const updateUser = async (req, res) => {
   const { name, email, phoneno, gender, age, address } = req.body;
   const userId = req.params.id; // The ID of the user to update, passed via URL parameter
@@ -317,5 +318,4 @@ export const GetUserChange = async (req, res) => {
     });
   }
 };
-
 

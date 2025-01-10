@@ -5,12 +5,14 @@ import {
   CancelBooking,
   CreateBooking,
   GetAllBookings,
+  GetAllChanges,
   getavgrating,
   GetBookingById,
   GetBookingChange,
   getBookingDatesByRoom,
   getBookingsByRoom,
   GetRevenueChange,
+  GetRoomAvailability,
   GetUserBookings,
   GetUserBookingsById,
   Putrating,
@@ -150,6 +152,12 @@ router.get(
   "/booking/roomdates/:id",
   getBookingDatesByRoom
 );
+router.get(
+  "/booking/rooms/:id",
+  authMiddleware,
+  authorizeRoles("admin"),
+  GetRoomAvailability
+)
 
 router.get( 
   "/bookingchange",
@@ -204,4 +212,5 @@ router.put(
 router.get("/hotel", GetHotel);
 router.get("/admindashboard",authMiddleware,authMiddleware, authorizeRoles("admin"), All)
 router.get("/revenuechange",authMiddleware,authorizeRoles("admin"),GetRevenueChange)
+router.get("/getallchange",authMiddleware,authorizeRoles("admin"),GetAllChanges)
 export default router;
