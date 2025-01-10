@@ -93,10 +93,10 @@ export const login = async (req, res) => {
     // Check password match
     const isMatch = await bcryptjs.compare(trimmedPassword, user.password);
 
-console.log('Password comparison:');
-console.log('Plain password:', trimmedPassword);
-console.log('Hashed password from DB:', user.password);
-console.log('Comparison result:', isMatch); // This should log `true` if passwords match.
+// console.log('Password comparison:');
+// console.log('Plain password:', trimmedPassword);
+// console.log('Hashed password from DB:', user.password);
+// console.log('Comparison result:', isMatch); // This should log `true` if passwords match.
 
 
     if (!isMatch) {

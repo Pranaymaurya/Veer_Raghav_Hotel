@@ -11,15 +11,13 @@ export const CreateBooking = async (req, res) => {
     checkOutDate,
     noofguests,
     noOfRooms = 1,
-    noofchildrens // Default to 1 if not provided
+    noofchildrens = 1, // Default to 1 if not provided
   } = req.body;
 
   try {
     // Validate number of guests
     if (!Number.isInteger(noofguests) || noofguests <= 0) {
-      return res
-        .status(400)
-        .json({ message: "Number of guests must be a positive integer." });
+      return res.status(400).json({ message: "Number of guests must be a positive integer." });
     }
 
     // Validate check-in and check-out dates
@@ -27,93 +25,51 @@ export const CreateBooking = async (req, res) => {
     const checkOut = new Date(checkOutDate);
 
     if (isNaN(checkIn) || isNaN(checkOut)) {
-      return res
-        .status(400)
-        .json({ message: "Invalid check-in or check-out date." });
+      return res.status(400).json({ message: "Invalid check-in or check-out date." });
     }
 
     if (checkOut <= checkIn) {
-      return res
-        .status(400)
-        .json({ message: "Check-out date must be after the check-in date." });
+      return res.status(400).json({ message: "Check-out date must be after the check-in date." });
     }
 
-    // Find the room by ID and check availability
+    // Fetch room details
     const room = await Room.findById(roomId);
     if (!room) {
       return res.status(404).json({ message: "Room not found." });
     }
 
-    // Only check for date conflicts if the room is marked as unavailable
-    // Check if the room is marked as unavailable
-if (!room.isAvailable) {
-  // Check for any conflicting bookings in the requested date range
-  const existingBooking = await Booking.findOne({
-    room: roomId,
-    checkInDate: { $lt: checkOut }, // Overlaps with requested check-out date
-    checkOutDate: { $gt: checkIn }, // Overlaps with requested check-in date
-  });
-
-  if (!existingBooking) {
-    // If no conflicting booking is found, allow the booking
-    console.log('Room is unavailable but no conflicting booking found, proceeding with booking.');
-  } else {
-    // Room is genuinely unavailable due to a conflicting booking
-    return res.status(400).json({
-      message: "Room is already booked for the selected dates.",
-      conflictingBooking: {
-        checkIn: existingBooking.checkInDate,
-        checkOut: existingBooking.checkOutDate,
-      },
+    // Check for conflicting bookings in the requested date range
+    const conflictingBookings = await Booking.find({
+      room: roomId,
+      checkInDate: { $lt: checkOut }, // Overlaps with requested check-out date
+      checkOutDate: { $gt: checkIn }, // Overlaps with requested check-in date
     });
-  }
-}
 
-// Continue with the rest of your booking process
-const existingBooking = await Booking.findOne({
-  room: roomId,
-  checkInDate: { $lt: checkOut },
-  checkOutDate: { $gt: checkIn },
-});
+    let availableSlots = room.totalSlots; // Start with the total slots of the room
 
-if (existingBooking) {
-  return res.status(400).json({
-    message: "Room is already booked for the selected dates.",
-    conflictingBooking: {
-      checkIn: existingBooking.checkInDate,
-      checkOut: existingBooking.checkOutDate,
-    },
-  });
-}
+    conflictingBookings.forEach((booking) => {
+      availableSlots -= booking.noOfRooms;
+    });
 
-// Continue with the other checks and booking logic as usual...
+    if (availableSlots < noOfRooms) {
+      return res.status(400).json({
+        message: `Only ${availableSlots} rooms are available for the selected dates.`,
+        suggestion: "Please try selecting different dates or reducing the number of rooms.",
+      });
+    }
 
-
-    // Calculate the number of nights
+    // Calculate booking details
     const numberOfNights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
     if (numberOfNights <= 0) {
       return res.status(400).json({ message: "Invalid booking dates." });
     }
 
-    // Check room availability
-    if (room.availableSlots < noOfRooms) {
-      return res.status(400).json({
-        message: `Only ${room.availableSlots} rooms are available. You cannot book ${noOfRooms} rooms.`,
-      });
-    }
-
-    // Pricing and taxes
-    const pricePerRoom =
-      room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+    const pricePerRoom = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
     const basePrice = pricePerRoom * numberOfNights * noOfRooms;
 
     const vatAmount = room.taxes?.vat ? (room.taxes.vat / 100) * basePrice : 0;
-    const serviceTaxAmount = room.taxes?.serviceTax
-      ? (room.taxes.serviceTax / 100) * basePrice
-      : 0;
-    const otherTaxAmount = room.taxes?.other
-      ? (room.taxes.other / 100) * basePrice
-      : 0;
+    const serviceTaxAmount = room.taxes?.serviceTax ? (room.taxes.serviceTax / 100) * basePrice : 0;
+    const otherTaxAmount = room.taxes?.other ? (room.taxes.other / 100) * basePrice : 0;
 
     const totaltax = vatAmount + serviceTaxAmount + otherTaxAmount;
     const totalPrice = basePrice + totaltax;
@@ -138,18 +94,6 @@ if (existingBooking) {
 
     const savedBooking = await booking.save();
 
-    // Update room availability
-    await Room.updateOne(
-      { _id: roomId },
-      {
-        $set: {
-          availableSlots: room.availableSlots - noOfRooms,
-          isAvailable: room.availableSlots - noOfRooms > 0, // Automatically set isAvailable
-        },
-        $inc: { bookedSlots: noOfRooms },
-      }
-    );
-
     // Update user booking status
     const user = await User.findById(userId);
     if (user) {
@@ -160,7 +104,6 @@ if (existingBooking) {
             IsBooking: true,
             currentBooking: savedBooking._id,
           },
-          $inc: { bookedSlots: noOfRooms },
         }
       );
 
@@ -176,10 +119,7 @@ if (existingBooking) {
           totalPrice,
         });
       } catch (emailError) {
-        console.error(
-          "Failed to send booking confirmation email:",
-          emailError.message
-        );
+        console.error("Failed to send booking confirmation email:", emailError.message);
       }
     }
 
@@ -190,11 +130,11 @@ if (existingBooking) {
     });
   } catch (error) {
     console.error("Error creating booking:", error.message);
-    res
-      .status(500)
-      .json({ message: "Failed to create booking.", error: error.message });
+    res.status(500).json({ message: "Failed to create booking.", error: error.message });
   }
 };
+
+
 
 
 export const UpdateBooking = async (req, res) => {
@@ -350,7 +290,123 @@ export const UpdateBooking = async (req, res) => {
       .json({ message: "Failed to update booking", error: error.message });
   }
 };
+export const GetRoomAvailability = async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    // Validate roomId
+    if (!id) {
+      return res.status(400).json({ 
+        message: "Room ID is required." 
+      });
+    }
 
+    // Fetch room details
+    const room = await Room.findById(id);
+    if (!room) {
+      return res.status(404).json({ 
+        message: "Room not found." 
+      });
+    }
+
+    // Get current date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get date 6 months from now
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+    sixMonthsFromNow.setHours(23, 59, 59, 999);
+
+    // Get all bookings for this room in the next 6 months
+    const bookings = await Booking.find({
+      room: id,
+      checkOutDate: { $gte: today },
+      checkInDate: { $lte: sixMonthsFromNow }
+    }).sort({ checkInDate: 1 });
+
+    // Create array of dates for next 6 months
+    const datesArray = [];
+    const currentDate = new Date(today);
+    
+    while (currentDate <= sixMonthsFromNow) {
+      datesArray.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate availability for each date
+    const availability = datesArray.map(date => {
+      const dateStr = date.toISOString().split('T')[0];
+      let bookedRooms = 0;
+
+      // Count bookings for this specific date
+      bookings.forEach(booking => {
+        const bookingStart = new Date(booking.checkInDate);
+        const bookingEnd = new Date(booking.checkOutDate);
+        
+        if (date >= bookingStart && date < bookingEnd) {
+          bookedRooms += booking.noOfRooms;
+        }
+      });
+
+      const availableSlots = room.totalSlots - bookedRooms;
+
+      return {
+        date: dateStr,
+        dayOfWeek: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        totalSlots: room.totalSlots,
+        bookedSlots: bookedRooms,
+        availableSlots: availableSlots,
+        isAvailable: availableSlots > 0,
+        priceForDay: getPriceForDay(room, date) // Helper function defined below
+      };
+    });
+
+    // Calculate availability statistics
+    const stats = {
+      totalDays: availability.length,
+      availableDays: availability.filter(day => day.isAvailable).length,
+      fullyBookedDays: availability.filter(day => day.availableSlots === 0).length,
+      averageAvailability: Math.round(
+        availability.reduce((sum, day) => sum + day.availableSlots, 0) / availability.length
+      )
+    };
+
+    res.status(200).json({
+      message: "Room availability retrieved successfully",
+      roomDetails: {
+        name: room.name,
+        totalSlots: room.totalSlots,
+        basePrice: room.pricePerNight,
+        discountedPrice: room.DiscountedPrice
+      },
+      stats,
+      availability
+    });
+
+  } catch (error) {
+    console.error("Error fetching room availability:", error.message);
+    res.status(500).json({ 
+      message: "Failed to fetch room availability.", 
+      error: error.message 
+    });
+  }
+};
+
+// Helper function to get price for specific day
+const getPriceForDay = (room, date) => {
+  const dayOfWeek = date.getDay();
+  const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
+
+  let basePrice = room.DiscountedPrice > 0 ? room.DiscountedPrice : room.pricePerNight;
+  
+  // Apply weekend pricing if applicable
+  if (isWeekend && room.weekendPricing) {
+    basePrice = room.weekendPricing;
+  }
+
+  return basePrice;
+};
 export const UpdateBookingForAdmin = async (req, res) => {
   const { id } = req.params;
   const { checkInDate, checkOutDate, status, roomId, noofguests ,noofchildrens} = req.body;
@@ -1112,7 +1168,6 @@ export const getBookingDatesByRoom = async (req, res) => {
         dates.push(new Date(currentDate).toISOString().split('T')[0]); // Format date as YYYY-MM-DD
         currentDate.setDate(currentDate.getDate() + 1); // Increment day
       }
-
       return dates;
     });
 
@@ -1130,6 +1185,192 @@ export const getBookingDatesByRoom = async (req, res) => {
       success: false,
       message: 'An error occurred while retrieving booked dates.',
       error: error.message,
+    });
+  }
+};
+
+export const GetAllChanges = async (req, res) => {
+  try {
+    const currentDate = moment();
+    const firstDayOfCurrentMonth = currentDate.startOf("month").toDate();
+    const lastDayOfCurrentMonth = currentDate.endOf("month").toDate();
+    const firstDayOfLastMonth = currentDate.subtract(1, "month").startOf("month").toDate();
+    const lastDayOfLastMonth = currentDate.endOf("month").toDate();
+
+    // Users change calculation
+    const [currentMonthUsers, lastMonthUsers] = await Promise.all([
+      User.countDocuments({
+        createdAt: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth }
+      }),
+      User.countDocuments({
+        createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth }
+      })
+    ]);
+
+    const userChange = currentMonthUsers - lastMonthUsers;
+    let userPercentageChange = 0;
+    if (lastMonthUsers > 0) {
+      userPercentageChange = ((userChange / lastMonthUsers) * 100).toFixed(2);
+    }
+
+    let userChangeStatus = "No change";
+    if (userChange > 0) {
+      userChangeStatus = `Increased by ${userPercentageChange}%`;
+    } else if (userChange < 0) {
+      userChangeStatus = `Decreased by ${Math.abs(userPercentageChange)}%`;
+    }
+
+    // Bookings change calculation
+    const [currentMonthBookingsCount, lastMonthBookingsCount] = await Promise.all([
+      Booking.countDocuments({
+        checkInDate: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth }
+      }),
+      Booking.countDocuments({
+        checkInDate: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth }
+      })
+    ]);
+
+    const bookingChange = currentMonthBookingsCount - lastMonthBookingsCount;
+    let bookingPercentageChange = 0;
+    if (lastMonthBookingsCount > 0) {
+      bookingPercentageChange = ((bookingChange / lastMonthBookingsCount) * 100).toFixed(2);
+    } else if (currentMonthBookingsCount > 0) {
+      bookingPercentageChange = 100;
+    }
+
+    let bookingChangeStatus = "No change";
+    if (bookingPercentageChange > 0) {
+      bookingChangeStatus = `Increased by ${bookingPercentageChange}%`;
+    } else if (bookingPercentageChange < 0) {
+      bookingChangeStatus = `Decreased by ${Math.abs(bookingPercentageChange)}%`;
+    }
+
+    // Revenue change calculation
+    const [currentMonthRevenue, lastMonthRevenue] = await Promise.all([ 
+      Booking.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth }
+          }
+        },
+        { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+      ]),
+      Booking.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth }
+          }
+        },
+        { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" } } }
+      ])
+    ]);
+
+    const currentMonthRevenueAmount = currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
+    const lastMonthRevenueAmount = lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
+    const revenueChange = currentMonthRevenueAmount - lastMonthRevenueAmount;
+
+    let revenuePercentageChange = 0;
+    if (lastMonthRevenueAmount > 0) {
+      revenuePercentageChange = (revenueChange / lastMonthRevenueAmount) * 100;
+    }
+
+    let revenueChangeStatus = "No change";
+    if (revenueChange > 0) {
+      revenueChangeStatus = `Increased by $${revenueChange.toFixed(2)} (${revenuePercentageChange.toFixed(2)}%)`;
+    } else if (revenueChange < 0) {
+      revenueChangeStatus = `Decreased by $${Math.abs(revenueChange).toFixed(2)} (${Math.abs(revenuePercentageChange).toFixed(2)}%)`;
+    }
+
+    // Guest and Regular Users change calculation
+    const [currentMonthGuests, lastMonthGuests] = await Promise.all([
+      Booking.distinct('user', {
+        checkInDate: { $gte: firstDayOfCurrentMonth, $lte: lastDayOfCurrentMonth }
+      }),
+      Booking.distinct('user', {
+        checkInDate: { $gte: firstDayOfLastMonth, $lte: lastDayOfLastMonth }
+      })
+    ]);
+
+    const currentMonthGuestCount = currentMonthGuests.length;
+    const lastMonthGuestCount = lastMonthGuests.length;
+    const guestChange = currentMonthGuestCount - lastMonthGuestCount;
+    
+    let guestPercentageChange = 0;
+    if (lastMonthGuestCount > 0) {
+      guestPercentageChange = ((guestChange / lastMonthGuestCount) * 100).toFixed(2);
+    } else if (currentMonthGuestCount > 0) {
+      guestPercentageChange = 100;
+    }
+
+    let guestChangeStatus = "No change";
+    if (guestChange > 0) {
+      guestChangeStatus = `Increased by ${guestPercentageChange}%`;
+    } else if (guestChange < 0) {
+      guestChangeStatus = `Decreased by ${Math.abs(guestPercentageChange)}%`;
+    }
+
+    // Calculate regular users (those who did not make any bookings)
+    const currentMonthRegularUsers = currentMonthUsers - currentMonthGuestCount;
+    const lastMonthRegularUsers = lastMonthUsers - lastMonthGuestCount;
+    const regularUserChange = currentMonthRegularUsers - lastMonthRegularUsers;
+
+    let regularUserPercentageChange = 0;
+    if (lastMonthRegularUsers > 0) {
+      regularUserPercentageChange = ((regularUserChange / lastMonthRegularUsers) * 100).toFixed(2);
+    }
+
+    let regularUserChangeStatus = "No change";
+    if (regularUserChange > 0) {
+      regularUserChangeStatus = `Increased by ${regularUserPercentageChange}%`;
+    } else if (regularUserChange < 0) {
+      regularUserChangeStatus = `Decreased by ${Math.abs(regularUserPercentageChange)}%`;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Monthly statistics change report",
+      users: {
+        current: currentMonthUsers,
+        last: lastMonthUsers,
+        change: userChange,
+        percentageChange: userPercentageChange,
+        status: userChangeStatus
+      },
+      bookings: {
+        current: currentMonthBookingsCount,
+        last: lastMonthBookingsCount,
+        change: bookingChange,
+        percentageChange: bookingPercentageChange,
+        status: bookingChangeStatus
+      },
+      revenue: {
+        current: currentMonthRevenueAmount.toFixed(2),
+        last: lastMonthRevenueAmount.toFixed(2),
+        change: revenueChange.toFixed(2),
+        percentageChange: revenuePercentageChange.toFixed(2),
+        status: revenueChangeStatus
+      },
+      guests: {
+        current: currentMonthGuestCount,
+        last: lastMonthGuestCount,
+        change: guestChange,
+        percentageChange: guestPercentageChange,
+        status: guestChangeStatus
+      },
+      regularUsers: {
+        current: currentMonthRegularUsers,
+        last: lastMonthRegularUsers,
+        change: regularUserChange,
+        percentageChange: regularUserPercentageChange,
+        status: regularUserChangeStatus
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error occurred while calculating statistics.",
+      error: error.message
     });
   }
 };
