@@ -8,19 +8,19 @@ const hotelSchema = new mongoose.Schema({
   },
   address: {
     type: String,
-    required: true,
+    // required: true,
   },
   contactNumbers: {
     type: [String], // Array of strings
-    required: true,
+    // required: true,
   },
   checkInTime: {
     type: String, // Time format like "HH:mm"
-    required: true,
+    // required: true,
   },
   checkOutTime: {
     type: String, // Time format like "HH:mm"
-    required: true,
+    // required: true,
   },
   logo: {
     type: String,
@@ -76,7 +76,7 @@ const hotelSchema = new mongoose.Schema({
   },
   Email: {
     type: String,
-    required: true,
+    // required: true,
     match: [
       /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 
       'Please enter a valid email address'
