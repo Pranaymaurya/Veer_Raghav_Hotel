@@ -1,6 +1,9 @@
 import Booking from "../Models/Booking.js";
 import Room from "../Models/Room.js";
 import User from "../Models/userModel.js";
+import mongoose from "mongoose";
+import RoomAvailability from "../Models/RoomAvailable.js";
+import {sendBookingConfirmation, sendCancellationConfirmation} from "./auth.js";
 // import sendBookingConfirmation from "./auth.js";
 
 export const CreateBooking = async (req, res) => {
@@ -697,96 +700,95 @@ export const CancelBooking = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Find the booking and validate it exists
+    // Find the booking by bookingId
     const booking = await Booking.findById(id);
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({ message: "Booking not found." });
     }
 
-    // Check if booking is already cancelled
-    if (booking.status === "Cancelled") {
-      return res.status(400).json({ message: "Booking is already cancelled" });
-    }
+    // Check if the booking belongs to the logged-in user (optional but recommended)
+    // if (booking.user.toString() !== req.user.userId) {
+    //   return res.status(403).json({ message: "You are not authorized to cancel this booking." });
+    // }
 
-    // Check if the booking is past check-out date
-    const currentDate = new Date();
-    if (new Date(booking.checkOutDate) < currentDate) {
-      return res
-        .status(400)
-        .json({ message: "Cannot cancel a completed booking" });
-    }
+    // Save the canceled booking to CancelledBooking collection
+    const canceledBooking = new CancelledBooking({
+      user: booking.user,
+      room: booking.room,
+      checkInDate: booking.checkInDate,
+      checkOutDate: booking.checkOutDate,
+      totalPrice: booking.totalPrice,
+      noOfRooms: booking.noOfRooms,
+      noOfGuests: booking.noofguests,
+      reason: req.body.reason || 'No reason provided', // Optional reason for cancellation
+    });
 
-    // Find the room
+    await canceledBooking.save();
+
+    // Delete the original booking from the Booking collection
+    await Booking.deleteOne({ _id: id });
+
+    // Update the availability of the room for the booked dates
     const room = await Room.findById(booking.room);
-    if (!room) {
-      return res.status(404).json({ message: "Room not found" });
+    if (room) {
+      const { checkInDate, checkOutDate, noOfRooms } = booking;
+
+      // Decrease the booked slots
+      room.bookedSlots -= noOfRooms;
+
+      // Optionally remove the canceled booking dates from a list of unavailable dates
+      const bookedDates = [];
+      let currentDate = new Date(checkInDate);
+      const endDate = new Date(checkOutDate);
+
+      while (currentDate <= endDate) {
+        bookedDates.push(new Date(currentDate).toISOString().split('T')[0]);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Remove unavailable dates
+      await Room.updateOne(
+        { _id: booking.room },
+        { 
+          $set: { bookedSlots: room.bookedSlots },
+          $pull: { unavailableDates: { $in: bookedDates } }
+        }
+      );
     }
 
-    // Update booking status
-    booking.status = "Cancelled";
-    await booking.save();
-
-    // Update room availability and counts
-    await Room.updateOne(
-      { _id: booking.room },
-      {
-        $inc: {
-          availableSlots: booking.noOfRooms,
-          bookedSlots: -booking.noOfRooms,
-        },
-        $set: {
-          isAvailable: true,
-        },
-      }
-    );
-
-    // Update user booking status if needed
+    // Update user booking status
     const user = await User.findById(booking.user);
     if (user) {
       await User.updateOne(
         { _id: booking.user },
-        {
-          $set: {
-            IsBooking: false,
-            currentBooking: null,
-          },
-          $inc: {
-            bookedSlots: -booking.noOfRooms,
-          },
-        }
+        { $set: { IsBooking: false, currentBooking: null } }
       );
-
-      // Optionally send cancellation confirmation email
-      try {
-        await sendBookingCancellationEmail({
-          email: user.email,
-          name: user.name,
-          bookingId: booking._id,
-          roomName: room.name,
-          checkInDate: booking.checkInDate,
-          checkOutDate: booking.checkOutDate,
-        });
-      } catch (emailError) {
-        console.error("Failed to send cancellation email:", emailError.message);
-        // Don't return error since the booking was still cancelled successfully
-      }
     }
 
-    // Send success response
+    // Optional: Send cancellation email
+    try {
+      await sendCancellationConfirmation({
+        email: user.email,
+        name: user.name,
+        bookingId: canceledBooking._id,
+        roomName: room.name,
+        checkInDate: booking.checkInDate,
+        checkOutDate: booking.checkOutDate,
+      });
+    } catch (emailError) {
+      console.error("Failed to send cancellation email:", emailError.message);
+    }
+
     res.status(200).json({
-      message: "Booking cancelled successfully",
-      booking,
-      refundInfo:
-        "If applicable, refund will be processed within 5-7 business days",
+      message: "Booking cancelled successfully and stored as a canceled booking.",
+      canceledBookingId: canceledBooking._id,
     });
   } catch (error) {
-    console.error("Error cancelling booking:", error);
-    res.status(500).json({
-      message: "Failed to cancel booking",
-      error: error.message,
-    });
+    console.error("Error cancelling booking:", error.message);
+    res.status(500).json({ message: "Failed to cancel booking.", error: error.message });
   }
 };
+ 
 
 export const Putrating = async (req, res) => {
   try {
@@ -963,7 +965,8 @@ export const All = async (req, res) => {
 };
 
 import moment from "moment"; // Adjust the path according to your project structure
-import { sendBookingConfirmation } from "./auth.js";
+import CancelledBooking from "../Models/CancelBooking.js";
+// import { sendBookingConfirmation } from "./auth.js";
 
 export const GetBookingChange = async (req, res) => {
   try {
@@ -1150,8 +1153,11 @@ export const getBookingDatesByRoom = async (req, res) => {
   try {
     const { id } = req.params; // Extract room ID from request parameters
 
-    // Find all bookings for the given room ID
-    const bookings = await Booking.find({ room: id }).select('checkInDate checkOutDate -_id');
+    // Find all bookings for the given room ID where the booking is not canceled
+    const bookings = await Booking.find({ 
+      room: id, 
+      status: { $ne: 'Cancelled' }  // Exclude canceled bookings
+    }).select('checkInDate checkOutDate -_id');
 
     // Check if bookings exist
     if (!bookings || bookings.length === 0) {
@@ -1188,6 +1194,7 @@ export const getBookingDatesByRoom = async (req, res) => {
     });
   }
 };
+
 
 export const GetAllChanges = async (req, res) => {
   try {
