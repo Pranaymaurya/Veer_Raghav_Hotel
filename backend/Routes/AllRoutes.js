@@ -100,7 +100,7 @@ router.get(
   GetAllBookings
 ); // Get all bookings
 router.delete(
-  "/booking/:id/cancel",
+  "/booking/:id",
   authMiddleware,
   authorizeRoles("user", "admin"),
   CancelBooking

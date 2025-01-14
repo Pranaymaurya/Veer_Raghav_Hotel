@@ -230,3 +230,108 @@ export const sendBookingConfirmation = async (bookingDetails) => {
     throw error;
   }
 };
+export const sendCancellationConfirmation = async (cancellationDetails) => {
+  try {
+    const { email, name, bookingId, roomName, checkInDate, checkOutDate } = cancellationDetails;
+
+    if (!email || !name || !bookingId || !checkInDate || !checkOutDate || !roomName) {
+      throw new Error('Missing required cancellation details');
+    }
+
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    };
+
+    const formattedCheckInDate = formatDate(checkInDate);
+    const formattedCheckOutDate = formatDate(checkOutDate);
+
+    const emailTemplate = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Booking Cancellation</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background-color: #FF6600;
+            color: white;
+            padding: 20px;
+            text-align: center;
+          }
+          .content {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #666;
+          }
+          .cancellation-details {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+          }
+          .cancellation-details p {
+            margin: 5px 0;
+          }
+          .notice {
+            font-size: 1.1em;
+            color: #FF6600;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Booking Cancellation</h1>
+        </div>
+        <div class="content">
+          <p>Dear ${name},</p>
+          <p>We regret to inform you that your booking for <strong>Room ${roomName}</strong> has been successfully cancelled.</p>
+          <div class="cancellation-details">
+            <p><strong>Booking ID:</strong> ${bookingId}</p>
+            <p><strong>Check-in:</strong> ${formattedCheckInDate}</p>
+            <p><strong>Check-out:</strong> ${formattedCheckOutDate}</p>
+            <p class="notice">Your booking has been cancelled, and no further action is required from your side.</p>
+          </div>
+          <p>If you have any questions or need assistance, please feel free to reach out to us.</p>
+          <p>We hope to welcome you again in the future!</p>
+        </div>
+        <div class="footer">
+          <p>If you have any questions, please don't hesitate to contact us.</p>
+          <p>&copy; ${new Date().getFullYear()} Veer Raghav. All rights reserved.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Assuming `sendEmail` is a function that sends an email with the given details
+    await sendEmail({
+      to: email,
+      subject: 'Booking Cancellation - Veer Raghav',
+      html: emailTemplate,
+    });
+
+    console.log(`Booking cancellation email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending cancellation confirmation email:', error.message);
+    throw error;
+  }
+};
