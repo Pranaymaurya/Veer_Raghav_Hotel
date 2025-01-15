@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, Clock, MapPin, Send } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
@@ -7,7 +7,7 @@ function ContactPage() {
   const { hotelInfo, gethotel } = useSettings();
   const pageTitle = 'CONTACT US'.split('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     gethotel();
   }, []);
 

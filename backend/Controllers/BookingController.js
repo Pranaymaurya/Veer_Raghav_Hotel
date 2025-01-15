@@ -312,7 +312,7 @@ export const GetRoomAvailability = async (req, res) => {
       });
     }
 
-    // Get current date
+ // Get current date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

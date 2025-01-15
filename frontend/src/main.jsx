@@ -50,6 +50,9 @@ import UserSettings from './pages/UserProfile/components/UserSettings';
 import PaymentPage from './pages/bookingpage/PaymentPage';
 import ScrollRestoration from './components/ScrollRestoration';
 import BookingContentLayout from './pages/AdminDashboard/pages/BookingContentLayout';
+import PrivacyPolicy from './pages/contact/Privacy-Policy';
+import TermsAndConditions from './pages/contact/Terms-And-Conditions';
+import CancellationandRefund from './pages/contact/Cancellation-Refund';
 
 
 
@@ -85,6 +88,18 @@ const router = createBrowserRouter([
       {
         path: "/contact",
         element: <ContactPage />,
+      },
+      {
+        path: "/privacy-policy",
+        element: <PrivacyPolicy />,
+      },
+      {
+        path: "/terms-and-conditions",
+        element: <TermsAndConditions />,
+      },
+      {
+        path: "/cancellation-and-refund",
+        element: <CancellationandRefund />,
       },
       {
         path: "/profile",
